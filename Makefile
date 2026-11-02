@@ -9,6 +9,7 @@ ifeq ($(UV),)
 else
   RUN := uv run --frozen
 endif
+CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 export PYTHONPATH := shared/dataset-management:projects/fraud-risk
 
 .PHONY: help setup lint test up down eda baseline baseline-final
@@ -37,6 +38,9 @@ up:
 
 down:
 	docker compose down
+
+eda:
+	$(RUN) python -m fraud_risk.eda.profile $(if $(wildcard $(CONFIG)),--config $(CONFIG),)
 
 baseline:
 	@echo "make baseline: not implemented yet (task T09)." >&2; exit 1
