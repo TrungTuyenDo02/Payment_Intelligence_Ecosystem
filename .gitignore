@@ -1,0 +1,32 @@
+# Data: never commit (AGENTS.md hard rules 1-3)
+datasets/raw/
+artifacts/
+*.parquet
+*.csv
+# Small synthetic test fixtures are the only allowed CSVs
+!**/fixtures/**/*.csv
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Model files
+*.joblib
+*.pkl
+*.pickle
+*.onnx
+*.pt
+*.pth
+*.h5
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
