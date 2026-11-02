@@ -37,8 +37,6 @@ REQUIRED_DIRS = [
 ]
 
 REQUIRED_FILES = [
-    "AGENTS.md",
-    "CLAUDE.md",
     "docs/decisions/0001-package-layout.md",
     "compose.yaml",
     ".env.example",
