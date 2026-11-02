@@ -10,6 +10,7 @@ import pytest
     [
         "fraud_risk.adapters",
         "fraud_risk.features",
+        "fraud_risk.eda",
         "fraud_risk.evaluation",
         "fraud_risk.baselines",
         "fraud_risk.scripts",

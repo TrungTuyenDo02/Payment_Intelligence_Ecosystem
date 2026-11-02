@@ -27,4 +27,4 @@ Raw data is never committed. Put the IEEE-CIS files under `datasets/raw/ieee-cis
 
 Folders with hyphens keep the names from `AGENTS.md`; Python code lives in a snake_case package inside them
 (`projects/fraud-risk/fraud_risk/`, `shared/dataset-management/dataset_management/`). See
-[ADR 0001](docs/decisions/0001-snake-case-packages-in-hyphenated-folders.md).
+[ADR 0001](docs/decisions/0001-package-layout.md).
