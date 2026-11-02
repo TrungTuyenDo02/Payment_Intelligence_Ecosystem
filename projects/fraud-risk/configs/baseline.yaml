@@ -1,0 +1,48 @@
+# Stage B baseline configuration (IEEE-CIS).
+# status: only the owner may change this to "frozen" (AGENTS.md D5). Agents never do.
+status: draft
+seed: 42
+
+data:
+  use_identity: false # identity join off by default
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split: # chronological, by TransactionDT; test = the rest
+  train_frac: 0.6
+  valid_frac: 0.2
+
+metrics:
+  precision_target: 0.5
+  bootstrap_resamples: 200
+  threshold_method: max_f1 # or precision_target; chosen on validation only
+
+# Starter feature list (AGENTS.md section 8) until rows in
+# docs/data-analysis/eda-summary.md are approved by the owner.
+features:
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day]
+
+rule_based: # score = fraction of rules triggered; thresholds learned on train only
+  rules:
+    - name: high_amount
+      type: numeric_above_quantile
+      column: TransactionAmt
+      quantile: 0.99
+      description: Amount above the train 99th percentile.
+    - name: risky_product
+      type: category_fraud_rate
+      column: ProductCD
+      rate_multiplier: 2.0
+      min_count: 100
+      description: ProductCD whose train fraud rate is at least 2x the overall train rate.
+    - name: risky_card_type
+      type: category_fraud_rate
+      column: card6
+      rate_multiplier: 1.5
+      min_count: 100
+      description: card6 (debit/credit) whose train fraud rate is at least 1.5x the overall rate.
+
+logistic:
+  C: 1.0
+  max_iter: 1000
