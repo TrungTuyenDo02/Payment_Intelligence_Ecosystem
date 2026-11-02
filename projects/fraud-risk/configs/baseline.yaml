@@ -1,6 +1,6 @@
 # Stage B baseline configuration (IEEE-CIS).
 # status: only the owner may change this to "frozen" (AGENTS.md D5). Agents never do.
-status: draft
+status: frozen # set on the owner's explicit instruction, 2026-11-03
 seed: 42
 
 data:
