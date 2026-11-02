@@ -1,0 +1,46 @@
+[project]
+name = "payment-intelligence-ecosystem"
+version = "0.1.0"
+description = "Payment Intelligence Ecosystem: shared foundation, payment reliability, fraud & risk (internship demo)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "pyarrow",
+    "numpy",
+    "scikit-learn",
+    "pyyaml",
+    "pydantic",
+    "jsonschema",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[tool.uv]
+# Not an installable package: code is imported via pythonpath (ADR 0001).
+package = false
+
+[tool.pytest.ini_options]
+# Parent folders of the snake_case packages (ADR 0001).
+pythonpath = [
+    "projects/fraud-risk",
+    "shared/dataset-management",
+]
+testpaths = ["tests", "projects/fraud-risk/tests", "shared"]
+addopts = "--import-mode=importlib"
+
+[tool.coverage.run]
+source = ["fraud_risk", "dataset_management"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["datasets/raw", "artifacts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]
