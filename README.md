@@ -4,10 +4,13 @@
 ![Stage](https://img.shields.io/badge/stage-A%2FB%20(skeleton%20%2B%20baselines)-orange)
 ![Tests](https://img.shields.io/badge/tests-pytest%20%2B%20coverage-green)
 ![Lint](https://img.shields.io/badge/lint-ruff-black)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 Nền tảng dữ liệu và AI dạng module cho thanh toán, gồm một **nền tảng dùng chung** và hai sản phẩm độc lập: **Payment Reliability** và **Fraud & Risk**. Đây là bản demo 6 tuần cho báo cáo thực tập. Ưu tiên của dự án là **chất lượng đánh giá**: không rò rỉ dữ liệu, tái lập được, báo cáo trung thực. Điểm số mô hình là ưu tiên thứ yếu.
 
 > Trạng thái hiện tại: đã xong **Stage A** (khung dự án) và **Stage B** (baseline phát hiện gian lận trên IEEE-CIS). Chưa có kết quả trên dữ liệu thật. Contract `payment-event` và các quyết định EDA đang chờ chủ dự án duyệt.
+>
+> **Về các nhánh:** `main` chỉ nhận code sau khi chủ dự án duyệt. Hiện `main` mới có T01; code T02–T10 nằm trên các nhánh `task/*` (xem bảng [Trạng thái dự án](#trạng-thái-dự-án)).
 
 ---
 
@@ -44,19 +47,19 @@ Nền tảng dữ liệu và AI dạng module cho thanh toán, gồm một **n�
 
 ## Trạng thái dự án
 
-| Task | Nội dung | Trạng thái |
-| --- | --- | --- |
-| T01 | Khung repo, tooling, Docker Compose (PostgreSQL 16) | Xong |
-| T02 | Contract `payment-event` (bản draft) | Xong, **chờ chủ dự án duyệt** |
-| T03 | Công cụ manifest dataset (SHA-256) | Xong |
-| T04 | Adapter IEEE-CIS | Xong (đã test trên fixture tổng hợp) |
-| T05 | Chia dữ liệu theo thời gian | Xong |
-| T05b | EDA trên partition train | Xong, **chờ chủ dự án duyệt quyết định** |
-| T06 | Metrics (PR-AUC, bootstrap CI, ...) | Xong |
-| T07 | Baseline dựa trên luật | Xong |
-| T08 | Baseline Logistic Regression | Xong |
-| T09 | Run log, CLI, quy tắc test-once | Xong |
-| T10 | Test chống rò rỉ dữ liệu | Xong |
+| Task | Nội dung | Trạng thái | Nhánh | Đã vào `main` |
+| --- | --- | --- | --- | --- |
+| T01 | Khung repo, tooling, Docker Compose (PostgreSQL 16) | Xong | `task/T01-skeleton` | Có |
+| T02 | Contract `payment-event` (bản draft) | Xong, **chờ chủ dự án duyệt** | `task/T02-contract-draft` | Chưa |
+| T03 | Công cụ manifest dataset (SHA-256) | Xong | `task/T03-dataset-manifest` | Chưa |
+| T04 | Adapter IEEE-CIS | Xong (đã test trên fixture tổng hợp) | `task/T04-ieee-cis-adapter` | Chưa |
+| T05 | Chia dữ liệu theo thời gian | Xong | `task/T05-time-split` | Chưa |
+| T05b | EDA trên partition train | Xong, **chờ chủ dự án duyệt quyết định** | `task/T05b-eda-profiling` | Chưa |
+| T06 | Metrics (PR-AUC, bootstrap CI, ...) | Xong | `task/T06-metrics` | Chưa |
+| T07 | Baseline dựa trên luật | Xong | `task/T07-rule-based-baseline` | Chưa |
+| T08 | Baseline Logistic Regression | Xong | `task/T08-logistic-baseline` | Chưa |
+| T09 | Run log, CLI, quy tắc test-once | Xong | `task/T09-run-log-cli` | Chưa |
+| T10 | Test chống rò rỉ dữ liệu | Xong | `task/T10-leakage-guards` | Chưa |
 
 ## Kiến trúc
 
@@ -274,8 +277,8 @@ make test
 
 ## Giấy phép
 
-Chưa chọn giấy phép cho mã nguồn; chủ dự án sẽ quyết định. Dữ liệu IEEE-CIS tuân theo điều khoản cuộc thi Kaggle và **không** được phân phối kèm repo.
+Mã nguồn phát hành theo giấy phép [MIT](LICENSE). Dữ liệu IEEE-CIS tuân theo điều khoản cuộc thi Kaggle và **không** được phân phối kèm repo.
 
 ## Tác giả
 
-- [@TrungTuyenDo02](https://github.com/TrungTuyenDo02): Technical Owner
+- **Đỗ Trung Tuyến** ([@TrungTuyenDo02](https://github.com/TrungTuyenDo02)): Technical Owner
