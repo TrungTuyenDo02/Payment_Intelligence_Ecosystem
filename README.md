@@ -21,6 +21,19 @@ make up                   # PostgreSQL 16, waits until healthy
 make down
 ```
 
+## Stage B workflow (IEEE-CIS)
+
+```bash
+# 1. Put train_transaction.csv (and train_identity.csv) in datasets/raw/ieee-cis/
+# 2. Write the dataset manifest (see shared/dataset-management/README.md)
+# 3. Profile the train partition, then read artifacts/eda/ and review docs/data-analysis/eda-summary.md
+make eda
+# 4. Train + validation only
+make baseline                       # -> artifacts/runs/<run_id>/
+# 5. Only after the owner sets status: frozen in the config, once:
+make baseline-final                 # -> artifacts/runs/<run_id>/test/
+```
+
 Raw data is never committed. Put the IEEE-CIS files under `datasets/raw/ieee-cis/` (see [`datasets/README.md`](datasets/README.md)).
 
 ## Code layout
