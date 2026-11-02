@@ -20,6 +20,7 @@ REQUIRED_DIRS = [
     "projects/payment-reliability",
     "projects/fraud-risk/fraud_risk/adapters",
     "projects/fraud-risk/fraud_risk/features",
+    "projects/fraud-risk/fraud_risk/eda",
     "projects/fraud-risk/fraud_risk/evaluation",
     "projects/fraud-risk/fraud_risk/baselines",
     "projects/fraud-risk/fraud_risk/scripts",
@@ -30,12 +31,15 @@ REQUIRED_DIRS = [
     "docs/architecture",
     "docs/product",
     "docs/data-governance",
+    "docs/data-analysis",
     "docs/decisions",
     "tests",
 ]
 
 REQUIRED_FILES = [
     "AGENTS.md",
+    "CLAUDE.md",
+    "docs/decisions/0001-package-layout.md",
     "compose.yaml",
     ".env.example",
     ".gitignore",
@@ -51,6 +55,7 @@ MUST_BE_IGNORED = [
     "artifacts/runs/abc/metrics.json",
     "some/where/data.parquet",
     "some/where/data.csv",
+    "artifacts/eda/02_missing.csv",
     ".env",
     "model.joblib",
     "model.pkl",

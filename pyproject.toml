@@ -19,6 +19,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "ruff",
+    "matplotlib",  # EDA figures only (AGENTS.md D2)
 ]
 
 [tool.uv]
@@ -28,10 +29,10 @@ package = false
 [tool.pytest.ini_options]
 # Parent folders of the snake_case packages (ADR 0001).
 pythonpath = [
-    "projects/fraud-risk",
     "shared/dataset-management",
+    "projects/fraud-risk",
 ]
-testpaths = ["tests", "projects/fraud-risk/tests", "shared"]
+testpaths = ["tests", "contracts", "shared", "projects"]
 addopts = "--import-mode=importlib"
 
 [tool.coverage.run]

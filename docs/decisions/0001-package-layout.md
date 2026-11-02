@@ -1,6 +1,6 @@
 # ADR 0001 — Package snake_case bên trong thư mục có dấu gạch ngang
 
-- **Trạng thái:** Accepted (chủ dự án quyết định, 2026-11-02)
+- **Trạng thái:** Accepted (quyết định D1 của chủ dự án trong `AGENTS.md`, 2026-11-02)
 - **Phạm vi:** toàn bộ code Python trong `shared/` và `projects/`
 
 ## Bối cảnh
@@ -20,12 +20,12 @@ Ba phương án đã được cân nhắc:
 
 Chọn **B**.
 
-- `projects/fraud-risk/fraud_risk/{adapters,features,evaluation,baselines,scripts}/` chứa code.
+- `projects/fraud-risk/fraud_risk/{adapters,features,eda,evaluation,baselines,scripts}/` chứa code.
 - `projects/fraud-risk/configs/` (YAML) và `projects/fraud-risk/tests/` vẫn ở cấp thư mục ngoài vì không phải code import được.
 - `shared/dataset-management/dataset_management/` chứa code tooling manifest (T03).
 - Quy tắc đặt tên: package = tên thư mục, đổi `-` thành `_`. Với tên quá chung (`shared/common`), chọn tên package có tiền tố khi thực sự cần, và ghi vào ADR mới.
 - Không build/cài đặt project như một package: `pyproject.toml` đặt `[tool.uv] package = false`.
-  - pytest: `pythonpath` trỏ tới các thư mục cha (`projects/fraud-risk`, `shared/dataset-management`).
+  - pytest: `pythonpath` trỏ tới các thư mục cha (`shared/dataset-management`, `projects/fraud-risk`).
   - Makefile: export `PYTHONPATH` tương tự; CLI chạy bằng `python -m fraud_risk.scripts.<tên>`.
 
 ## Hệ quả

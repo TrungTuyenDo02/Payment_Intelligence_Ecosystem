@@ -9,18 +9,18 @@ ifeq ($(UV),)
 else
   RUN := uv run --frozen
 endif
-export PYTHONPATH := projects/fraud-risk:shared/dataset-management
+export PYTHONPATH := shared/dataset-management:projects/fraud-risk
 
-.PHONY: help setup lint test up down baseline baseline-final
+.PHONY: help setup lint test up down eda baseline baseline-final
 
 help:
-	@echo "Targets: setup lint test up down baseline baseline-final"
+	@echo "Targets: setup lint test up down eda baseline baseline-final"
 
 setup:
 ifeq ($(UV),)
 	python3 -m venv .venv
 	.venv/bin/pip install -U pip
-	.venv/bin/pip install pandas pyarrow numpy scikit-learn pyyaml pydantic jsonschema pytest pytest-cov ruff
+	.venv/bin/pip install pandas pyarrow numpy scikit-learn pyyaml pydantic jsonschema pytest pytest-cov ruff matplotlib
 else
 	uv sync
 endif
