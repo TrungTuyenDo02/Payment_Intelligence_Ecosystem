@@ -78,7 +78,7 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting, API chấm điểm | Đăng ký trước danh sách config chạy test; ADR framework API |
 | 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard |
 
-**Trạng thái hiện tại:** Stage A/B đã có code (T01–T10 và bổ sung recall tại FPR). Contract revision 2 đang chờ duyệt. 9 quyết định EDA đã duyệt. Config baseline đang ở `draft` (do thêm `fpr_target`), chờ chủ dự án chạy `make baseline` và đặt lại `frozen`. **Chưa chạy đánh giá test.** Đặc tả Stage C (bản nháp): [`stage-c-spec.draft.md`](../architecture/stage-c-spec.draft.md).
+**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract revision 2 đang chờ duyệt. 9 quyết định EDA đã duyệt. Đã chạy `make baseline` trên validation với config mới (`run-d6faa4699008`): Logistic Regression PR-AUC 0,245, baseline luật 0,089 (xem [README](../../README.md#kết-quả)). Config baseline vẫn ở `draft`, chờ chủ dự án đặt lại `frozen` và chạy test. Đã có **một** lần chạy test (`run-515a1190a0a4`, 2026-11-03) với config cũ trước khi thêm `fpr_target`. Đặc tả Stage C (bản nháp): [`stage-c-spec.draft.md`](../architecture/stage-c-spec.draft.md).
 
 ## 6. Rủi ro và hạn chế đã biết
 
@@ -158,10 +158,10 @@ Mỗi nhóm xếp theo thứ tự nên đọc. Chỉ nguồn có trong mục 7.5
 | T06 | Metrics | Xong; bổ sung recall tại FPR 5% |
 | T07 | Baseline dựa trên luật | Xong |
 | T08 | Baseline Logistic Regression | Xong |
-| T09 | Run log, CLI, quy tắc test-một-lần | Xong; config về `draft`, **chưa chạy test** |
+| T09 | Run log, CLI, quy tắc test-một-lần | Xong; config về `draft`, **chưa chạy test với config mới** |
 | T10 | Test chống rò rỉ dữ liệu | Xong |
 
-Toàn bộ Stage A/B được gộp trong nhánh `integration/stage-ab`, chờ review và merge vào `main`.
+Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào `main` (PR #2).
 
 ## 9. Quy tắc bắt buộc
 
