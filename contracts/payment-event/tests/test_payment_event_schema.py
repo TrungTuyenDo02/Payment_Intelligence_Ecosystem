@@ -1,4 +1,4 @@
-"""Tests for the Payment Event draft contract (AGENTS.md section 9)."""
+"""Tests for the Payment Event contract (AGENTS.md section 9)."""
 
 import copy
 import importlib.util
@@ -32,10 +32,10 @@ def valid_event() -> dict[str, Any]:
     return _load(CONTRACT_DIR / "examples" / "valid.json")
 
 
-def test_schema_is_marked_draft() -> None:
+def test_schema_is_marked_approved() -> None:
     schema = _load(rules.SCHEMA_PATH)
-    assert schema["x-status"] == "draft"
-    assert rules.SCHEMA_PATH.name.endswith(".draft.json")
+    assert schema["x-status"] == "approved"
+    assert rules.SCHEMA_PATH.name == "payment_event.schema.json"
 
 
 def test_valid_example_passes(valid_event: dict[str, Any], validator: Draft202012Validator) -> None:

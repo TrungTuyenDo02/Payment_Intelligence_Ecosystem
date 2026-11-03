@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/contracts/payment-event/payment_event.schema.draft.json",
-  "title": "Payment Event envelope (DRAFT)",
-  "description": "DRAFT awaiting owner approval. Envelope and payload for a synthetic payment attempt event. Contains no card data or authentication data.",
-  "x-status": "draft",
+  "$id": "https://example.invalid/contracts/payment-event/payment_event.schema.json",
+  "title": "Payment Event envelope",
+  "description": "Approved by the owner on 2026-11-03. Envelope and payload for a synthetic payment attempt event. Contains no card data or authentication data.",
+  "x-status": "approved",
   "type": "object",
   "additionalProperties": false,
   "required": [

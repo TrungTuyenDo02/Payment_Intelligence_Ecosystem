@@ -128,6 +128,8 @@ make up
 | `make baseline` | Hai baseline, đánh giá trên validation |
 | `make baseline-final` | Đánh giá test một lần cho config đã `frozen` |
 | `make report` | Biểu đồ và bảng số cho lần chạy gần nhất (`RUN_DIR=...` để chọn lần chạy khác) |
+| `make simulate` | Sinh dữ liệu thanh toán giả lập (Stage C) vào `artifacts/simulations/<simulation_id>/`; `CONFIG=...` để chọn kịch bản khác |
+| `make db-init` / `make ingest SIM=<simulation_id>` | Tạo bảng PostgreSQL / nạp một lần mô phỏng vào PostgreSQL (cần `make up`) |
 
 ## Quy trình làm việc
 
@@ -150,7 +152,7 @@ datasets/raw/, artifacts/   dữ liệu và kết quả chạy (không commit)
 ## Tài liệu
 
 - [Tổng quan đề tài](docs/product/project-overview.md)
-- [Đặc tả Stage C (nháp)](docs/architecture/stage-c-spec.draft.md)
+- [Đặc tả Stage C](docs/architecture/stage-c-spec.md) · [Báo cáo Stage C](docs/architecture/stage-c-report.md)
 - [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md)
 - ADR: [0001](docs/decisions/0001-package-layout.md) cấu trúc package · [0002](docs/decisions/0002-product-boundaries.md) ranh giới hai sản phẩm · [0003](docs/decisions/0003-label-delay-and-entity-overlap.md) độ trễ nhãn · [0004](docs/decisions/0004-postgres-driver.md) driver PostgreSQL
 - [Contract `payment-event`](contracts/payment-event/)

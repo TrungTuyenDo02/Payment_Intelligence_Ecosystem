@@ -1,7 +1,7 @@
-# Đặc tả Stage C — Bộ sinh dữ liệu giả lập và ingestion (BẢN NHÁP)
+# Đặc tả Stage C — Bộ sinh dữ liệu giả lập và ingestion
 
-- **Trạng thái:** Draft, chờ chủ dự án duyệt. Sau khi duyệt, nội dung này được chép vào `AGENTS.md` (mục mới cho Stage C). Chưa có dòng code nào của Stage C được viết.
-- **Điều kiện bắt đầu code:** (1) contract `payment-event` được duyệt; (2) các câu hỏi ở mục 9 (đã trả lời ngày 2026-11-03); (3) Stage A/B đã merge vào `main`.
+- **Trạng thái:** **Đã duyệt** bởi chủ dự án (2026-11-04). File này là nguồn chính cho Stage C; không chép sang `AGENTS.md`.
+- **Điều kiện bắt đầu code:** (1) contract `payment-event` được duyệt (đã duyệt 1.0.0 ngày 2026-11-03); (2) các câu hỏi ở mục 9 (đã trả lời ngày 2026-11-03); (3) Stage A/B đã merge vào `main`. Cả ba điều kiện đã đạt.
 - **Liên quan:** [ADR 0002](../decisions/0002-product-boundaries.md) (Product 01 chỉ dùng dữ liệu giả lập), contract `contracts/payment-event/`.
 
 ## 1. Mục tiêu
@@ -12,7 +12,7 @@ Sinh ra một luồng sự kiện thanh toán giả lập **đúng contract**, *
 
 **Trong phạm vi**
 - `shared/synthetic-generator/`: package `synthetic_generator` (mô hình sinh, CLI).
-- `shared/data-validation/`: dùng lại `payment_event_rules.validate_event`, không viết lại.
+- Kiểm tra từng sự kiện dùng lại `payment_event_rules.validate_event` của contract, không viết lại. Kiểm tra giữa các attempt nằm trong code ingestion. Không tạo package `shared/data-validation/` riêng.
 - Ingestion một lần (batch) từ file JSONL vào PostgreSQL.
 - Config YAML cho mỗi kịch bản mô phỏng, có `status: draft | frozen` như D5.
 
@@ -30,7 +30,7 @@ Sinh ra một luồng sự kiện thanh toán giả lập **đúng contract**, *
 | Số lượng giao dịch | Quá trình Poisson với cường độ thay đổi theo giờ | Số payment trung bình mỗi giờ |
 | Phương thức và số tiền | Phân phối rời rạc cho `payment_method`; số tiền log-normal theo phương thức, làm tròn đến 1.000 VND | Tỷ trọng phương thức, tham số log-normal |
 | Kết quả attempt | Xác suất thất bại theo provider × phương thức; mã lỗi theo phân phối rời rạc | Xác suất lỗi nền, phân phối mã lỗi |
-| Retry | Payment thất bại có thể được thử lại, tối đa k lần, mỗi attempt có `attempt_id` riêng | Xác suất retry, k, khoảng chờ |
+| Retry | Chỉ lỗi kỹ thuật (`TIMEOUT`, `PROVIDER_ERROR`, `NETWORK_ERROR`) được thử lại, tối đa k lần; `DECLINED` và `INVALID_REQUEST` không retry. Mỗi attempt có `attempt_id` riêng; retry có thể chuyển sang provider khác. `merchant_id`, `amount`, `payment_method`, `currency` giữ nguyên | Xác suất retry, k, khoảng chờ, `retry_switch_provider_prob` |
 | Độ trễ | Log-normal theo provider; attempt `TIMEOUT` có độ trễ bằng ngưỡng timeout | Tham số log-normal, ngưỡng timeout |
 
 Tất cả sự kiện có `source_system = synthetic_generator`, `currency = VND`, `event_time` là thời điểm attempt **kết thúc** (UTC, hậu tố `Z`).
@@ -67,7 +67,8 @@ Tất cả sự kiện có `source_system = synthetic_generator`, `currency = VN
 Quy tắc:
 - Mọi sự kiện đi qua `validate_event`. Sự kiện lỗi vào `ingestion_rejects`, không làm dừng cả lô.
 - Tính duy nhất của `event_id` được đảm bảo bằng khoá chính. Changelog của contract đã hẹn kiểm tra này ở ingestion.
-- Nạp lại cùng một `simulation_id` không tạo bản ghi trùng (idempotent).
+- Kiểm tra các quy tắc giữa các attempt của cùng payment (trong code ingestion), theo changelog contract 1.0.0: cùng `merchant_id`, `amount`, `payment_method`, `currency`; tối đa một `SUCCESS` và không có attempt sau `SUCCESS`; cặp (`payment_id`, `attempt_number`) duy nhất; `attempt_number` liên tiếp từ 1. Retry được đổi `provider_id`. Nếu một payment vi phạm, **mọi attempt của payment đó** vào `ingestion_rejects` kèm lý do, để chuỗi retry không bị đứt.
+- Nạp lại cùng một `simulation_id` không tạo bản ghi trùng (idempotent). Nếu checksum `events.jsonl` khác lần nạp trước của cùng `simulation_id`, từ chối nạp và báo lỗi.
 - Schema SQL nằm trong `infrastructure/database/`, chạy bằng một lệnh `make db-init`.
 
 ## 7. Lệnh Makefile mới
@@ -98,6 +99,17 @@ Mỗi task một nhánh `task/C0x-...`; chỉ xong khi `make lint` và `make tes
 | 2 | Phân loại lỗi | Giữ một trạng thái `FAILED` trong contract; tầng KPI (Stage D) tách lỗi nghiệp vụ (`DECLINED`, `INVALID_REQUEST`) khỏi lỗi kỹ thuật |
 | 3 | Thư viện PostgreSQL | `psycopg[binary]`, xem [ADR 0004](../decisions/0004-postgres-driver.md) |
 | 4 | Quy mô dữ liệu | **Demo nhỏ**: mặc định 7 ngày, 3 provider, 20 merchant, trung bình 30 payment mỗi giờ (khoảng 5 nghìn payment, khoảng 6 nghìn sự kiện kể cả retry). Config cho phép tăng khi cần |
-| 5 | Phiên bản trong sự kiện | Sự kiện ghi `schema_version = "1.0.0"`; trạng thái draft chỉ ghi trong changelog |
+| 5 | Phiên bản trong sự kiện | Sự kiện ghi `schema_version = "1.0.0"`; trạng thái duyệt chỉ ghi trong changelog và `x-status` |
 
-Việc còn lại trước khi code: chủ dự án duyệt contract `payment-event` (revision 2) và chép đặc tả này vào `AGENTS.md`.
+Quyết định khi duyệt đặc tả (2026-11-04):
+
+| # | Câu hỏi | Quyết định |
+| --- | --- | --- |
+| 6 | Payment vi phạm quy tắc giữa các attempt | Từ chối cả payment: mọi attempt vào `ingestion_rejects` |
+| 7 | Lỗi nào được retry | Chỉ `TIMEOUT`, `PROVIDER_ERROR`, `NETWORK_ERROR` |
+| 8 | Chọn provider khi retry | Tham số config `retry_switch_provider_prob` |
+| 9 | Nạp lại cùng `simulation_id`, khác checksum | Từ chối nạp, báo lỗi |
+| 10 | Package `shared/data-validation/` | Không tạo; kiểm tra giữa các attempt nằm trong ingestion |
+| 11 | Chép đặc tả vào `AGENTS.md` | Không chép; file này là nguồn chính, đổi tên thành `stage-c-spec.md` |
+
+Không còn việc nào chặn việc viết code Stage C.

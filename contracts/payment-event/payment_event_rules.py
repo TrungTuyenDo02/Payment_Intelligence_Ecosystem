@@ -1,7 +1,8 @@
-"""Validation for the Payment Event draft contract.
+"""Validation for the Payment Event contract (approved 1.0.0).
 
 JSON Schema cannot express cross-field inequality, so `payment_id != attempt_id`
-is checked here. `event_id` uniqueness is checked at ingestion (later stage).
+is checked here. Rules across events (`event_id` uniqueness, attempt order,
+fields shared by all attempts of a payment) are checked at ingestion; see CHANGELOG.md.
 """
 
 import json
@@ -11,11 +12,11 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-SCHEMA_PATH = Path(__file__).with_name("payment_event.schema.draft.json")
+SCHEMA_PATH = Path(__file__).with_name("payment_event.schema.json")
 
 
 def load_validator() -> Draft202012Validator:
-    """Load the draft schema and return a validator for it."""
+    """Load the schema and return a validator for it."""
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     return Draft202012Validator(schema)

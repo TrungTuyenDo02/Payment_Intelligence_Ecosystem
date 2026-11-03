@@ -10,18 +10,21 @@ else
   RUN := uv run --frozen
 endif
 CONFIG ?= projects/fraud-risk/configs/baseline.yaml
-export PYTHONPATH := shared/dataset-management:projects/fraud-risk
+# POSTGRES_* from .env (never committed); defaults in code match compose.yaml.
+-include .env
+export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
+export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk
 
-.PHONY: help setup lint test up down eda baseline baseline-final report
+.PHONY: help setup lint test up down eda baseline baseline-final report simulate db-init ingest
 
 help:
-	@echo "Targets: setup lint test up down eda baseline baseline-final report"
+	@echo "Targets: setup lint test up down eda baseline baseline-final report simulate db-init ingest"
 
 setup:
 ifeq ($(UV),)
 	python3 -m venv .venv
 	.venv/bin/pip install -U pip
-	.venv/bin/pip install pandas pyarrow numpy scikit-learn pyyaml pydantic jsonschema pytest pytest-cov ruff matplotlib
+	.venv/bin/pip install pandas pyarrow numpy scikit-learn pyyaml pydantic jsonschema 'psycopg[binary]' pytest pytest-cov ruff matplotlib
 else
 	uv sync
 endif
@@ -53,3 +56,16 @@ baseline-final:
 # Charts + summary table from the latest run (or RUN_DIR=artifacts/runs/<run_id>[/test]).
 report:
 	$(RUN) python -m fraud_risk.scripts.plot_results $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
+
+# Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
+SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)
+simulate:
+	$(RUN) python -m synthetic_generator.cli --config $(SIM_CONFIG)
+
+# Stage C ingestion into PostgreSQL (start it with `make up`).
+db-init:
+	$(RUN) python -m synthetic_generator.ingest --init-db
+
+ingest:
+	$(if $(SIM),,$(error SIM=<simulation_id> is required))
+	$(RUN) python -m synthetic_generator.ingest --sim $(SIM)

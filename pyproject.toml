@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml",
     "pydantic",
     "jsonschema",
+    "psycopg[binary]>=3.3.7",
 ]
 
 [dependency-groups]
@@ -30,13 +31,14 @@ package = false
 # Parent folders of the snake_case packages (ADR 0001).
 pythonpath = [
     "shared/dataset-management",
+    "shared/synthetic-generator",
     "projects/fraud-risk",
 ]
 testpaths = ["tests", "contracts", "shared", "projects"]
 addopts = "--import-mode=importlib"
 
 [tool.coverage.run]
-source = ["fraud_risk", "dataset_management"]
+source = ["fraud_risk", "dataset_management", "synthetic_generator"]
 
 [tool.ruff]
 line-length = 100
