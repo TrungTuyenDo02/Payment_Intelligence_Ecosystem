@@ -253,9 +253,6 @@ make test
 - Không dùng dữ liệu thật của công ty. Không commit credentials, `.env`, dữ liệu, file Parquet hay file mô hình.
 - Không có dữ liệu thẻ hoặc dữ liệu xác thực trong schema, fixture hay log.
 - Không tải hay chạy mô hình pretrained từ internet (rủi ro nhiễm dữ liệu và rủi ro thực thi mã từ pickle).
-
-## Quy trình đóng góp
-
 - Mỗi task một nhánh `task/<ID>-<slug>`, chia thành các commit nhỏ.
 - Một task chỉ được coi là xong khi `make lint` và `make test` đều pass.
 - Contract chỉ được tạo dưới dạng draft. Muốn thay đổi kiến trúc, đề xuất bằng ADR trong `docs/decisions/`.
