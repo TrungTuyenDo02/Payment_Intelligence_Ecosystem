@@ -26,14 +26,20 @@ Chi tiết từng giai đoạn, rủi ro và tài liệu tham khảo: [tổng qu
 
 ## Kết quả
 
-> **Chưa có kết quả trên dữ liệu thật.** Phần này sẽ được cập nhật sau lần chạy đầu tiên trên IEEE-CIS, kèm `run_id` của lần chạy.
+Kết quả trên tập **validation** của IEEE-CIS, lần chạy `run-d6faa4699008` (config `draft`, commit `fa34646`). Đây chưa phải kết quả test cuối cùng.
 
 | Mô hình | Tập | PR-AUC [95% CI] | Tỷ lệ gian lận | Recall @ precision 0,5 | Recall @ FPR 5% |
 | --- | --- | --- | --- | --- | --- |
-| Luật (rule-based) | Validation | – | – | – | – |
-| Logistic Regression | Validation | – | – | – | – |
+| Logistic Regression | Validation | 0,245 [0,234; 0,256] | 3,90% | 0,14 | 0,33 |
+| Luật (rule-based) | Validation | 0,089 [0,084; 0,092] | 3,90% | 0,00 | 0,00 |
 
-Sau khi chạy, lệnh `make report` vẽ ba biểu đồ vào `docs/assets/results/`:
+Logistic Regression có PR-AUC gấp khoảng 6 lần mô hình ngẫu nhiên (bằng tỷ lệ gian lận, 0,039). Baseline luật chỉ nhỉnh hơn ngẫu nhiên và có recall bằng 0 ở cả hai mục tiêu.
+
+<p align="center"><img src="docs/assets/results/split.png" alt="Số giao dịch và tỷ lệ gian lận của train, validation, test" width="70%"></p>
+<p align="center"><img src="docs/assets/results/pr_auc.png" alt="PR-AUC của hai baseline trên validation kèm khoảng tin cậy 95%" width="70%"></p>
+<p align="center"><img src="docs/assets/results/recall_targets.png" alt="Recall khi precision ≥ 0,5 và khi FPR ≤ 5% trên validation" width="100%"></p>
+
+Lệnh `make report` vẽ ba biểu đồ trên vào `docs/assets/results/`:
 
 | Biểu đồ | Cho biết |
 | --- | --- |
