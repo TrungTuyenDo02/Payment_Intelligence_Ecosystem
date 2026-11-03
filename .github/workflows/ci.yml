@@ -1,0 +1,42 @@
+# Runs on every pull request and on pushes to main.
+# A pull request may only be merged when this workflow is green
+# (enable "Require status checks to pass" for main in the repository settings).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: lint and test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies from uv.lock
+        run: uv sync --frozen
+
+      - name: Lint (ruff check and format)
+        run: make lint
+
+      - name: Tests with coverage (synthetic fixtures only, no real data)
+        run: make test
