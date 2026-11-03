@@ -78,7 +78,7 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting, API chấm điểm | Đăng ký trước danh sách config chạy test; ADR framework API |
 | 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard |
 
-**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). Đang làm Stage C.
+**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). **Stage C: C01–C05 xong code** ([báo cáo](../architecture/stage-c-report.md)): demo `tuning` sinh 4.945 payment, 5.766 sự kiện; config `report` riêng. Còn chạy 3 test tích hợp PostgreSQL (cần bật Docker) và chủ dự án `frozen` hai config mô phỏng trước Stage D.
 
 ## 6. Rủi ro và hạn chế đã biết
 
@@ -145,7 +145,7 @@ Mỗi nhóm xếp theo thứ tự nên đọc. Chỉ nguồn có trong mục 7.5
 
 # Phần II — Phụ lục kỹ thuật
 
-## 8. Trạng thái task (Stage A/B)
+## 8. Trạng thái task
 
 | ID | Việc | Trạng thái |
 | --- | --- | --- |
@@ -162,6 +162,16 @@ Mỗi nhóm xếp theo thứ tự nên đọc. Chỉ nguồn có trong mục 7.5
 | T10 | Test chống rò rỉ dữ liệu | Xong |
 
 Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào `main` (PR #2).
+
+### Stage C
+
+| ID | Việc | Trạng thái |
+| --- | --- | --- |
+| C01 | Config mô phỏng và `simulation_id` | Xong |
+| C02 | Mô hình sinh cơ bản, `make simulate` | Xong |
+| C03 | Chèn bất thường, ground truth, config `tuning` và `report` | Xong; config còn `draft` |
+| C04 | Schema PostgreSQL, `make db-init`, `make ingest` | Xong code; **3 test tích hợp chưa chạy** (cần Docker) |
+| C05 | README giả định, báo cáo | Xong ([báo cáo](../architecture/stage-c-report.md)) |
 
 ## 9. Quy tắc bắt buộc
 
