@@ -165,6 +165,7 @@ def run(
                 scores[part],
                 threshold,
                 precision_target=m.precision_target,
+                fpr_target=m.fpr_target,
                 n_resamples=m.bootstrap_resamples,
                 seed=cfg.seed,
             )

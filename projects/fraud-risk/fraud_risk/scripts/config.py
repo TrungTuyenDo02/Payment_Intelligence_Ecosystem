@@ -27,6 +27,7 @@ class SplitConfig(_Strict):
 
 class MetricsConfig(_Strict):
     precision_target: float = Field(default=0.5, gt=0, le=1)
+    fpr_target: float = Field(default=0.05, gt=0, lt=1)
     bootstrap_resamples: int = Field(default=200, ge=1)
     threshold_method: Literal["max_f1", "precision_target"] = "max_f1"
 

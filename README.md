@@ -214,7 +214,7 @@ Dùng config khác bằng `make baseline CONFIG=path/to/config.yaml`.
 | Fit | Mọi imputer, scaler, encoder và ngưỡng luật chỉ học trên **train**. Ngưỡng quyết định chọn trên **validation**. |
 | Baseline 1 | Luật minh bạch: số tiền > q99 của train; `ProductCD` và `card6` có fraud rate cao (tính trên train). Điểm = tỷ lệ luật bị kích hoạt, nằm trong [0, 1]. |
 | Baseline 2 | `Pipeline`: median impute + scale cho cột số, one-hot (`handle_unknown='ignore'`) cho cột phân loại, `LogisticRegression(class_weight='balanced')`. |
-| Metrics | PR-AUC kèm bootstrap CI 95% (200 lần, có seed); precision, recall, F1, FPR tại ngưỡng; recall tại precision 0.5. **Không** báo accuracy, vì dữ liệu mất cân bằng lớp. |
+| Metrics | PR-AUC kèm bootstrap CI 95% (200 lần, có seed); precision, recall, F1, FPR tại ngưỡng; recall tại precision 0.5; recall tại FPR 5% (không phụ thuộc tỷ lệ gian lận). **Không** báo accuracy, vì dữ liệu mất cân bằng lớp. |
 | Định danh run | `run_id` là hash của: config (bỏ trường `status`), seed, checksum manifest, mốc split. Không gồm git SHA. |
 | Test-once | `make baseline-final` từ chối config chưa `frozen` và config đã từng chạy test (ghi trong `artifacts/test_runs.json`). Có thể ép bằng `FORCE=1`, khi đó cảnh báo được ghi vào `metrics.json`. |
 
