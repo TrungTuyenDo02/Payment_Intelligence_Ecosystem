@@ -2,6 +2,18 @@
 
 Versions follow semantic versioning. Events always carry the plain version (for example `1.0.0`); the draft or approved status is recorded only in this changelog and in the schema's `x-status`.
 
+## 1.0.0, status: APPROVED (2026-11-03)
+
+Approved by the owner on 2026-11-03. The schema content is revision 2 below; `x-status` is now `approved` and the file is renamed to `payment_event.schema.json`.
+
+Rules across attempts of one payment, decided by the owner at approval. JSON Schema checks one event at a time, so these are enforced at ingestion (Stage C), and the synthetic generator must produce data that follows them:
+
+- A retry may use a different `provider_id`. Reliability KPIs per provider are computed per attempt, not per payment.
+- All attempts of a payment have the same `merchant_id`, `amount`, `payment_method` and `currency`.
+- At most one attempt per payment has `status = SUCCESS`, and no attempt follows a `SUCCESS` (by `attempt_number`).
+- `(payment_id, attempt_number)` is unique.
+- `attempt_number` values of a payment are consecutive, starting at 1.
+
 ## 1.0.0, status: DRAFT, revision 2 (2026-11-03), awaiting owner approval
 
 Changes agreed by the owner on 2026-11-03 during the contract review:

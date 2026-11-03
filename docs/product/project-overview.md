@@ -41,7 +41,7 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 
 | Giai đoạn | Nội dung |
 | --- | --- |
-| A | Khung repo, tooling, PostgreSQL, contract `payment-event` (bản nháp), công cụ manifest dataset |
+| A | Khung repo, tooling, PostgreSQL, contract `payment-event`, công cụ manifest dataset |
 | B | Baseline gian lận trên IEEE-CIS: adapter, chia theo thời gian, EDA, metrics, baseline luật và Logistic Regression, run log |
 | C | Bộ sinh dữ liệu thanh toán giả lập (dựa trên luật, tái lập bằng `simulation_id`) và pipeline ingestion |
 | D | Mô hình dữ liệu (dbt), KPI độ tin cậy, bộ phát hiện bất thường |
@@ -78,7 +78,7 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting, API chấm điểm | Đăng ký trước danh sách config chạy test; ADR framework API |
 | 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard |
 
-**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract revision 2 đang chờ duyệt. 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage B hoàn tất**; Stage A chỉ còn chờ duyệt contract revision 2. Bước tiếp theo là Stage C. Đặc tả Stage C (bản nháp): [`stage-c-spec.draft.md`](../architecture/stage-c-spec.draft.md).
+**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Bước tiếp theo là Stage C, chờ duyệt đặc tả. Đặc tả Stage C (bản nháp): [`stage-c-spec.draft.md`](../architecture/stage-c-spec.draft.md).
 
 ## 6. Rủi ro và hạn chế đã biết
 
@@ -150,7 +150,7 @@ Mỗi nhóm xếp theo thứ tự nên đọc. Chỉ nguồn có trong mục 7.5
 | ID | Việc | Trạng thái |
 | --- | --- | --- |
 | T01 | Khung repo và tooling | Xong, đã vào `main` |
-| T02 | Contract `payment-event` (draft) | Revision 2 (thêm `attempt_number`), **chờ duyệt** |
+| T02 | Contract `payment-event` | **Đã duyệt** 1.0.0 (2026-11-03), kèm quy tắc giữa các attempt trong changelog |
 | T03 | Công cụ manifest dataset | Xong |
 | T04 | Adapter IEEE-CIS | Xong |
 | T05 | Chia dữ liệu theo thời gian | Xong |

@@ -1,7 +1,7 @@
 # Đặc tả Stage C — Bộ sinh dữ liệu giả lập và ingestion (BẢN NHÁP)
 
 - **Trạng thái:** Draft, chờ chủ dự án duyệt. Sau khi duyệt, nội dung này được chép vào `AGENTS.md` (mục mới cho Stage C). Chưa có dòng code nào của Stage C được viết.
-- **Điều kiện bắt đầu code:** (1) contract `payment-event` được duyệt; (2) các câu hỏi ở mục 9 (đã trả lời ngày 2026-11-03); (3) Stage A/B đã merge vào `main`.
+- **Điều kiện bắt đầu code:** (1) contract `payment-event` được duyệt (đã duyệt 1.0.0 ngày 2026-11-03); (2) các câu hỏi ở mục 9 (đã trả lời ngày 2026-11-03); (3) Stage A/B đã merge vào `main`.
 - **Liên quan:** [ADR 0002](../decisions/0002-product-boundaries.md) (Product 01 chỉ dùng dữ liệu giả lập), contract `contracts/payment-event/`.
 
 ## 1. Mục tiêu
@@ -67,6 +67,7 @@ Tất cả sự kiện có `source_system = synthetic_generator`, `currency = VN
 Quy tắc:
 - Mọi sự kiện đi qua `validate_event`. Sự kiện lỗi vào `ingestion_rejects`, không làm dừng cả lô.
 - Tính duy nhất của `event_id` được đảm bảo bằng khoá chính. Changelog của contract đã hẹn kiểm tra này ở ingestion.
+- Kiểm tra các quy tắc giữa các attempt của cùng payment, theo changelog contract 1.0.0: cùng `merchant_id`, `amount`, `payment_method`, `currency`; tối đa một `SUCCESS` và không có attempt sau `SUCCESS`; cặp (`payment_id`, `attempt_number`) duy nhất; `attempt_number` liên tiếp từ 1. Retry được đổi `provider_id`.
 - Nạp lại cùng một `simulation_id` không tạo bản ghi trùng (idempotent).
 - Schema SQL nằm trong `infrastructure/database/`, chạy bằng một lệnh `make db-init`.
 
@@ -98,6 +99,6 @@ Mỗi task một nhánh `task/C0x-...`; chỉ xong khi `make lint` và `make tes
 | 2 | Phân loại lỗi | Giữ một trạng thái `FAILED` trong contract; tầng KPI (Stage D) tách lỗi nghiệp vụ (`DECLINED`, `INVALID_REQUEST`) khỏi lỗi kỹ thuật |
 | 3 | Thư viện PostgreSQL | `psycopg[binary]`, xem [ADR 0004](../decisions/0004-postgres-driver.md) |
 | 4 | Quy mô dữ liệu | **Demo nhỏ**: mặc định 7 ngày, 3 provider, 20 merchant, trung bình 30 payment mỗi giờ (khoảng 5 nghìn payment, khoảng 6 nghìn sự kiện kể cả retry). Config cho phép tăng khi cần |
-| 5 | Phiên bản trong sự kiện | Sự kiện ghi `schema_version = "1.0.0"`; trạng thái draft chỉ ghi trong changelog |
+| 5 | Phiên bản trong sự kiện | Sự kiện ghi `schema_version = "1.0.0"`; trạng thái duyệt chỉ ghi trong changelog và `x-status` |
 
-Việc còn lại trước khi code: chủ dự án duyệt contract `payment-event` (revision 2) và chép đặc tả này vào `AGENTS.md`.
+Việc còn lại trước khi code: chủ dự án duyệt đặc tả này và chép vào `AGENTS.md`. Contract `payment-event` đã duyệt (1.0.0, 2026-11-03).
