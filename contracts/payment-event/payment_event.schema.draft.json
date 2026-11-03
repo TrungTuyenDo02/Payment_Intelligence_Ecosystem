@@ -32,7 +32,7 @@
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },
     "event_time": {
-      "description": "UTC, ISO 8601 with a trailing Z. Offsets such as +07:00 are rejected.",
+      "description": "Time the attempt finished. UTC, ISO 8601 with a trailing Z. Offsets such as +07:00 are rejected.",
       "type": "string",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
     },
@@ -57,6 +57,7 @@
       "required": [
         "payment_id",
         "attempt_id",
+        "attempt_number",
         "provider_id",
         "merchant_id",
         "payment_method",
@@ -74,6 +75,11 @@
           "maxLength": 64
         },
         "attempt_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "attempt_number": {
+          "description": "1 for the first attempt of a payment, 2 for the first retry, and so on.",
+          "type": "integer",
+          "minimum": 1
+        },
         "provider_id": { "type": "string", "minLength": 1, "maxLength": 64 },
         "merchant_id": { "type": "string", "minLength": 1, "maxLength": 64 },
         "payment_method": {
@@ -88,6 +94,7 @@
         "currency": { "type": "string", "enum": ["VND"] },
         "status": { "type": "string", "enum": ["SUCCESS", "FAILED"] },
         "error_code": {
+          "description": "DECLINED and INVALID_REQUEST are business or client-side failures; TIMEOUT, PROVIDER_ERROR and NETWORK_ERROR are technical failures. The KPI layer (Stage D) makes this split; the schema does not.",
           "type": ["string", "null"],
           "enum": [
             "TIMEOUT",

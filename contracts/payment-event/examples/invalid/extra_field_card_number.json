@@ -8,6 +8,7 @@
   "payload": {
     "payment_id": "pay-000001",
     "attempt_id": "att-000001-1",
+    "attempt_number": 1,
     "provider_id": "prov-A",
     "merchant_id": "mer-0001",
     "payment_method": "QR",
