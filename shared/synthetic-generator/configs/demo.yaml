@@ -17,10 +17,12 @@ payments_per_hour: 30
 n_merchants: 20
 merchant_zipf_s: 1.1
 
+# Failure rates and retry_prob are deliberately high so Stage D has enough retries
+# (about 6 thousand events; owner decision 2026-11-04).
 providers:
-  - {failure_prob: 0.04, latency_median_ms: 450, latency_sigma: 0.35}
-  - {failure_prob: 0.06, latency_median_ms: 600, latency_sigma: 0.45}
-  - {failure_prob: 0.08, latency_median_ms: 800, latency_sigma: 0.55}
+  - {failure_prob: 0.15, latency_median_ms: 450, latency_sigma: 0.35}
+  - {failure_prob: 0.22, latency_median_ms: 600, latency_sigma: 0.45}
+  - {failure_prob: 0.30, latency_median_ms: 800, latency_sigma: 0.55}
 
 method_weights: {QR: 0.45, E_WALLET: 0.25, CARD: 0.2, BANK_TRANSFER: 0.1}
 amounts:
@@ -30,15 +32,15 @@ amounts:
   BANK_TRANSFER: {median_vnd: 1500000, sigma: 1.1}
 
 error_code_weights:
-  DECLINED: 0.35
-  TIMEOUT: 0.2
-  PROVIDER_ERROR: 0.2
-  NETWORK_ERROR: 0.15
-  INVALID_REQUEST: 0.1
+  DECLINED: 0.25
+  TIMEOUT: 0.25
+  PROVIDER_ERROR: 0.25
+  NETWORK_ERROR: 0.2
+  INVALID_REQUEST: 0.05
 timeout_ms: 10000
 
 retry:
-  retry_prob: 0.6
+  retry_prob: 0.9
   max_retries: 2
   wait_seconds_min: 5
   wait_seconds_max: 60
