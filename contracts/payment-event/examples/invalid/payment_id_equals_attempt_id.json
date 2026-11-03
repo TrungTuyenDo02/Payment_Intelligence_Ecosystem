@@ -1,0 +1,21 @@
+{
+  "event_id": "evt-000001",
+  "event_type": "payment.attempt.completed",
+  "schema_version": "1.0.0",
+  "event_time": "2026-01-15T03:21:07.250Z",
+  "source_system": "synthetic_generator",
+  "simulation_id": "sim-2026-01-seed42",
+  "payload": {
+    "payment_id": "pay-000001",
+    "attempt_id": "pay-000001",
+    "attempt_number": 1,
+    "provider_id": "prov-A",
+    "merchant_id": "mer-0001",
+    "payment_method": "QR",
+    "amount": 150000,
+    "currency": "VND",
+    "status": "FAILED",
+    "error_code": "TIMEOUT",
+    "latency_ms": 3500
+  }
+}

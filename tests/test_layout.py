@@ -37,8 +37,6 @@ REQUIRED_DIRS = [
 ]
 
 REQUIRED_FILES = [
-    "AGENTS.md",
-    "CLAUDE.md",
     "docs/decisions/0001-package-layout.md",
     "compose.yaml",
     ".env.example",
@@ -115,3 +113,44 @@ def test_path_is_not_ignored(git_repo: None, rel: str) -> None:
 @pytest.mark.parametrize("module", ["fraud_risk", "dataset_management"])
 def test_package_importable(module: str) -> None:
     importlib.import_module(module)
+
+
+FORBIDDEN_SUFFIXES = (".parquet", ".joblib", ".pkl", ".pickle", ".onnx", ".pt", ".pth", ".h5")
+
+
+def _forbidden(path: str) -> bool:
+    """Data, model and secret files that must never be committed (hard rules 1-3)."""
+    name = path.rsplit("/", 1)[-1]
+    return (
+        path.startswith(("datasets/raw/", "artifacts/"))
+        or path.endswith(FORBIDDEN_SUFFIXES)
+        or (path.endswith(".csv") and "/fixtures/" not in f"/{path}")
+        or (name.startswith(".env") and name != ".env.example")
+    )
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("datasets/raw/ieee-cis/train_transaction.csv", True),
+        ("artifacts/runs/abc/metrics.json", True),
+        ("models/lr.pkl", True),
+        ("data/x.parquet", True),
+        ("notes/sample.csv", True),
+        (".env", True),
+        ("projects/fraud-risk/tests/fixtures/ieee_cis/train_transaction.csv", False),
+        (".env.example", False),
+        ("README.md", False),
+    ],
+)
+def test_forbidden_rule(path: str, expected: bool) -> None:
+    assert _forbidden(path) is expected
+
+
+def test_no_forbidden_files_tracked(git_repo: None) -> None:
+    """Catches files added with `git add -f` despite .gitignore."""
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, check=True, capture_output=True, text=True
+    ).stdout.splitlines()
+    offenders = [p for p in tracked if _forbidden(p)]
+    assert not offenders, f"data, model or secret files are tracked: {offenders}"

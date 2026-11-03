@@ -30,3 +30,7 @@ __pycache__/
 coverage.xml
 htmlcov/
 *.egg-info/
+
+# Local agent instructions (kept on disk, not in the repo)
+AGENTS.md
+CLAUDE.md

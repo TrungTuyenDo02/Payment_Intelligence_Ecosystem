@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/contracts/payment-event/payment_event.schema.draft.json",
+  "title": "Payment Event envelope (DRAFT)",
+  "description": "DRAFT awaiting owner approval. Envelope and payload for a synthetic payment attempt event. Contains no card data or authentication data.",
+  "x-status": "draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "event_time",
+    "source_system",
+    "simulation_id",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "description": "Unique per event. Uniqueness is checked at ingestion (later stage), not by this schema.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["payment.attempt.completed"]
+    },
+    "schema_version": {
+      "description": "Semantic version x.y.z of this contract, to support upgrades.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "event_time": {
+      "description": "Time the attempt finished. UTC, ISO 8601 with a trailing Z. Offsets such as +07:00 are rejected.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    },
+    "source_system": {
+      "type": "string",
+      "enum": ["synthetic_generator"]
+    },
+    "simulation_id": {
+      "description": "Identifies the simulation run so it can be reproduced exactly.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "payload": {
+      "$ref": "#/$defs/payload"
+    }
+  },
+  "$defs": {
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payment_id",
+        "attempt_id",
+        "attempt_number",
+        "provider_id",
+        "merchant_id",
+        "payment_method",
+        "amount",
+        "currency",
+        "status",
+        "error_code",
+        "latency_ms"
+      ],
+      "properties": {
+        "payment_id": {
+          "description": "Must differ from attempt_id (checked by payment_event_rules.py).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "attempt_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "attempt_number": {
+          "description": "1 for the first attempt of a payment, 2 for the first retry, and so on.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "provider_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "merchant_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "payment_method": {
+          "type": "string",
+          "enum": ["QR", "CARD", "BANK_TRANSFER", "E_WALLET"]
+        },
+        "amount": {
+          "description": "Integer in the smallest currency unit (VND has no sub-unit).",
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "currency": { "type": "string", "enum": ["VND"] },
+        "status": { "type": "string", "enum": ["SUCCESS", "FAILED"] },
+        "error_code": {
+          "description": "DECLINED and INVALID_REQUEST are business or client-side failures; TIMEOUT, PROVIDER_ERROR and NETWORK_ERROR are technical failures. The KPI layer (Stage D) makes this split; the schema does not.",
+          "type": ["string", "null"],
+          "enum": [
+            "TIMEOUT",
+            "PROVIDER_ERROR",
+            "DECLINED",
+            "NETWORK_ERROR",
+            "INVALID_REQUEST",
+            null
+          ]
+        },
+        "latency_ms": { "type": "integer", "minimum": 0 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "SUCCESS" } }, "required": ["status"] },
+          "then": { "properties": { "error_code": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "FAILED" } }, "required": ["status"] },
+          "then": { "properties": { "error_code": { "type": "string" } } }
+        }
+      ]
+    }
+  }
+}
