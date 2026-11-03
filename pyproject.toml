@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml",
     "pydantic",
     "jsonschema",
+    "psycopg[binary]>=3.3.7",
 ]
 
 [dependency-groups]

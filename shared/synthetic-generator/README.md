@@ -17,4 +17,8 @@ Rule-based generator of synthetic `payment-event` data (Stage C, [spec](../../do
 - Ground truth goes only to `anomaly_labels.json`; events carry contract fields only. Each payment draws from its own RNG stream, so payments that do not touch an anomaly window are identical to a run without anomalies.
 - `configs/demo.yaml` (`purpose: tuning`, seed 42) and `configs/report.yaml` (`purpose: report`, seed 2026). The report run has `traffic_drop`, which tuning never sees. Freeze both before tuning the Stage D detector.
 
-Ingestion (C04) is not written yet.
+- `synthetic_generator/ingest.py`: `make db-init` creates the tables (`infrastructure/database/001_payment_events.sql`), `make ingest SIM=<simulation_id>` loads one simulation in a single transaction:
+  - every line goes through the contract's `validate_event`; bad lines go to `ingestion_rejects` with reasons and do not stop the batch;
+  - rules across attempts (contract 1.0.0 changelog) are checked per payment; if any attempt of a payment is rejected, all its attempts are rejected;
+  - loading the same simulation again inserts nothing new (`ON CONFLICT DO NOTHING`); a changed `events.jsonl` for a `simulation_id` already loaded is refused.
+  - Connection settings come from `POSTGRES_*` in `.env`; defaults match `compose.yaml`. Database tests skip with a reason when PostgreSQL is not running.
