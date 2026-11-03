@@ -151,6 +151,7 @@ datasets/raw/, artifacts/   dữ liệu và kết quả chạy (không commit)
 
 ## Tài liệu
 
+- [Bàn giao công việc](HANDOFF.md)
 - [Tổng quan đề tài](docs/product/project-overview.md)
 - [Đặc tả Stage C](docs/architecture/stage-c-spec.md) · [Báo cáo Stage C](docs/architecture/stage-c-report.md)
 - [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md)
