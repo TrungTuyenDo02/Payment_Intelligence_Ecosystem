@@ -65,20 +65,20 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | Fit mô hình | Mọi bước tiền xử lý và ngưỡng luật chỉ học trên train; ngưỡng quyết định chọn trên validation | Tránh rò rỉ thông tin từ dữ liệu đánh giá |
 | Tập test | Mỗi cấu hình đã chốt (`frozen`) chỉ chạy test **một lần** | Tránh chọn mô hình dựa trên kết quả test |
 | Quyết định tiền xử lý | Dựa trên bằng chứng EDA từ train; chủ dự án duyệt từng quyết định | Mọi lựa chọn đều có căn cứ và giải thích được |
-| Metrics | PR-AUC kèm khoảng tin cậy bootstrap, precision, recall, F1, FPR, recall tại precision mục tiêu. Không dùng accuracy làm chỉ số chính | Dữ liệu mất cân bằng (gian lận khoảng 3,5%); accuracy gây hiểu nhầm |
+| Metrics | PR-AUC kèm khoảng tin cậy bootstrap, precision, recall, F1, FPR, recall tại precision mục tiêu, recall tại FPR 5%. Không dùng accuracy làm chỉ số chính | Dữ liệu mất cân bằng (gian lận khoảng 3,5%); accuracy gây hiểu nhầm |
 | Tái lập | `run_id` tất định từ config, seed, checksum dataset và mốc split | Chạy lại cùng điều kiện cho ra cùng kết quả |
 
 ## 5. Kế hoạch 6 tuần
 
 | Tuần | Giai đoạn | Đầu ra | Điểm dừng chờ duyệt |
 | --- | --- | --- | --- |
-| 1–2 | A, B | Baseline có số liệu validation; một lần chạy test | Duyệt contract; quyết định ADR 0003 trước khi chạy test |
-| 3 | C | Dữ liệu sự kiện giả lập tái lập được, nạp vào PostgreSQL | ADR chọn công cụ ingestion |
+| 1–2 | A, B | Baseline có số liệu validation; một lần chạy test | Duyệt contract; ADR 0003 đã chọn: để `gap_days` sang Stage E |
+| 3 | C | Dữ liệu sự kiện giả lập (demo nhỏ, khoảng 5 nghìn payment) tái lập được, nạp vào PostgreSQL | Duyệt đặc tả Stage C; driver đã chọn ([ADR 0004](../decisions/0004-postgres-driver.md)) |
 | 4 | D | Bảng KPI, danh sách bất thường và sự cố | ADR dbt (phương án dự phòng: SQL views) |
 | 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting, API chấm điểm | Đăng ký trước danh sách config chạy test; ADR framework API |
 | 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard |
 
-**Trạng thái hiện tại:** Stage A/B đã có code (T01–T10, đang ở các nhánh `task/*` chờ merge). Contract đang chờ duyệt. 9 quyết định EDA đã duyệt, config baseline đã `frozen`. **Chưa chạy đánh giá test.**
+**Trạng thái hiện tại:** Stage A/B đã có code (T01–T10 và bổ sung recall tại FPR). Contract revision 2 đang chờ duyệt. 9 quyết định EDA đã duyệt. Config baseline đang ở `draft` (do thêm `fpr_target`), chờ chủ dự án chạy `make baseline` và đặt lại `frozen`. **Chưa chạy đánh giá test.** Đặc tả Stage C (bản nháp): [`stage-c-spec.draft.md`](../architecture/stage-c-spec.draft.md).
 
 ## 6. Rủi ro và hạn chế đã biết
 
@@ -86,8 +86,8 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | --- | --- | --- |
 | Hai sản phẩm không chung dữ liệu | Không có luồng dữ liệu xuyên suốt | Tuyên bố rõ trong báo cáo (ADR 0002) |
 | Đánh giá vòng tròn ở Product 01 | Detector chỉ chứng minh bắt được bất thường do chính dự án chèn vào | Chốt kịch bản bất thường trước khi chỉnh detector, tách seed chỉnh và seed báo cáo, giữ lại một loại bất thường không dùng khi chỉnh. Báo cáo là "kiểm chứng trên bất thường đã biết", không phải hiệu năng thực tế |
-| PR-AUC phụ thuộc tỷ lệ gian lận | So sánh giữa các tập có tỷ lệ khác nhau bị nhiễu | Luôn báo tỷ lệ gian lận cạnh PR-AUC; bổ sung metric không phụ thuộc tỷ lệ (ROC-AUC hoặc recall tại FPR cố định) |
-| Cách gán nhãn IEEE-CIS | Nhãn lan sang các giao dịch sau của cùng tài khoản, email hoặc địa chỉ; cùng thực thể có thể nằm ở cả train và test | Đo tỷ lệ thực thể lặp lại; phân tích độ nhạy với khoảng trống thời gian ([ADR 0003](../decisions/0003-label-delay-and-entity-overlap.md), đề xuất) |
+| PR-AUC phụ thuộc tỷ lệ gian lận | So sánh giữa các tập có tỷ lệ khác nhau bị nhiễu | Luôn báo tỷ lệ gian lận cạnh PR-AUC; đã thêm recall tại FPR cố định (không phụ thuộc tỷ lệ) |
+| Cách gán nhãn IEEE-CIS | Nhãn lan sang các giao dịch sau của cùng tài khoản, email hoặc địa chỉ; cùng thực thể có thể nằm ở cả train và test | Đo tỷ lệ thực thể lặp lại; phân tích độ nhạy với khoảng trống thời gian ([ADR 0003](../decisions/0003-label-delay-and-entity-overlap.md): làm ở Stage E) |
 | Độ trễ nhãn | Chưa có chuẩn chung để đánh giá | Tự định nghĩa giao thức và biện minh, không viết "theo chuẩn X" |
 | Lịch 6 tuần chặt | Stage C–F mỗi giai đoạn chỉ một tuần | Mỗi ADR công cụ có phương án dự phòng đơn giản hơn |
 
@@ -150,18 +150,18 @@ Mỗi nhóm xếp theo thứ tự nên đọc. Chỉ nguồn có trong mục 7.5
 | ID | Việc | Trạng thái |
 | --- | --- | --- |
 | T01 | Khung repo và tooling | Xong, đã vào `main` |
-| T02 | Contract `payment-event` (draft) | Xong, **chờ duyệt** |
+| T02 | Contract `payment-event` (draft) | Revision 2 (thêm `attempt_number`), **chờ duyệt** |
 | T03 | Công cụ manifest dataset | Xong |
 | T04 | Adapter IEEE-CIS | Xong |
 | T05 | Chia dữ liệu theo thời gian | Xong |
 | T05b | EDA 6 bước trên train | Xong, 9 quyết định đã duyệt |
-| T06 | Metrics | Xong |
+| T06 | Metrics | Xong; bổ sung recall tại FPR 5% |
 | T07 | Baseline dựa trên luật | Xong |
 | T08 | Baseline Logistic Regression | Xong |
-| T09 | Run log, CLI, quy tắc test-một-lần | Xong, config đã `frozen`, **chưa chạy test** |
+| T09 | Run log, CLI, quy tắc test-một-lần | Xong; config về `draft`, **chưa chạy test** |
 | T10 | Test chống rò rỉ dữ liệu | Xong |
 
-T02–T10 nằm trên các nhánh `task/*`, chờ review và merge vào `main`.
+Toàn bộ Stage A/B được gộp trong nhánh `integration/stage-ab`, chờ review và merge vào `main`.
 
 ## 9. Quy tắc bắt buộc
 

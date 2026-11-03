@@ -1,7 +1,7 @@
 # Đặc tả Stage C — Bộ sinh dữ liệu giả lập và ingestion (BẢN NHÁP)
 
 - **Trạng thái:** Draft, chờ chủ dự án duyệt. Sau khi duyệt, nội dung này được chép vào `AGENTS.md` (mục mới cho Stage C). Chưa có dòng code nào của Stage C được viết.
-- **Điều kiện bắt đầu code:** (1) contract `payment-event` được duyệt; (2) các câu hỏi ở mục 9 đã có câu trả lời; (3) Stage A/B đã merge vào `main`.
+- **Điều kiện bắt đầu code:** (1) contract `payment-event` được duyệt; (2) các câu hỏi ở mục 9 (đã trả lời ngày 2026-11-03); (3) Stage A/B đã merge vào `main`.
 - **Liên quan:** [ADR 0002](../decisions/0002-product-boundaries.md) (Product 01 chỉ dùng dữ liệu giả lập), contract `contracts/payment-event/`.
 
 ## 1. Mục tiêu
@@ -90,10 +90,14 @@ Quy tắc:
 
 Mỗi task một nhánh `task/C0x-...`; chỉ xong khi `make lint` và `make test` đều pass.
 
-## 9. Câu hỏi cho chủ dự án (phải trả lời trước khi code)
+## 9. Quyết định của chủ dự án (2026-11-03)
 
-1. **Thứ tự attempt:** contract hiện không có trường thứ tự attempt (ví dụ `attempt_number`). Thiếu trường này vẫn sắp được theo `event_time`, nhưng KPI "tỷ lệ thành công ngay lần đầu" sẽ khó tính hơn. Có thêm vào contract trước khi duyệt không?
-2. **Phân loại lỗi:** `DECLINED` và `INVALID_REQUEST` là lỗi nghiệp vụ hoặc phía khách hàng, không phải lỗi hệ thống. Đề xuất: giữ nguyên contract, phân loại ở tầng KPI (Stage D), ghi trong tài liệu. Đồng ý không?
-3. **Thư viện PostgreSQL:** đề xuất thêm `psycopg[binary]` (psycopg 3), không thêm SQLAlchemy hay ORM. Cần ADR theo quy tắc 11.
-4. **Quy mô dữ liệu:** đề xuất mặc định 30 ngày, khoảng 5 provider, 200 merchant, trung bình 500 payment mỗi giờ (khoảng 360 nghìn payment). Có phù hợp với máy của bạn không?
-5. **Phiên bản trong sự kiện:** khi contract còn draft, sự kiện ghi `schema_version = "1.0.0"`. Changelog đang ghi `1.0.0-draft`, mà mẫu semver của schema không cho phép hậu tố `-draft`. Đề xuất: giữ `1.0.0` trong sự kiện, chỉ changelog ghi trạng thái draft.
+| # | Câu hỏi | Quyết định |
+| --- | --- | --- |
+| 1 | Thứ tự attempt | Thêm `attempt_number` (số nguyên ≥ 1) vào contract, trước khi duyệt (changelog, revision 2) |
+| 2 | Phân loại lỗi | Giữ một trạng thái `FAILED` trong contract; tầng KPI (Stage D) tách lỗi nghiệp vụ (`DECLINED`, `INVALID_REQUEST`) khỏi lỗi kỹ thuật |
+| 3 | Thư viện PostgreSQL | `psycopg[binary]`, xem [ADR 0004](../decisions/0004-postgres-driver.md) |
+| 4 | Quy mô dữ liệu | **Demo nhỏ**: mặc định 7 ngày, 3 provider, 20 merchant, trung bình 30 payment mỗi giờ (khoảng 5 nghìn payment, khoảng 6 nghìn sự kiện kể cả retry). Config cho phép tăng khi cần |
+| 5 | Phiên bản trong sự kiện | Sự kiện ghi `schema_version = "1.0.0"`; trạng thái draft chỉ ghi trong changelog |
+
+Việc còn lại trước khi code: chủ dự án duyệt contract `payment-event` (revision 2) và chép đặc tả này vào `AGENTS.md`.

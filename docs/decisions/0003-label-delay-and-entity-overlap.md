@@ -1,6 +1,6 @@
 # ADR 0003 — Độ trễ nhãn và thực thể lặp lại giữa các tập (IEEE-CIS)
 
-- **Trạng thái:** Proposed. Chờ chủ dự án quyết định. Đề xuất này có liên quan đến quy tắc split nên cần duyệt trước khi làm.
+- **Trạng thái:** Accepted, phương án B (chủ dự án chọn trong chat ngày 2026-11-03: giữ split của baseline, `gap_days` và đo thực thể lặp lại làm ở Stage E).
 - **Phạm vi:** `fraud_risk/evaluation/split.py`, báo cáo đánh giá Product 02, Stage E
 
 ## Bối cảnh
