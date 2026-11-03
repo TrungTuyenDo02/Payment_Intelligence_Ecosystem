@@ -6,11 +6,18 @@ from fraud_risk.evaluation.metrics import (
     bootstrap_pr_auc_ci,
     evaluate,
     pr_auc,
+    recall_at_fpr,
     recall_at_precision,
     select_threshold,
     threshold_metrics,
 )
-from sklearn.metrics import average_precision_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    average_precision_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_curve,
+)
 
 # Hand example: scores sorted descending, labels 1 0 1 0 0 1.
 Y = [1, 0, 1, 0, 0, 1]
@@ -68,6 +75,53 @@ def test_recall_at_precision_unreachable() -> None:
     assert r == {"precision_target": 0.9, "recall": 0.0, "threshold": None, "reachable": False}
 
 
+@pytest.mark.parametrize(
+    ("target", "recall", "threshold", "fpr"),
+    [
+        (0.0, 1 / 3, 0.9, 0.0),  # only the top score has no false positive
+        (0.34, 2 / 3, 0.7, 1 / 3),  # at 0.7: one of three negatives flagged
+        (0.5, 2 / 3, 0.7, 1 / 3),  # 0.4 would flag 2/3 negatives, above target
+        (1.0, 1.0, 0.2, 1.0),  # everything flagged
+    ],
+)
+def test_recall_at_fpr_hand_computed(
+    target: float, recall: float, threshold: float, fpr: float
+) -> None:
+    r = recall_at_fpr(Y, S, target)
+    assert r["recall"] == pytest.approx(recall)
+    assert r["threshold"] == pytest.approx(threshold)
+    assert r["fpr"] == pytest.approx(fpr)
+    assert r["reachable"] is True
+
+
+def test_recall_at_fpr_unreachable() -> None:
+    # The top score is a negative, so every threshold flags at least one of two negatives.
+    r = recall_at_fpr([0, 1, 0, 1], [0.9, 0.8, 0.1, 0.2], 0.4)
+    assert r == {
+        "fpr_target": 0.4,
+        "recall": 0.0,
+        "threshold": None,
+        "fpr": 0.0,
+        "reachable": False,
+    }
+
+
+def test_recall_at_fpr_matches_sklearn_roc_curve() -> None:
+    rng = np.random.default_rng(7)
+    y = rng.integers(0, 2, 500)
+    s = np.round(rng.random(500) + 0.3 * y, 2)  # rounding creates ties
+    fpr, tpr, _ = roc_curve(y, s)
+    for target in (0.01, 0.05, 0.2):
+        assert recall_at_fpr(y, s, target)["recall"] == pytest.approx(tpr[fpr <= target].max())
+
+
+def test_recall_at_fpr_ignores_prevalence() -> None:
+    # Duplicating every negative halves the fraud rate but leaves FPR, and so the result, unchanged.
+    y2 = Y + [0 for v in Y if v == 0]
+    s2 = S + [sc for v, sc in zip(Y, S, strict=True) if v == 0]
+    assert recall_at_fpr(y2, s2, 0.34) == recall_at_fpr(Y, S, 0.34)
+
+
 def test_select_threshold() -> None:
     # F1 ties at 0.7 and 0.2 (both 2/3): the higher threshold wins (fewer alerts).
     assert select_threshold(Y, S, "max_f1") == pytest.approx(0.7)
@@ -93,7 +147,13 @@ def test_evaluate_has_no_accuracy() -> None:
     result = evaluate(Y, S, 0.5, n_resamples=20, seed=0)
     assert "accuracy" not in str(result)
     assert result["prevalence"] == 0.5
-    assert set(result) >= {"pr_auc", "pr_auc_ci", "at_threshold", "recall_at_precision"}
+    assert set(result) >= {
+        "pr_auc",
+        "pr_auc_ci",
+        "at_threshold",
+        "recall_at_precision",
+        "recall_at_fpr",
+    }
 
 
 def test_input_validation() -> None:

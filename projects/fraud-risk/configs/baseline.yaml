@@ -1,6 +1,6 @@
 # Stage B baseline configuration (IEEE-CIS).
 # status: only the owner may change this to "frozen" (AGENTS.md D5). Agents never do.
-status: frozen # set on the owner's explicit instruction, 2026-11-03
+status: draft # back to draft: metrics.fpr_target added 2026-11-03; only the owner sets frozen
 seed: 42
 
 data:
@@ -13,6 +13,7 @@ split: # chronological, by TransactionDT; test = the rest
 
 metrics:
   precision_target: 0.5
+  fpr_target: 0.05 # recall at a fixed false positive rate (prevalence-independent)
   bootstrap_resamples: 200
   threshold_method: max_f1 # or precision_target; chosen on validation only
 

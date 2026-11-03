@@ -53,15 +53,20 @@ def threshold_metrics(y_true: Any, scores: Any, threshold: float) -> dict[str, f
     }
 
 
-def pr_table(y_true: Any, scores: Any) -> pd.DataFrame:
-    """Precision/recall/F1 for every distinct score used as threshold (descending)."""
-    y, s = _arrays(y_true, scores)
+def _cumulative_counts(y: np.ndarray, s: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Distinct thresholds (descending) with TP and FP counts when predicting score >= threshold."""
     order = np.argsort(-s, kind="stable")
     s_sorted, y_sorted = s[order], y[order]
     tp_cum = np.cumsum(y_sorted)
     fp_cum = np.cumsum(1 - y_sorted)
     last_of_value = np.r_[s_sorted[1:] != s_sorted[:-1], True]
-    tp, fp = tp_cum[last_of_value], fp_cum[last_of_value]
+    return s_sorted[last_of_value], tp_cum[last_of_value], fp_cum[last_of_value]
+
+
+def pr_table(y_true: Any, scores: Any) -> pd.DataFrame:
+    """Precision/recall/F1 for every distinct score used as threshold (descending)."""
+    y, s = _arrays(y_true, scores)
+    thresholds, tp, fp = _cumulative_counts(y, s)
     positives = max(int(y.sum()), 1)
     precision = tp / (tp + fp)
     recall = tp / positives
@@ -69,7 +74,7 @@ def pr_table(y_true: Any, scores: Any) -> pd.DataFrame:
         f1 = np.where(precision + recall > 0, 2 * precision * recall / (precision + recall), 0.0)
     return pd.DataFrame(
         {
-            "threshold": s_sorted[last_of_value],
+            "threshold": thresholds,
             "precision": precision,
             "recall": recall,
             "f1": f1,
@@ -88,6 +93,37 @@ def recall_at_precision(y_true: Any, scores: Any, target: float = 0.5) -> dict[s
         "precision_target": target,
         "recall": float(best["recall"]),
         "threshold": float(best["threshold"]),
+        "reachable": True,
+    }
+
+
+def recall_at_fpr(y_true: Any, scores: Any, target: float = 0.05) -> dict[str, Any]:
+    """Highest recall among thresholds with false positive rate <= target (ties: highest threshold).
+
+    Unlike precision, FPR does not depend on the fraud rate, so this number stays comparable
+    across partitions whose prevalence differs. It also reads as an alert budget: at most
+    `target` of legitimate transactions are flagged.
+    """
+    y, s = _arrays(y_true, scores)
+    thresholds, tp, fp = _cumulative_counts(y, s)
+    positives, negatives = int(y.sum()), int((y == 0).sum())
+    fpr = fp / negatives if negatives else np.zeros(len(fp))
+    recall = tp / positives if positives else np.zeros(len(tp))
+    ok = np.flatnonzero(fpr <= target)
+    if ok.size == 0:
+        return {
+            "fpr_target": target,
+            "recall": 0.0,
+            "threshold": None,
+            "fpr": 0.0,
+            "reachable": False,
+        }
+    best = ok[int(np.argmax(recall[ok]))]  # first max = highest threshold (fewer alerts)
+    return {
+        "fpr_target": target,
+        "recall": float(recall[best]),
+        "threshold": float(thresholds[best]),
+        "fpr": float(fpr[best]),
         "reachable": True,
     }
 
@@ -142,6 +178,7 @@ def evaluate(
     threshold: float,
     *,
     precision_target: float = 0.5,
+    fpr_target: float = 0.05,
     n_resamples: int = 200,
     seed: int = 0,
 ) -> dict[str, Any]:
@@ -155,4 +192,5 @@ def evaluate(
         "pr_auc_ci": bootstrap_pr_auc_ci(y, s, n_resamples=n_resamples, seed=seed),
         "at_threshold": threshold_metrics(y, s, threshold),
         "recall_at_precision": recall_at_precision(y, s, precision_target),
+        "recall_at_fpr": recall_at_fpr(y, s, fpr_target),
     }
