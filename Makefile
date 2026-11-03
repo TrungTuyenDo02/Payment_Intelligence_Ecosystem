@@ -10,7 +10,7 @@ else
   RUN := uv run --frozen
 endif
 CONFIG ?= projects/fraud-risk/configs/baseline.yaml
-export PYTHONPATH := shared/dataset-management:projects/fraud-risk
+export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk
 
 .PHONY: help setup lint test up down eda baseline baseline-final report
 

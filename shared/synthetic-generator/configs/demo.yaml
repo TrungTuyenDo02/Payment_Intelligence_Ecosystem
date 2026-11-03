@@ -1,0 +1,47 @@
+# Stage C demo simulation (spec decision 4: 7 days, 3 providers, 20 merchants, ~30 payments/hour).
+# All values are assumptions, not learned from real data.
+# status: only the owner may change this to "frozen" (AGENTS.md D5).
+status: draft
+purpose: tuning
+seed: 42
+
+time:
+  start_date: 2026-01-05 # Monday
+  days: 7
+  # Local hour 0..23 (Asia/Ho_Chi_Minh): quiet at night, peaks at lunch and evening.
+  hour_of_day_factors: [0.2, 0.1, 0.1, 0.1, 0.1, 0.2, 0.5, 0.9, 1.2, 1.2, 1.3, 1.6,
+                        1.8, 1.5, 1.2, 1.1, 1.1, 1.3, 1.6, 1.9, 2.0, 1.7, 1.0, 0.5]
+  day_of_week_factors: [1.0, 1.0, 1.0, 1.0, 1.1, 1.2, 0.9] # Monday first
+
+payments_per_hour: 30
+n_merchants: 20
+merchant_zipf_s: 1.1
+
+providers:
+  - {failure_prob: 0.04, latency_median_ms: 450, latency_sigma: 0.35}
+  - {failure_prob: 0.06, latency_median_ms: 600, latency_sigma: 0.45}
+  - {failure_prob: 0.08, latency_median_ms: 800, latency_sigma: 0.55}
+
+method_weights: {QR: 0.45, E_WALLET: 0.25, CARD: 0.2, BANK_TRANSFER: 0.1}
+amounts:
+  QR: {median_vnd: 120000, sigma: 0.9}
+  E_WALLET: {median_vnd: 90000, sigma: 0.8}
+  CARD: {median_vnd: 350000, sigma: 1.0}
+  BANK_TRANSFER: {median_vnd: 1500000, sigma: 1.1}
+
+error_code_weights:
+  DECLINED: 0.35
+  TIMEOUT: 0.2
+  PROVIDER_ERROR: 0.2
+  NETWORK_ERROR: 0.15
+  INVALID_REQUEST: 0.1
+timeout_ms: 10000
+
+retry:
+  retry_prob: 0.6
+  max_retries: 2
+  wait_seconds_min: 5
+  wait_seconds_max: 60
+  retry_switch_provider_prob: 0.3
+
+anomalies: [] # added in C03

@@ -110,7 +110,7 @@ def test_path_is_not_ignored(git_repo: None, rel: str) -> None:
     assert not _git_ignored(rel), f"{rel} must NOT be git-ignored"
 
 
-@pytest.mark.parametrize("module", ["fraud_risk", "dataset_management"])
+@pytest.mark.parametrize("module", ["fraud_risk", "dataset_management", "synthetic_generator"])
 def test_package_importable(module: str) -> None:
     importlib.import_module(module)
 
