@@ -1,130 +1,155 @@
 # Payment Intelligence Ecosystem
 
+[![CI](https://github.com/TrungTuyenDo02/Payment_Intelligence_Ecosystem/actions/workflows/ci.yml/badge.svg)](https://github.com/TrungTuyenDo02/Payment_Intelligence_Ecosystem/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Stage](https://img.shields.io/badge/stage-A%2FB%20(skeleton%20%2B%20baselines)-orange)
-![Tests](https://img.shields.io/badge/tests-pytest%20%2B%20coverage-green)
-![Lint](https://img.shields.io/badge/lint-ruff-black)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-Nền tảng dữ liệu và AI dạng module cho thanh toán, gồm một **nền tảng dùng chung** và hai sản phẩm độc lập: **Payment Reliability** và **Fraud & Risk**. Đây là bản demo 6 tuần cho báo cáo thực tập. Ưu tiên của dự án là **chất lượng đánh giá**: không rò rỉ dữ liệu, tái lập được, báo cáo trung thực. Điểm số mô hình là ưu tiên thứ yếu.
+Đây là đề tài thực tập của mình: xây một nền tảng dữ liệu nhỏ cho mảng thanh toán, trên đó chạy hai ứng dụng phân tích. Ứng dụng thứ nhất theo dõi **độ ổn định của hệ thống thanh toán**. Ứng dụng thứ hai **chấm điểm rủi ro gian lận** cho từng giao dịch.
 
-> Trạng thái hiện tại: đã xong **Stage A** (khung dự án) và **Stage B** (baseline phát hiện gian lận trên IEEE-CIS). Chưa có kết quả trên dữ liệu thật. Contract `payment-event` và các quyết định EDA đang chờ chủ dự án duyệt.
->
-> **Về các nhánh:** `main` chỉ nhận code sau khi chủ dự án duyệt. Hiện `main` mới có T01; code T02–T10 nằm trên các nhánh `task/*` (xem bảng [Trạng thái dự án](#trạng-thái-dự-án)).
+Dự án là một bản demo làm trong 6 tuần và chạy hoàn toàn trên máy cá nhân bằng Docker. Mình ưu tiên **cách đánh giá đúng** hơn là điểm số cao: không rò rỉ dữ liệu, chạy lại ra cùng kết quả, và báo cáo đúng những gì đã chạy.
 
 ---
 
-## Mục lục
+## 1. Bức tranh tổng thể
 
-1. [Giới thiệu](#giới-thiệu)
-2. [Trạng thái dự án](#trạng-thái-dự-án)
-3. [Kiến trúc](#kiến-trúc)
-4. [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-5. [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
-6. [Cài đặt](#cài-đặt)
-7. [Dữ liệu](#dữ-liệu)
-8. [Sử dụng](#sử-dụng)
-9. [Phương pháp đánh giá](#phương-pháp-đánh-giá)
-10. [Kết quả đầu ra](#kết-quả-đầu-ra)
-11. [Kiểm thử](#kiểm-thử)
-12. [Quy tắc dữ liệu và bảo mật](#quy-tắc-dữ-liệu-và-bảo-mật)
-13. [Quy trình đóng góp](#quy-trình-đóng-góp)
-14. [Lộ trình](#lộ-trình)
-15. [Giấy phép](#giấy-phép)
-16. [Tác giả](#tác-giả)
+Một công ty thanh toán sinh ra rất nhiều dữ liệu, và có nhiều bài toán phân tích có thể làm trên đó. Sơ đồ dưới đây là toàn cảnh. Hai khối tô đậm là phần đề tài này làm.
 
----
+```mermaid
+flowchart LR
+    subgraph SRC["Nguồn dữ liệu"]
+        E["Sự kiện giao dịch<br/>(attempt, trạng thái, độ trễ)"]
+        L["Nhãn gian lận<br/>(chargeback)"]
+        O["Dữ liệu khác<br/>(sổ cái, khách hàng, CSKH)"]
+    end
 
-## Giới thiệu
+    subgraph FOUND["Nền tảng dùng chung"]
+        C["Data contract<br/>payment-event"]
+        M["Quản lý dataset<br/>manifest + checksum"]
+        V["Kiểm tra dữ liệu"]
+        R["Quy tắc đánh giá<br/>split theo thời gian, test một lần, run log"]
+        DB[("PostgreSQL")]
+    end
 
-| Thành phần | Thư mục | Nội dung |
+    subgraph APPS["Ứng dụng phân tích"]
+        P1["Payment Reliability<br/>KPI + phát hiện bất thường"]:::chosen
+        P2["Fraud & Risk<br/>chấm điểm rủi ro"]:::chosen
+        X1["Đối soát / settlement"]:::other
+        X2["Phân tích merchant"]:::other
+        X3["Phân tích khách hàng"]:::other
+    end
+
+    E --> C --> V --> DB
+    L --> M
+    O -.-> FOUND
+    DB --> P1
+    M --> R --> P2
+    FOUND -.-> X1 & X2 & X3
+
+    classDef chosen fill:#1f6feb,color:#fff,stroke:#0b3d91,stroke-width:2px
+    classDef other fill:#eeeeee,color:#777,stroke:#bbb,stroke-dasharray:4 3
+```
+
+Các khối màu xám (đối soát, phân tích merchant, phân tích khách hàng) chỉ để minh hoạ vị trí của đề tài trong một hệ thống lớn hơn. Đề tài này **không** làm các khối đó.
+
+## 2. Vì sao chọn hai hệ thống này
+
+| | **Payment Reliability** | **Fraud & Risk** |
 | --- | --- | --- |
-| Shared Foundation | `contracts/`, `shared/`, `datasets/` | Data contract, công cụ quản lý dataset (manifest, checksum), validation, hạ tầng chung |
-| Product 01: Payment Reliability | `projects/payment-reliability/` | KPI, phát hiện bất thường, sự cố, API, dashboard (chưa bắt đầu) |
-| Product 02: Fraud & Risk | `projects/fraud-risk/` | Đặc trưng, mô hình, đánh giá, chấm điểm rủi ro (Stage B đã xong) |
+| Câu hỏi trả lời | Hệ thống thanh toán có đang chạy ổn không? | Giao dịch này có đáng nghi không? |
+| Người dùng | Đội vận hành, kỹ thuật | Đội rủi ro, điều tra |
+| Dữ liệu | Dữ liệu giả lập theo contract `payment-event` | Dataset công khai IEEE-CIS (Kaggle, có nhãn) |
+| Loại bài toán | Chuỗi thời gian, phát hiện bất thường (không có nhãn sẵn) | Phân loại có nhãn, mất cân bằng lớp (gian lận khoảng 3,5%) |
 
-Điểm rủi ro chỉ dùng để **hỗ trợ quyết định**. Hệ thống không tự động chặn giao dịch.
+Lý do chọn:
 
-## Trạng thái dự án
+1. **Hai câu hỏi cốt lõi của vận hành thanh toán.** Hệ thống có chạy không và giao dịch có an toàn không. Hầu hết các bài toán khác đều cần hai thứ này trước.
+2. **Có dữ liệu làm được mà không đụng tới dữ liệu thật.** Fraud có dataset công khai có nhãn. Reliability tự sinh được dữ liệu vì chỉ cần mô phỏng trạng thái và độ trễ của giao dịch. Các mảng như đối soát hay phân tích khách hàng cần sổ cái hoặc dữ liệu khách hàng thật, mà dữ liệu đó không có bản công khai phù hợp.
+3. **Hai kiểu bài toán khác nhau.** Một bên không có nhãn và làm trên chuỗi thời gian, một bên có nhãn và rất mất cân bằng. Làm cả hai cho thấy được nhiều kỹ năng hơn mà vẫn vừa sức 6 tuần.
+4. **Dùng chung được nền tảng.** Contract, quản lý dataset, quy tắc đánh giá và hạ tầng được viết một lần, cả hai sản phẩm cùng dùng.
 
-| Task | Nội dung | Trạng thái | Nhánh | Đã vào `main` |
-| --- | --- | --- | --- | --- |
-| T01 | Khung repo, tooling, Docker Compose (PostgreSQL 16) | Xong | `task/T01-skeleton` | Có |
-| T02 | Contract `payment-event` (bản draft) | Xong, **chờ chủ dự án duyệt** | `task/T02-contract-draft` | Chưa |
-| T03 | Công cụ manifest dataset (SHA-256) | Xong | `task/T03-dataset-manifest` | Chưa |
-| T04 | Adapter IEEE-CIS | Xong (đã test trên fixture tổng hợp) | `task/T04-ieee-cis-adapter` | Chưa |
-| T05 | Chia dữ liệu theo thời gian | Xong | `task/T05-time-split` | Chưa |
-| T05b | EDA trên partition train | Xong, **chờ chủ dự án duyệt quyết định** | `task/T05b-eda-profiling` | Chưa |
-| T06 | Metrics (PR-AUC, bootstrap CI, ...) | Xong | `task/T06-metrics` | Chưa |
-| T07 | Baseline dựa trên luật | Xong | `task/T07-rule-based-baseline` | Chưa |
-| T08 | Baseline Logistic Regression | Xong | `task/T08-logistic-baseline` | Chưa |
-| T09 | Run log, CLI, quy tắc test-once | Xong | `task/T09-run-log-cli` | Chưa |
-| T10 | Test chống rò rỉ dữ liệu | Xong | `task/T10-leakage-guards` | Chưa |
+**Giới hạn cần nói rõ:** hai sản phẩm **không dùng chung dữ liệu**. Không có dataset công khai nào vừa có dữ liệu vận hành vừa có nhãn gian lận với cùng khoá giao dịch. Trong hệ thống thật, hai bên sẽ nối với nhau qua `payment_id`, và contract đã giữ sẵn trường này. Chi tiết ở [ADR 0002](docs/decisions/0002-product-boundaries.md).
 
-## Kiến trúc
-
-Luồng dữ liệu của Stage B:
+## 3. Kiến trúc trong repo
 
 ```mermaid
 flowchart TD
-    A["datasets/raw/ieee-cis/train_*.csv<br/>(chủ dự án tự đặt, không commit)"] --> M["dataset_management<br/>manifest + SHA-256"]
-    A --> B["adapters/ieee_cis.py<br/>X (không có nhãn), y, time"]
-    M --> R
-    B --> C["evaluation/split.py<br/>chia theo thời gian 60/20/20"]
-    C --> E["eda/profile.py<br/>chỉ dùng train"]
-    E --> D["docs/data-analysis/eda-summary.md<br/>chủ dự án duyệt"]
-    C --> F["features/baseline_features.py<br/>không đọc được nhãn"]
-    F --> G1["baselines/rule_based.py<br/>ngưỡng học từ train"]
-    F --> G2["baselines/logistic.py<br/>Pipeline fit trên train"]
-    G1 --> H["evaluation/metrics.py<br/>ngưỡng chọn trên validation"]
-    G2 --> H
-    H --> R["evaluation/run_log.py<br/>artifacts/runs/&lt;run_id&gt;/"]
+    subgraph P02["Fraud & Risk (Stage B, E)"]
+        A1["datasets/raw/ieee-cis/<br/>(tự tải, không commit)"] --> A2["Manifest + SHA-256"]
+        A2 --> A3["Adapter IEEE-CIS<br/>X (không nhãn), y, time"]
+        A3 --> A4["Chia theo thời gian<br/>60 / 20 / 20"]
+        A4 --> A5["EDA trên train<br/>→ eda-summary.md (duyệt)"]
+        A4 --> A6["Baseline luật<br/>Logistic Regression"]
+        A6 --> A7["Metrics<br/>ngưỡng chọn trên validation"]
+        A7 --> A8["Run log<br/>artifacts/runs/&lt;run_id&gt;/"]
+    end
+
+    subgraph P01["Payment Reliability (Stage C, D)"]
+        B1["Config kịch bản<br/>+ seed"] --> B2["Bộ sinh dữ liệu<br/>sự kiện + bất thường chèn vào"]
+        B2 --> B3["Kiểm tra contract"]
+        B3 --> B4[("PostgreSQL")]
+        B4 --> B5["KPI: tỷ lệ thành công,<br/>độ trễ, lỗi theo provider"]
+        B5 --> B6["Phát hiện bất thường<br/>so với ground truth"]
+    end
+
+    B2 -. "nhãn bất thường<br/>để riêng" .-> B6
 ```
 
-Quy ước package (xem [ADR 0001](docs/decisions/0001-package-layout.md)): tên thư mục giữ dấu gạch ngang (`projects/fraud-risk/`), còn code Python nằm trong package snake_case bên trong (`fraud_risk/`). Ví dụ: `from fraud_risk.evaluation.split import time_split`.
+Phần Fraud & Risk đã có code. Phần Payment Reliability đang ở bước đặc tả ([`stage-c-spec.draft.md`](docs/architecture/stage-c-spec.draft.md)).
 
-## Cấu trúc thư mục
+## 4. Kế hoạch thực hiện
 
-```text
-.
-├── contracts/
-│   ├── payment-event/        # schema draft, rules, examples, tests, CHANGELOG
-│   └── risk-context/         # chỉ có README
-├── shared/
-│   ├── dataset-management/   # package dataset_management: manifest.py, cli.py
-│   ├── data-validation/      # chỉ có README
-│   ├── synthetic-generator/  # chỉ có README (Stage C)
-│   └── common/               # chỉ có README
-├── datasets/
-│   ├── manifests/            # một YAML cho mỗi dataset
-│   └── raw/                  # git-ignored
-├── projects/
-│   ├── payment-reliability/  # chỉ có README
-│   └── fraud-risk/
-│       ├── fraud_risk/       # adapters, features, eda, evaluation, baselines, scripts
-│       ├── configs/          # baseline.yaml
-│       └── tests/
-├── infrastructure/           # docker/, database/
-├── docs/                     # architecture, product, data-governance, data-analysis, decisions
-├── tests/                    # test layout và .gitignore
-├── artifacts/                # git-ignored: runs, EDA, Parquet
-├── compose.yaml
-├── Makefile
-└── pyproject.toml
-```
+| Tuần | Giai đoạn | Nội dung | Trạng thái |
+| --- | --- | --- | --- |
+| 1–2 | **A** Nền tảng | Khung repo, Docker + PostgreSQL, contract `payment-event`, công cụ manifest | Code xong; contract đang chờ duyệt |
+| 1–2 | **B** Fraud baseline | Adapter IEEE-CIS, split theo thời gian, EDA, metrics, baseline luật và Logistic Regression, run log, test chống rò rỉ | Code xong; chưa chạy đánh giá test |
+| 3 | **C** Dữ liệu giả lập | Bộ sinh sự kiện (demo nhỏ, khoảng 5 nghìn payment), chèn bất thường, nạp vào PostgreSQL | Đặc tả nháp, chờ duyệt |
+| 4 | **D** Reliability | Bảng KPI, bộ phát hiện bất thường, đánh giá trên bất thường đã biết | Chưa bắt đầu |
+| 5 | **E** Fraud nâng cao | Thí nghiệm rò rỉ (chia ngẫu nhiên và chia theo thời gian), Gradient Boosting, khoảng trống thời gian (`gap_days`), API chấm điểm | Chưa bắt đầu |
+| 6 | **F** Hoàn thiện | Dashboard, báo cáo thực tập | Chưa bắt đầu |
 
-## Yêu cầu hệ thống
+Mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đã được review. Kế hoạch đầy đủ, rủi ro và tài liệu tham khảo nằm trong [tổng quan đề tài](docs/product/project-overview.md).
 
-- Python **3.11+**
-- [uv](https://docs.astral.sh/uv/) (khuyến nghị). Nếu không có uv, Makefile tự chuyển sang `venv` + `pip`.
-- Docker và Docker Compose (để chạy PostgreSQL 16)
+## 5. Kết quả đầu ra
+
+| Giai đoạn | Đầu ra |
+| --- | --- |
+| A | Contract JSON Schema có test; manifest dataset có checksum |
+| B | Bảng EDA (`artifacts/eda/`), 9 quyết định tiền xử lý đã duyệt ([`eda-summary.md`](docs/data-analysis/eda-summary.md)), thư mục run cho mỗi lần chạy baseline |
+| C | Sự kiện giả lập tái lập được theo `simulation_id`, file nhãn bất thường riêng, bảng dữ liệu trong PostgreSQL |
+| D | Bảng KPI theo thời gian, danh sách bất thường phát hiện được, so sánh với ground truth |
+| E | Báo cáo thí nghiệm rò rỉ, kết quả Gradient Boosting, API chấm điểm |
+| F | Dashboard và báo cáo thực tập |
+
+Mỗi lần chạy baseline tạo một thư mục `artifacts/runs/<run_id>/` (không commit):
+
+| File | Nội dung |
+| --- | --- |
+| `config.yaml` | Bản sao config đã dùng |
+| `metrics.json` | PR-AUC (kèm khoảng tin cậy 95%), precision, recall, F1, FPR, recall tại precision 0,5, recall tại FPR 5% |
+| `split.json` | Mốc thời gian, số dòng, tỷ lệ gian lận của train / validation / test |
+| `threshold.json` | Ngưỡng quyết định chọn trên validation |
+| `models.json` | Luật với ngưỡng đã học; hệ số Logistic Regression (JSON, không dùng pickle) |
+| `environment.txt`, `git_sha.txt`, `manifest_checksum.txt` | Thông tin để chạy lại đúng như cũ |
+
+**Kết quả trên dữ liệu thật: chưa có.** Bảng số liệu sẽ được thêm vào đây sau lần chạy test đầu tiên, kèm `run_id`.
+
+## 6. Hướng dẫn chạy
+
+### Cần chuẩn bị
+
+- Python 3.11 trở lên
+- [uv](https://docs.astral.sh/uv/) (khuyến nghị). Không có uv thì Makefile tự dùng `venv` + `pip`.
+- Docker và Docker Compose
 - `make`, `git`
-- RAM khuyến nghị ≥ 8 GB khi chạy trên toàn bộ IEEE-CIS ([Ước đoán] khoảng 590 nghìn dòng × 394 cột)
+- Khoảng 8 GB RAM nếu chạy trên toàn bộ IEEE-CIS
 
-## Cài đặt
+### Cài đặt
 
 ```bash
 git clone https://github.com/TrungTuyenDo02/Payment_Intelligence_Ecosystem.git
+```
+
+```bash
 cd Payment_Intelligence_Ecosystem
 ```
 
@@ -146,135 +171,151 @@ make lint test
 make up
 ```
 
-`make up` khởi động PostgreSQL 16 và chờ đến khi trạng thái là `healthy`. Dùng `make down` để dừng.
+`make up` bật PostgreSQL 16 và chờ đến khi healthy. Tắt bằng `make down`.
 
-## Dữ liệu
+Lệnh `make test` chỉ dùng dữ liệu tổng hợp nhỏ có sẵn trong repo, nên chạy được ngay mà không cần tải dataset.
 
-Dự án dùng bộ **IEEE-CIS Fraud Detection** (Kaggle). Agent không bao giờ tự tải dữ liệu. Muốn tải, bạn cần đăng nhập Kaggle và chấp nhận điều khoản cuộc thi.
+### Chuẩn bị dữ liệu IEEE-CIS
 
-1. Đặt các file vào `datasets/raw/ieee-cis/`. Nếu để chỗ khác, đặt biến môi trường `IEEE_CIS_DIR`.
+1. Đăng nhập Kaggle, chấp nhận điều khoản cuộc thi [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection), tải dữ liệu về.
+2. Đặt file vào `datasets/raw/ieee-cis/` (hoặc đặt biến môi trường `IEEE_CIS_DIR`):
 
    ```text
    datasets/raw/ieee-cis/
      train_transaction.csv
      train_identity.csv
-     test_transaction.csv   # KHÔNG có nhãn, không dùng để đánh giá
-     test_identity.csv      # KHÔNG có nhãn
    ```
 
-2. Tạo manifest (ghi checksum và nguồn gốc dữ liệu):
+   Hai file `test_*.csv` của Kaggle không có nhãn, dự án không dùng chúng. Train, validation và test đều được tách từ các file `train_*` theo thời gian.
+
+3. Tạo manifest để ghi checksum và nguồn gốc:
 
    ```bash
    PYTHONPATH=shared/dataset-management uv run python -m dataset_management.cli --name ieee-cis --source "Kaggle competition: IEEE-CIS Fraud Detection (https://www.kaggle.com/c/ieee-fraud-detection)" --base-dir datasets/raw/ieee-cis --file train_transaction.csv --file train_identity.csv --download-date YYYY-MM-DD --license-note "Kaggle competition terms, research use only, verify before any other use" --out datasets/manifests/ieee-cis.yaml
    ```
 
-Lưu ý:
-- Chỉ dùng các file `train_*`. Train, validation và test đều được tách từ chính các file này theo thời gian.
-- Nếu file dữ liệu bị thay đổi sau khi tạo manifest, lần chạy sẽ dừng với lỗi `changed since the manifest`.
-- Giấy phép: điều khoản cuộc thi Kaggle, chỉ dùng cho nghiên cứu. Cần kiểm tra lại trước khi dùng vào mục đích khác.
+Nếu file dữ liệu bị sửa sau khi tạo manifest, lần chạy sẽ dừng với lỗi `changed since the manifest`.
 
-## Sử dụng
+### Chạy phần Fraud & Risk
 
-| Lệnh | Mục đích |
+1. Chạy EDA trên phần train:
+
+   ```bash
+   make eda
+   ```
+
+   Đọc các bảng trong `artifacts/eda/`. Mỗi quyết định tiền xử lý được ghi và duyệt trong [`eda-summary.md`](docs/data-analysis/eda-summary.md).
+
+2. Chạy baseline (chỉ dùng train và validation, không đụng tới test):
+
+   ```bash
+   make baseline
+   ```
+
+3. Khi đã chốt cấu hình, chủ dự án đổi `status: draft` thành `status: frozen` trong `projects/fraud-risk/configs/baseline.yaml`, rồi chạy đánh giá test **một lần**:
+
+   ```bash
+   make baseline-final
+   ```
+
+   Lệnh này từ chối config chưa `frozen` và config đã từng chạy test. Có thể ép chạy lại bằng `FORCE=1`, nhưng cảnh báo sẽ được ghi vào `metrics.json`.
+
+Muốn dùng config khác thì thêm `CONFIG=path/to/config.yaml` vào lệnh.
+
+### Tất cả lệnh
+
+| Lệnh | Việc |
 | --- | --- |
-| `make setup` | Tạo môi trường và cài thư viện |
+| `make setup` | Tạo môi trường, cài thư viện |
 | `make lint` | `ruff check` và `ruff format --check` |
 | `make test` | `pytest` kèm coverage |
 | `make up` / `make down` | Bật / tắt PostgreSQL |
-| `make eda` | Chạy EDA trên partition train, ghi bảng vào `artifacts/eda/` |
-| `make baseline` | Chạy hai baseline, chỉ đánh giá trên train và validation |
-| `make baseline-final` | Đánh giá trên test **một lần duy nhất** cho config đã `frozen` |
+| `make eda` | EDA trên train, ghi bảng vào `artifacts/eda/` |
+| `make baseline` | Hai baseline, đánh giá trên train và validation |
+| `make baseline-final` | Đánh giá test một lần cho config đã `frozen` |
 
-Quy trình chuẩn:
+## 7. Cách đánh giá (Fraud & Risk)
 
-```bash
-make eda
-```
-
-Đọc các bảng trong `artifacts/eda/`, sau đó chủ dự án duyệt từng dòng trong [`eda-summary.md`](docs/data-analysis/eda-summary.md).
-
-```bash
-make baseline
-```
-
-Bước này tạo thư mục `artifacts/runs/<run_id>/`. Khi đã chốt cấu hình, **chỉ chủ dự án** sửa `status: draft` thành `status: frozen` trong `projects/fraud-risk/configs/baseline.yaml`, rồi chạy:
-
-```bash
-make baseline-final
-```
-
-Dùng config khác bằng `make baseline CONFIG=path/to/config.yaml`.
-
-## Phương pháp đánh giá
-
-| Thành phần | Cách làm |
+| Vấn đề | Cách làm |
 | --- | --- |
-| Chia dữ liệu | Sắp theo `TransactionDT`: 60% đầu là train, 20% tiếp là validation, 20% cuối là test. Các dòng cùng timestamp luôn nằm chung một phần, và có kiểm tra không chồng lấn thời gian. Không chia ngẫu nhiên. |
-| Tách nhãn | Adapter trả `X` (không có `isFraud`) riêng với `y`. Hàm tạo feature không có tham số `y`. |
-| Fit | Mọi imputer, scaler, encoder và ngưỡng luật chỉ học trên **train**. Ngưỡng quyết định chọn trên **validation**. |
-| Baseline 1 | Luật minh bạch: số tiền > q99 của train; `ProductCD` và `card6` có fraud rate cao (tính trên train). Điểm = tỷ lệ luật bị kích hoạt, nằm trong [0, 1]. |
-| Baseline 2 | `Pipeline`: median impute + scale cho cột số, one-hot (`handle_unknown='ignore'`) cho cột phân loại, `LogisticRegression(class_weight='balanced')`. |
-| Metrics | PR-AUC kèm bootstrap CI 95% (200 lần, có seed); precision, recall, F1, FPR tại ngưỡng; recall tại precision 0.5; recall tại FPR 5% (không phụ thuộc tỷ lệ gian lận). **Không** báo accuracy, vì dữ liệu mất cân bằng lớp. |
-| Định danh run | `run_id` là hash của: config (bỏ trường `status`), seed, checksum manifest, mốc split. Không gồm git SHA. |
-| Test-once | `make baseline-final` từ chối config chưa `frozen` và config đã từng chạy test (ghi trong `artifacts/test_runs.json`). Có thể ép bằng `FORCE=1`, khi đó cảnh báo được ghi vào `metrics.json`. |
+| Chia dữ liệu | Sắp theo `TransactionDT`: 60% đầu là train, 20% tiếp là validation, 20% cuối là test. Không chia ngẫu nhiên, vì chia ngẫu nhiên cho kết quả đẹp giả tạo. |
+| Nhãn | Adapter trả về đặc trưng `X` và nhãn `y` riêng. Hàm tạo đặc trưng không nhận được nhãn. |
+| Học tham số | Mọi bước tiền xử lý và ngưỡng của luật chỉ học trên train. Ngưỡng quyết định chọn trên validation. |
+| Baseline luật | Số tiền lớn hơn phân vị 99% của train; `ProductCD` và `card6` có tỷ lệ gian lận cao (tính trên train). Điểm là tỷ lệ luật bị kích hoạt. |
+| Baseline Logistic Regression | Điền thiếu bằng median, chuẩn hoá cột số, one-hot cột phân loại, `class_weight='balanced'`. |
+| Metrics | PR-AUC kèm khoảng tin cậy bootstrap, recall tại precision 0,5, recall tại FPR 5%. Không dùng accuracy, vì đoán "không bao giờ gian lận" đã đạt khoảng 96,5%. |
+| Tái lập | `run_id` tính từ config (bỏ trường `status`), seed, checksum dataset và mốc split. Cùng đầu vào thì ra cùng `metrics.json`. |
 
-## Kết quả đầu ra
+## 8. Quy trình làm việc
 
-Mỗi run ghi vào `artifacts/runs/<run_id>/` (thư mục này bị git-ignore):
-
-| File | Nội dung |
-| --- | --- |
-| `config.yaml` | Bản sao config đã dùng |
-| `metrics.json` | Metrics theo model và partition (train/valid, thêm test ở bước final) |
-| `split.json` | Mốc thời gian, số dòng và fraud rate của từng partition |
-| `threshold.json` | Ngưỡng chọn trên validation, kèm phương pháp chọn |
-| `models.json` | Luật với ngưỡng đã học; hệ số Logistic Regression (JSON, không dùng pickle) |
-| `environment.txt` | Phiên bản Python và các thư viện |
-| `git_sha.txt` | Commit đang chạy (có hậu tố `-dirty` nếu còn thay đổi chưa commit) |
-| `manifest_checksum.txt` | Checksum của dataset |
-
-Kết quả trên dữ liệu thật: **chưa có**. Bảng kết quả sẽ được bổ sung sau khi chủ dự án chạy trên máy cá nhân.
-
-## Kiểm thử
-
-```bash
-make test
+```mermaid
+flowchart LR
+    T["Task trong kế hoạch"] --> B["Nhánh task/&lt;ID&gt;-&lt;tên&gt;"]
+    B --> PR["Pull request vào main"]
+    PR --> CI{"CI trên GitHub<br/>lint + test"}
+    CI -- "đỏ" --> B
+    CI -- "xanh" --> RV{"Chủ dự án review"}
+    RV -- "cần sửa" --> B
+    RV -- "duyệt" --> MG["Merge vào main"]
 ```
 
-- Toàn bộ test chạy trên **dữ liệu tổng hợp** có cấu trúc giống IEEE-CIS. Repo không chứa dữ liệu thật.
-- Test chống rò rỉ (`projects/fraud-risk/tests/test_leakage_guards.py`) sẽ fail nếu xảy ra một trong các trường hợp sau:
-  - một cột suy ra từ nhãn lọt vào features;
-  - baseline dùng split ngẫu nhiên;
-  - một transformer hoặc ngưỡng được fit ngoài partition train.
-- Test tái lập: chạy hai lần với cùng config, seed và dữ liệu phải cho `metrics.json` giống hệt từng byte.
+- Mỗi task một nhánh, commit nhỏ. Chỉ merge vào `main` qua pull request.
+- **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) chạy `make lint` và `make test` trên Python 3.11 và 3.13 cho mọi pull request và mỗi lần push lên `main`. Test cũng báo lỗi nếu repo có file dữ liệu, mô hình hoặc `.env` bị commit nhầm.
+- Có một số **điểm dừng** chỉ chủ dự án được thông qua:
+  - duyệt contract;
+  - duyệt quyết định EDA;
+  - đặt config thành `frozen`;
+  - chạy đánh giá test.
+- Thay đổi về kiến trúc hoặc thêm thư viện mới được ghi thành ADR trong [`docs/decisions/`](docs/decisions/).
 
-## Quy tắc dữ liệu và bảo mật
+## 9. Cấu trúc thư mục
 
-- Không dùng dữ liệu thật của công ty. Không commit credentials, `.env`, dữ liệu, file Parquet hay file mô hình.
-- Không có dữ liệu thẻ hoặc dữ liệu xác thực trong schema, fixture hay log.
-- Không tải hay chạy mô hình pretrained từ internet (rủi ro nhiễm dữ liệu và rủi ro thực thi mã từ pickle).
+```text
+.
+├── .github/workflows/    # CI: lint + test
+├── contracts/
+│   ├── payment-event/    # JSON Schema (draft), ví dụ, test, changelog
+│   └── risk-context/     # chưa làm
+├── shared/
+│   ├── dataset-management/   # manifest + checksum
+│   ├── synthetic-generator/  # Stage C
+│   ├── data-validation/
+│   └── common/
+├── datasets/
+│   ├── manifests/        # một YAML cho mỗi dataset
+│   └── raw/              # không commit
+├── projects/
+│   ├── fraud-risk/       # adapters, eda, features, baselines, evaluation, scripts, configs, tests
+│   └── payment-reliability/  # Stage D
+├── infrastructure/       # docker, database
+├── docs/                 # tổng quan, kiến trúc, quyết định (ADR), phân tích dữ liệu
+├── tests/                # test cấu trúc repo và .gitignore
+├── artifacts/            # không commit: run, bảng EDA, Parquet
+├── compose.yaml
+├── Makefile
+└── pyproject.toml
+```
 
-## Quy trình đóng góp
+Code Python nằm trong package snake_case bên trong thư mục có dấu gạch ngang, ví dụ `projects/fraud-risk/fraud_risk/` ([ADR 0001](docs/decisions/0001-package-layout.md)).
 
-- Mỗi task một nhánh `task/<ID>-<slug>`, chia thành các commit nhỏ.
-- Một task chỉ được coi là xong khi `make lint` và `make test` đều pass.
-- Contract chỉ được tạo dưới dạng draft. Muốn thay đổi kiến trúc, đề xuất bằng ADR trong `docs/decisions/`.
-- Chỉ chủ dự án được: duyệt contract, duyệt quyết định EDA, đặt `frozen`, chạy `make baseline-final`.
+## 10. Nguyên tắc dữ liệu
 
-## Lộ trình
+- Không dùng dữ liệu thật hay dữ liệu công ty. Chỉ dùng dataset công khai và dữ liệu giả lập.
+- Không có dữ liệu thẻ hay thông tin xác thực trong schema, fixture hay log.
+- Không commit dataset, Parquet, file mô hình, bảng EDA hay `.env`.
+- Không dùng mô hình pretrained tải từ Internet.
+- Điểm rủi ro chỉ để hỗ trợ con người ra quyết định, hệ thống không tự chặn giao dịch.
 
-| Stage | Nội dung |
-| --- | --- |
-| A, B | Khung dự án và baseline fraud (**đã xong**) |
-| C | Synthetic generator và ingestion |
-| D | dbt marts, KPI và bộ phát hiện bất thường |
-| E | Thí nghiệm rò rỉ, Gradient Boosting, scoring API |
-| F | Dashboard, tích hợp, báo cáo |
+## 11. Tài liệu
 
-## Giấy phép
+- [Tổng quan đề tài](docs/product/project-overview.md): phạm vi, kế hoạch, rủi ro, tài liệu tham khảo
+- [Đặc tả Stage C (nháp)](docs/architecture/stage-c-spec.draft.md)
+- [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md)
+- ADR: [0001 cấu trúc package](docs/decisions/0001-package-layout.md) · [0002 ranh giới hai sản phẩm](docs/decisions/0002-product-boundaries.md) · [0003 độ trễ nhãn](docs/decisions/0003-label-delay-and-entity-overlap.md) · [0004 driver PostgreSQL](docs/decisions/0004-postgres-driver.md)
+- [Contract `payment-event`](contracts/payment-event/)
 
-Mã nguồn phát hành theo giấy phép [MIT](LICENSE). Dữ liệu IEEE-CIS tuân theo điều khoản cuộc thi Kaggle và **không** được phân phối kèm repo.
+## Giấy phép và tác giả
 
-## Tác giả
+Mã nguồn theo giấy phép [MIT](LICENSE). Dữ liệu IEEE-CIS theo điều khoản cuộc thi Kaggle và **không** đi kèm repo.
 
-- **Đỗ Trung Tuyến** ([@TrungTuyenDo02](https://github.com/TrungTuyenDo02)): Technical Owner
+**Đỗ Trung Tuyến** ([@TrungTuyenDo02](https://github.com/TrungTuyenDo02))
