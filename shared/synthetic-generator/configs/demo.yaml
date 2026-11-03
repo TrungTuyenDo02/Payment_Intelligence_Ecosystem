@@ -46,4 +46,21 @@ retry:
   wait_seconds_max: 60
   retry_switch_provider_prob: 0.3
 
-anomalies: [] # added in C03
+# Known anomalies for tuning the Stage D detector. Ground truth goes to anomaly_labels.json only.
+# configs/report.yaml uses another seed and adds traffic_drop, which tuning never sees.
+anomalies:
+  - type: provider_outage
+    provider: 1 # prov_002
+    start: 2026-01-06T05:00:00Z # 12:00 local, near lunch peak
+    duration_minutes: 90
+    magnitude: 4
+  - type: latency_degradation
+    provider: 0 # prov_001
+    start: 2026-01-08T12:00:00Z # 19:00 local
+    duration_minutes: 180
+    magnitude: 3
+  - type: error_burst
+    error_code: NETWORK_ERROR
+    start: 2026-01-10T02:30:00Z # 09:30 local, all providers
+    duration_minutes: 45
+    magnitude: 3

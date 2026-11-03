@@ -28,7 +28,7 @@ def demo_events() -> list[dict[str, Any]]:
 def big() -> tuple[SimulationConfig, list[dict[str, Any]]]:
     """Large sample for rate checks: about 60 thousand payments in 2 days."""
     raw_time = yaml.safe_load(DEMO.read_text("utf-8"))["time"]
-    cfg = _config(payments_per_hour=1250, time={**raw_time, "days": 2})
+    cfg = _config(payments_per_hour=1250, time={**raw_time, "days": 2}, anomalies=[])
     return cfg, generate_events(cfg)
 
 

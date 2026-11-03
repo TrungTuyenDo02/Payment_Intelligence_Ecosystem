@@ -13,7 +13,7 @@ import yaml
 
 from synthetic_generator import GENERATOR_VERSION
 from synthetic_generator.config import SimulationConfig, load_config, simulation_id
-from synthetic_generator.generator import generate_events
+from synthetic_generator.generator import anomaly_labels, generate_events
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RULES_PATH = REPO_ROOT / "contracts" / "payment-event" / "payment_event_rules.py"
@@ -54,13 +54,15 @@ def write_simulation(config: SimulationConfig, out_root: Path) -> Path:
     out = out_root / sid
     out.mkdir(parents=True, exist_ok=True)
     (out / "events.jsonl").write_bytes(data)
-    (out / "anomaly_labels.json").write_text("[]\n", encoding="utf-8")  # filled in C03
+    labels = json.dumps(anomaly_labels(config), indent=2, sort_keys=True, ensure_ascii=True)
+    (out / "anomaly_labels.json").write_text(labels + "\n", encoding="utf-8")
     manifest = {
         "simulation_id": sid,
         "generator_version": GENERATOR_VERSION,
         "seed": config.seed,
         "numpy_version": metadata.version("numpy"),  # byte-identical output assumes the same numpy
         "events": len(events),
+        "anomalies": len(config.anomalies),
         "payments": len({e["payload"]["payment_id"] for e in events}),
         "events_sha256": hashlib.sha256(data).hexdigest(),
         "config": config.model_dump(mode="json"),

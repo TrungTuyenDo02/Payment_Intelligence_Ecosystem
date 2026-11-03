@@ -44,9 +44,9 @@ def test_key_order_does_not_change_simulation_id(raw: dict[str, Any]) -> None:
 
 
 def test_explicit_default_does_not_change_simulation_id(raw: dict[str, Any]) -> None:
-    assert "anomalies" in raw
+    explicit = {**raw, "anomalies": []}
     without = {k: v for k, v in raw.items() if k != "anomalies"}
-    assert _sim_id(raw) == _sim_id(without)
+    assert _sim_id(explicit) == _sim_id(without)
 
 
 @pytest.mark.parametrize(

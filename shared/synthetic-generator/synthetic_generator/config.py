@@ -75,7 +75,8 @@ class AnomalyConfig(_Strict):
     type: Literal["provider_outage", "latency_degradation", "error_burst", "traffic_drop"]
     start: datetime  # UTC
     duration_minutes: int = Field(ge=1)
-    magnitude: float = Field(gt=0)
+    # Strength multiplier > 1: failure prob x m (outage, burst), latency x m, traffic / m.
+    magnitude: float = Field(gt=1)
     provider: int | None = Field(default=None, ge=0)  # index into `providers`
     payment_method: PaymentMethod | None = None
     error_code: ErrorCode | None = None
