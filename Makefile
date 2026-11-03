@@ -12,10 +12,10 @@ endif
 CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk
 
-.PHONY: help setup lint test up down eda baseline baseline-final report
+.PHONY: help setup lint test up down eda baseline baseline-final report simulate
 
 help:
-	@echo "Targets: setup lint test up down eda baseline baseline-final report"
+	@echo "Targets: setup lint test up down eda baseline baseline-final report simulate"
 
 setup:
 ifeq ($(UV),)
@@ -53,3 +53,8 @@ baseline-final:
 # Charts + summary table from the latest run (or RUN_DIR=artifacts/runs/<run_id>[/test]).
 report:
 	$(RUN) python -m fraud_risk.scripts.plot_results $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
+
+# Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
+SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)
+simulate:
+	$(RUN) python -m synthetic_generator.cli --config $(SIM_CONFIG)

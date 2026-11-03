@@ -128,6 +128,7 @@ make up
 | `make baseline` | Hai baseline, đánh giá trên validation |
 | `make baseline-final` | Đánh giá test một lần cho config đã `frozen` |
 | `make report` | Biểu đồ và bảng số cho lần chạy gần nhất (`RUN_DIR=...` để chọn lần chạy khác) |
+| `make simulate` | Sinh dữ liệu thanh toán giả lập (Stage C) vào `artifacts/simulations/<simulation_id>/`; `CONFIG=...` để chọn kịch bản khác |
 
 ## Quy trình làm việc
 
