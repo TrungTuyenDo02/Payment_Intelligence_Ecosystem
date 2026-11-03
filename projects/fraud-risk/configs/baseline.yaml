@@ -1,6 +1,6 @@
 # Stage B baseline configuration (IEEE-CIS).
 # status: only the owner may change this to "frozen" (AGENTS.md D5). Agents never do.
-status: draft # back to draft: metrics.fpr_target added 2026-11-03; only the owner sets frozen
+status: frozen # set by the owner, 2026-11-03, after adding metrics.fpr_target
 seed: 42
 
 data:
