@@ -9,6 +9,7 @@ ifeq ($(UV),)
 else
   RUN := uv run --frozen
 endif
+CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 export PYTHONPATH := shared/dataset-management:projects/fraud-risk
 
 .PHONY: help setup lint test up down eda baseline baseline-final
@@ -38,8 +39,13 @@ up:
 down:
 	docker compose down
 
-baseline:
-	@echo "make baseline: not implemented yet (task T09)." >&2; exit 1
+eda:
+	$(RUN) python -m fraud_risk.eda.profile $(if $(wildcard $(CONFIG)),--config $(CONFIG),)
 
+# Train + validation only; never touches test.
+baseline:
+	$(RUN) python -m fraud_risk.scripts.run_baseline --config $(CONFIG) --stage validation
+
+# One-time test evaluation of a config the OWNER has frozen. FORCE=1 re-runs (logged warning).
 baseline-final:
-	@echo "make baseline-final: not implemented yet (task T09)." >&2; exit 1
+	$(RUN) python -m fraud_risk.scripts.run_baseline --config $(CONFIG) --stage final $(if $(FORCE),--force,)

@@ -45,3 +45,5 @@ extend-exclude = ["datasets/raw", "artifacts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]
+# Allow the ML convention of upper-case `X` for feature matrices.
+ignore = ["N803", "N806"]

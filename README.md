@@ -108,8 +108,6 @@ Quy ước package (xem [ADR 0001](docs/decisions/0001-package-layout.md)): tên
 ├── docs/                     # architecture, product, data-governance, data-analysis, decisions
 ├── tests/                    # test layout và .gitignore
 ├── artifacts/                # git-ignored: runs, EDA, Parquet
-├── AGENTS.md                 # đặc tả và quy tắc (nguồn chuẩn duy nhất)
-├── CLAUDE.md                 # chỉ import AGENTS.md
 ├── compose.yaml
 ├── Makefile
 └── pyproject.toml
@@ -255,11 +253,6 @@ make test
 - Không dùng dữ liệu thật của công ty. Không commit credentials, `.env`, dữ liệu, file Parquet hay file mô hình.
 - Không có dữ liệu thẻ hoặc dữ liệu xác thực trong schema, fixture hay log.
 - Không tải hay chạy mô hình pretrained từ internet (rủi ro nhiễm dữ liệu và rủi ro thực thi mã từ pickle).
-- Chi tiết đầy đủ: [`AGENTS.md`](AGENTS.md), mục 4.
-
-## Quy trình đóng góp
-
-- Đọc [`AGENTS.md`](AGENTS.md) trước khi sửa bất cứ thứ gì. Đây là nguồn chuẩn cho phạm vi, quy tắc và tiêu chí nghiệm thu.
 - Mỗi task một nhánh `task/<ID>-<slug>`, chia thành các commit nhỏ.
 - Một task chỉ được coi là xong khi `make lint` và `make test` đều pass.
 - Contract chỉ được tạo dưới dạng draft. Muốn thay đổi kiến trúc, đề xuất bằng ADR trong `docs/decisions/`.
