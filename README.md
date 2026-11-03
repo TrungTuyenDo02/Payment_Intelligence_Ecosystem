@@ -26,18 +26,23 @@ Chi tiết từng giai đoạn, rủi ro và tài liệu tham khảo: [tổng qu
 
 ## Kết quả
 
-Kết quả trên tập **validation** của IEEE-CIS, lần chạy `run-d6faa4699008` (config `draft`, commit `fa34646`). Đây chưa phải kết quả test cuối cùng.
+Đánh giá cuối trên IEEE-CIS, lần chạy `run-d6faa4699008` (config `frozen`, commit `fa34646`). Tập test chỉ được mở một lần cho config này.
 
 | Mô hình | Tập | PR-AUC [95% CI] | Tỷ lệ gian lận | Recall @ precision 0,5 | Recall @ FPR 5% |
 | --- | --- | --- | --- | --- | --- |
 | Logistic Regression | Validation | 0,245 [0,234; 0,256] | 3,90% | 0,14 | 0,33 |
+| Logistic Regression | **Test** | **0,165 [0,155; 0,176]** | 3,44% | 0,03 | 0,28 |
 | Luật (rule-based) | Validation | 0,089 [0,084; 0,092] | 3,90% | 0,00 | 0,00 |
+| Luật (rule-based) | **Test** | **0,078 [0,074; 0,082]** | 3,44% | 0,00 | 0,22 |
 
-Logistic Regression có PR-AUC gấp khoảng 6 lần mô hình ngẫu nhiên (bằng tỷ lệ gian lận, 0,039). Baseline luật chỉ nhỉnh hơn ngẫu nhiên và có recall bằng 0 ở cả hai mục tiêu.
+- **Logistic Regression tốt hơn baseline luật** trên cả hai tập. Trên test, PR-AUC gấp khoảng 4,8 lần mô hình ngẫu nhiên (bằng tỷ lệ gian lận, 0,034); trên validation là khoảng 6,3 lần.
+- **Kết quả giảm từ validation sang test.** Recall tại FPR 5% (không phụ thuộc tỷ lệ gian lận) giảm từ 0,33 xuống 0,28, nên mức giảm không chỉ do tỷ lệ gian lận thấp hơn. Đây là dấu hiệu dữ liệu thay đổi theo thời gian. Recall khi giữ precision ≥ 0,5 giảm mạnh (0,14 → 0,03): ngưỡng cho precision cao không ổn định giữa hai giai đoạn.
+- **Các số 0 của baseline luật** không có nghĩa là luật không bắt được gì. Điểm của luật chỉ có vài mức rời rạc. Ngay cả ở mức chặt nhất (ngưỡng 0,67), luật bắt được 23,8% gian lận trên validation nhưng báo nhầm 5,1% giao dịch tốt, vượt mục tiêu 5% một chút, nên recall tại FPR 5% bằng 0. Trên test, cùng mức đó chỉ báo nhầm 3,9%, nên recall là 0,22.
+- **Về lần chạy test trước:** đã có một lần chạy test (`run-515a1190a0a4`) với config cũ, trước khi thêm metric `fpr_target`. Mô hình, đặc trưng và ngưỡng giống hệt nhau. Mọi metric có ở cả hai lần đều trùng khớp, nên lần chạy thứ hai chỉ bổ sung recall tại FPR 5%, không dùng kết quả test để chọn lại mô hình.
 
 <p align="center"><img src="docs/assets/results/split.png" alt="Số giao dịch và tỷ lệ gian lận của train, validation, test" width="70%"></p>
-<p align="center"><img src="docs/assets/results/pr_auc.png" alt="PR-AUC của hai baseline trên validation kèm khoảng tin cậy 95%" width="70%"></p>
-<p align="center"><img src="docs/assets/results/recall_targets.png" alt="Recall khi precision ≥ 0,5 và khi FPR ≤ 5% trên validation" width="100%"></p>
+<p align="center"><img src="docs/assets/results/pr_auc.png" alt="PR-AUC của hai baseline trên validation và test kèm khoảng tin cậy 95%" width="70%"></p>
+<p align="center"><img src="docs/assets/results/recall_targets.png" alt="Recall khi precision ≥ 0,5 và khi FPR ≤ 5% trên validation và test" width="100%"></p>
 
 Lệnh `make report` vẽ ba biểu đồ trên vào `docs/assets/results/`:
 
