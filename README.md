@@ -4,55 +4,44 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-Một nền tảng dữ liệu nhỏ cho mảng thanh toán, trên đó chạy hai ứng dụng: **theo dõi độ ổn định của hệ thống thanh toán** và **chấm điểm rủi ro gian lận**. Đây là đề tài thực tập 6 tuần, chạy hoàn toàn trên máy cá nhân bằng Docker.
+Đề tài thực tập 6 tuần: một nền tảng dữ liệu nhỏ cho mảng thanh toán, trả lời hai câu hỏi của vận hành:
+
+1. **Hệ thống thanh toán có đang chạy ổn không?** Theo dõi KPI và phát hiện bất thường (Product 01, dữ liệu giả lập).
+2. **Giao dịch này có đáng nghi không?** Chấm điểm rủi ro gian lận (Product 02, dataset công khai IEEE-CIS).
+
+Không dùng dữ liệu thật của công ty. Toàn bộ chạy trên máy cá nhân bằng Python và Docker.
 
 ## Hệ thống
 
-<p align="center"><img src="docs/assets/diagrams/system-overview.svg" alt="Sơ đồ tổng thể: nền tảng dùng chung và hai sản phẩm" width="100%"></p>
+<p align="center"><img src="docs/assets/diagrams/system-overview.svg" alt="Sơ đồ tổng thể: nền tảng dùng chung, hai sản phẩm và trạng thái từng bước" width="100%"></p>
 
-Đề tài chọn hai sản phẩm vì:
+Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý dataset, quy tắc đánh giá, PostgreSQL) nhưng không dùng chung dữ liệu ([ADR 0002](docs/decisions/0002-product-boundaries.md)).
 
-- **Đây là hai câu hỏi cốt lõi của vận hành thanh toán:** hệ thống có đang chạy ổn không, và giao dịch này có đáng nghi không.
-- **Làm được mà không cần dữ liệu thật:** Fraud có dataset công khai có nhãn (IEEE-CIS), còn Reliability có thể tự sinh dữ liệu. Các mảng màu xám trong sơ đồ cần sổ cái hoặc dữ liệu khách hàng thật.
-- **Hai kiểu bài toán bổ sung cho nhau:** phát hiện bất thường trên chuỗi thời gian, và phân loại có nhãn với dữ liệu mất cân bằng.
+## Tiến độ
 
-Hai sản phẩm dùng chung nền tảng nhưng không dùng chung dữ liệu ([ADR 0002](docs/decisions/0002-product-boundaries.md)).
+<p align="center"><img src="docs/assets/diagrams/roadmap.svg" alt="Lộ trình 6 tuần: A, B, C đã xong; D đang làm ở tuần 4" width="100%"></p>
 
-## Kế hoạch
+- **Đã xong (tuần 1–3):** khung repo, contract `payment-event` 1.0.0, hai baseline gian lận đã đánh giá trên tập test, bộ sinh dữ liệu thanh toán giả lập và nạp vào PostgreSQL.
+- **Đang làm (tuần 4):** KPI độ tin cậy và phát hiện bất thường trên dữ liệu giả lập.
 
-<p align="center"><img src="docs/assets/diagrams/roadmap.svg" alt="Lộ trình 6 tuần theo giai đoạn A đến F" width="100%"></p>
+## Kết quả đến nay
 
-Chi tiết từng giai đoạn, rủi ro và tài liệu tham khảo: [tổng quan đề tài](docs/product/project-overview.md).
+**Product 02: phát hiện gian lận trên IEEE-CIS.** Dữ liệu được chia theo thời gian: mô hình học trên phần cũ, được đánh giá trên phần mới hơn, giống như khi chạy thật.
 
-## Kết quả
+<p align="center"><img src="docs/assets/results/split.png" alt="Train 60%, validation 20%, test 20% theo thời gian, kèm số giao dịch và tỷ lệ gian lận" width="85%"></p>
+<p align="center"><img src="docs/assets/results/results.png" alt="PR-AUC và tỷ lệ gian lận bắt được tại FPR 5% của hai mô hình trên validation và test" width="100%"></p>
 
-Đánh giá cuối trên IEEE-CIS, lần chạy `run-d6faa4699008` (config `frozen`, commit `fa34646`). Tập test chỉ được mở một lần cho config này.
+- **Logistic Regression tốt hơn baseline luật.** PR-AUC trên test là 0,165, gấp khoảng 4,8 lần mô hình đoán ngẫu nhiên. Baseline luật đạt 0,078.
+- **Kết quả giảm từ validation sang test.** Dữ liệu thay đổi theo thời gian, nên con số trên validation lạc quan hơn thực tế. Đây là lý do tập test chỉ được mở **một lần**, với cấu hình đã chốt trước.
+- Bảng số đầy đủ: [`summary.md`](docs/assets/results/summary.md) (lần chạy `run-d6faa4699008`).
 
-| Mô hình | Tập | PR-AUC [95% CI] | Tỷ lệ gian lận | Recall @ precision 0,5 | Recall @ FPR 5% |
-| --- | --- | --- | --- | --- | --- |
-| Logistic Regression | Validation | 0,245 [0,234; 0,256] | 3,90% | 0,14 | 0,33 |
-| Logistic Regression | **Test** | **0,165 [0,155; 0,176]** | 3,44% | 0,03 | 0,28 |
-| Luật (rule-based) | Validation | 0,089 [0,084; 0,092] | 3,90% | 0,00 | 0,00 |
-| Luật (rule-based) | **Test** | **0,078 [0,074; 0,082]** | 3,44% | 0,00 | 0,22 |
+**Product 01: dữ liệu thanh toán giả lập.** Bộ sinh dữ liệu tạo khoảng 5 nghìn payment (khoảng 5,8 nghìn sự kiện, có retry và 3 sự cố được cài sẵn). Mọi sự kiện qua kiểm tra contract và được nạp vào PostgreSQL không lỗi. Kết quả phát hiện bất thường sẽ có sau tuần 4.
 
-- **Logistic Regression tốt hơn baseline luật** trên cả hai tập. Trên test, PR-AUC gấp khoảng 4,8 lần mô hình ngẫu nhiên (bằng tỷ lệ gian lận, 0,034); trên validation là khoảng 6,3 lần.
-- **Kết quả giảm từ validation sang test.** Recall tại FPR 5% (không phụ thuộc tỷ lệ gian lận) giảm từ 0,33 xuống 0,28, nên mức giảm không chỉ do tỷ lệ gian lận thấp hơn. Đây là dấu hiệu dữ liệu thay đổi theo thời gian. Recall khi giữ precision ≥ 0,5 giảm mạnh (0,14 → 0,03): ngưỡng cho precision cao không ổn định giữa hai giai đoạn.
-- **Các số 0 của baseline luật** không có nghĩa là luật không bắt được gì. Điểm của luật chỉ có vài mức rời rạc. Ngay cả ở mức chặt nhất (ngưỡng 0,67), luật bắt được 23,8% gian lận trên validation nhưng báo nhầm 5,1% giao dịch tốt, vượt mục tiêu 5% một chút, nên recall tại FPR 5% bằng 0. Trên test, cùng mức đó chỉ báo nhầm 3,9%, nên recall là 0,22.
-- **Về lần chạy test trước:** đã có một lần chạy test (`run-515a1190a0a4`) với config cũ, trước khi thêm metric `fpr_target`. Mô hình, đặc trưng và ngưỡng giống hệt nhau. Mọi metric có ở cả hai lần đều trùng khớp, nên lần chạy thứ hai chỉ bổ sung recall tại FPR 5%, không dùng kết quả test để chọn lại mô hình.
+## Nguyên tắc
 
-<p align="center"><img src="docs/assets/results/split.png" alt="Số giao dịch và tỷ lệ gian lận của train, validation, test" width="70%"></p>
-<p align="center"><img src="docs/assets/results/pr_auc.png" alt="PR-AUC của hai baseline trên validation và test kèm khoảng tin cậy 95%" width="70%"></p>
-<p align="center"><img src="docs/assets/results/recall_targets.png" alt="Recall khi precision ≥ 0,5 và khi FPR ≤ 5% trên validation và test" width="100%"></p>
-
-Lệnh `make report` vẽ ba biểu đồ trên vào `docs/assets/results/`:
-
-| Biểu đồ | Cho biết |
-| --- | --- |
-| `split.png` | Số giao dịch và tỷ lệ gian lận của train, validation, test |
-| `pr_auc.png` | PR-AUC của từng mô hình kèm khoảng tin cậy 95%, so với mức của mô hình ngẫu nhiên |
-| `recall_targets.png` | Tỷ lệ gian lận bắt được khi giữ precision ≥ 0,5, và khi chỉ cho phép báo nhầm 5% giao dịch tốt |
-
-Lệnh này cũng tạo `summary.md` chứa bảng số ở trên, dùng để dán vào README.
+- **Đánh giá trung thực hơn điểm cao:** chia theo thời gian, không xáo trộn; mọi phép biến đổi chỉ học trên train; tập test dùng một lần.
+- **Tái lập được:** cùng config, seed và dữ liệu cho cùng kết quả; mỗi lần chạy lưu config, checksum dữ liệu và metric.
+- **Không dữ liệu thật, không dữ liệu thẻ:** chỉ dataset công khai và dữ liệu tự sinh.
 
 ## Chạy thử
 
@@ -63,11 +52,7 @@ git clone https://github.com/TrungTuyenDo02/Payment_Intelligence_Ecosystem.git
 ```
 
 ```bash
-cd Payment_Intelligence_Ecosystem
-```
-
-```bash
-cp .env.example .env
+cd Payment_Intelligence_Ecosystem && cp .env.example .env
 ```
 
 ```bash
@@ -78,85 +63,50 @@ make setup
 make lint test
 ```
 
-```bash
-make up
-```
+`make test` chỉ dùng dữ liệu tổng hợp nhỏ có sẵn trong repo, không cần tải dataset.
 
-`make test` chỉ dùng dữ liệu tổng hợp nhỏ có sẵn trong repo, không cần tải dataset. `make up` bật PostgreSQL 16; tắt bằng `make down`.
-
-## Chạy với dữ liệu thật
-
-1. Tải [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) từ Kaggle (cần đăng nhập và chấp nhận điều khoản cuộc thi). Đặt `train_transaction.csv` và `train_identity.csv` vào `datasets/raw/ieee-cis/`. Thư mục này không được commit.
-2. Tạo manifest để ghi checksum của dữ liệu:
-
-   ```bash
-   PYTHONPATH=shared/dataset-management uv run python -m dataset_management.cli --name ieee-cis --source "Kaggle competition: IEEE-CIS Fraud Detection (https://www.kaggle.com/c/ieee-fraud-detection)" --base-dir datasets/raw/ieee-cis --file train_transaction.csv --file train_identity.csv --download-date YYYY-MM-DD --license-note "Kaggle competition terms, research use only, verify before any other use" --out datasets/manifests/ieee-cis.yaml
-   ```
-
-3. Chạy EDA trên phần train. Bảng kết quả nằm trong `artifacts/eda/`; các quyết định tiền xử lý nằm trong [`eda-summary.md`](docs/data-analysis/eda-summary.md).
-
-   ```bash
-   make eda
-   ```
-
-4. Chạy hai baseline trên train và validation, rồi vẽ biểu đồ:
-
-   ```bash
-   make baseline
-   ```
-
-   ```bash
-   make report
-   ```
-
-5. Khi đã chốt cấu hình, chủ dự án đặt `status: frozen` trong `projects/fraud-risk/configs/baseline.yaml` và chạy đánh giá test **một lần duy nhất**. Sau đó vẽ biểu đồ cho lần chạy test:
-
-   ```bash
-   make baseline-final
-   ```
-
-   ```bash
-   make report
-   ```
+<details>
+<summary>Các lệnh khác và cách chạy với dữ liệu thật</summary>
 
 | Lệnh | Việc |
 | --- | --- |
-| `make setup` | Cài môi trường |
-| `make lint` / `make test` | Kiểm tra code style / chạy test |
-| `make up` / `make down` | Bật / tắt PostgreSQL |
-| `make eda` | EDA trên phần train |
+| `make up` / `make down` | Bật / tắt PostgreSQL 16 |
+| `make simulate` | Sinh dữ liệu thanh toán giả lập vào `artifacts/simulations/<simulation_id>/` (`CONFIG=...` để chọn kịch bản) |
+| `make db-init` / `make ingest SIM=<simulation_id>` | Tạo bảng / nạp một lần mô phỏng vào PostgreSQL |
+| `make eda` | EDA trên phần train của IEEE-CIS |
 | `make baseline` | Hai baseline, đánh giá trên validation |
-| `make baseline-final` | Đánh giá test một lần cho config đã `frozen` |
-| `make report` | Biểu đồ và bảng số cho lần chạy gần nhất (`RUN_DIR=...` để chọn lần chạy khác) |
-| `make simulate` | Sinh dữ liệu thanh toán giả lập (Stage C) vào `artifacts/simulations/<simulation_id>/`; `CONFIG=...` để chọn kịch bản khác |
-| `make db-init` / `make ingest SIM=<simulation_id>` | Tạo bảng PostgreSQL / nạp một lần mô phỏng vào PostgreSQL (cần `make up`) |
+| `make baseline-final` | Đánh giá test một lần, chỉ với config đã `frozen` (chỉ chủ dự án chạy) |
+| `make report` | Vẽ biểu đồ và bảng số cho lần chạy gần nhất (`RUN_DIR=...` để chọn lần khác) |
 
-## Quy trình làm việc
+**Dữ liệu IEEE-CIS:** tải [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) từ Kaggle (cần đăng nhập và chấp nhận điều khoản cuộc thi), đặt `train_transaction.csv` và `train_identity.csv` vào `datasets/raw/ieee-cis/` (không commit). Tạo manifest checksum:
+
+```bash
+PYTHONPATH=shared/dataset-management uv run python -m dataset_management.cli --name ieee-cis --source "Kaggle competition: IEEE-CIS Fraud Detection (https://www.kaggle.com/c/ieee-fraud-detection)" --base-dir datasets/raw/ieee-cis --file train_transaction.csv --file train_identity.csv --download-date YYYY-MM-DD --license-note "Kaggle competition terms, research use only, verify before any other use" --out datasets/manifests/ieee-cis.yaml
+```
+
+Sau đó chạy `make eda`, `make baseline`, `make report`.
+
+</details>
+
+<details>
+<summary>Quy trình làm việc</summary>
 
 <p align="center"><img src="docs/assets/diagrams/workflow.svg" alt="Quy trình: nhánh, pull request, CI, review, merge" width="100%"></p>
 
-Mỗi pull request được [CI](.github/workflows/ci.yml) kiểm tra: `make lint` và `make test` chạy trên Python 3.11 và 3.13. CI cũng chặn việc lỡ commit dataset, file mô hình hoặc `.env`.
+Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` và `make test` trên Python 3.11 và 3.13, và chặn việc lỡ commit dataset, file mô hình hoặc `.env`.
 
-## Cấu trúc thư mục
-
-```text
-contracts/payment-event/    hợp đồng dữ liệu (JSON Schema) + test
-shared/dataset-management/  manifest, checksum
-projects/fraud-risk/        adapter, EDA, baseline, đánh giá, config, test
-projects/payment-reliability/   Stage D
-shared/synthetic-generator/     Stage C
-docs/                       tổng quan, ADR, phân tích dữ liệu, sơ đồ
-datasets/raw/, artifacts/   dữ liệu và kết quả chạy (không commit)
-```
+</details>
 
 ## Tài liệu
 
-- [Bàn giao công việc](HANDOFF.md)
-- [Tổng quan đề tài](docs/product/project-overview.md)
-- [Đặc tả Stage C](docs/architecture/stage-c-spec.md) · [Báo cáo Stage C](docs/architecture/stage-c-report.md)
-- [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md)
-- ADR: [0001](docs/decisions/0001-package-layout.md) cấu trúc package · [0002](docs/decisions/0002-product-boundaries.md) ranh giới hai sản phẩm · [0003](docs/decisions/0003-label-delay-and-entity-overlap.md) độ trễ nhãn · [0004](docs/decisions/0004-postgres-driver.md) driver PostgreSQL
-- [Contract `payment-event`](contracts/payment-event/)
+| Tài liệu | Nội dung |
+| --- | --- |
+| [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch, rủi ro, tài liệu tham khảo |
+| [Bàn giao công việc](HANDOFF.md) | Trạng thái hiện tại và việc tiếp theo |
+| [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md) | 9 quyết định đã duyệt và bằng chứng |
+| [Đặc tả](docs/architecture/stage-c-spec.md) · [Báo cáo](docs/architecture/stage-c-report.md) Stage C | Bộ sinh dữ liệu giả lập và ingestion |
+| [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0004) |
 
 ## Giấy phép
 

@@ -21,11 +21,24 @@ DEFAULT_OUT = REPO_ROOT / "docs" / "assets" / "results"
 
 MODEL_LABELS = {"rule_based": "Luật (rule-based)", "logistic": "Logistic Regression"}
 PART_LABELS = {"train": "Train", "valid": "Validation", "test": "Test"}
-PART_COLORS = {"train": "#9aa5b1", "valid": "#2f6fdb", "test": "#1a9e5c"}
+# One blue hue, light to dark in time order (validated as an ordinal ramp).
+PART_COLORS = {"train": "#86b6ef", "valid": "#3987e5", "test": "#184f95"}
+INK, INK_2, MUTED, GRID = "#0b0b0b", "#52514e", "#898781", "#e1e0d9"
 
 
 class ReportError(RuntimeError):
     """No usable run folder."""
+
+
+def vn_number(value: float, decimals: int = 0) -> str:
+    """Vietnamese number format: `.` groups thousands, `,` marks decimals."""
+    text = f"{value:,.{decimals}f}"
+    return text.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+def vn_percent(value: float, decimals: int = 2) -> str:
+    """Share in [0, 1] as a Vietnamese percentage, e.g. 0.0338 -> `3,38%`."""
+    return vn_number(value * 100, decimals) + "%"
 
 
 def latest_run_dir(artifacts_dir: Path) -> Path:
@@ -52,91 +65,161 @@ def _eval_parts(metrics: dict[str, Any]) -> list[str]:
     return [p for p in ("valid", "test") if p in first]
 
 
-def _style(ax: plt.Axes, title: str, ylabel: str) -> None:
-    ax.set_title(title, loc="left", fontsize=12, fontweight="bold")
-    ax.set_ylabel(ylabel)
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.grid(axis="y", alpha=0.3)
-    ax.set_axisbelow(True)
-
-
-def plot_pr_auc(metrics: dict[str, Any], out: Path) -> Path:
-    """PR-AUC per model and partition, with the 95% bootstrap CI and the random baseline."""
-    parts, models = _eval_parts(metrics), list(metrics["models"])
-    width = 0.8 / len(parts)
-    fig, ax = plt.subplots(figsize=(7, 4))
-    for j, part in enumerate(parts):
-        xs = [i + (j - (len(parts) - 1) / 2) * width for i in range(len(models))]
-        vals = [metrics["models"][m][part]["pr_auc"] for m in models]
-        cis = [metrics["models"][m][part]["pr_auc_ci"] for m in models]
-        err = [
-            [v - c["low"] for v, c in zip(vals, cis, strict=True)],
-            [c["high"] - v for v, c in zip(vals, cis, strict=True)],
-        ]
-        bars = ax.bar(
-            xs,
-            vals,
-            width * 0.9,
-            yerr=err,
-            capsize=4,
-            color=PART_COLORS[part],
-            label=PART_LABELS[part],
-        )
-        ax.bar_label(bars, fmt="%.3f", padding=3, fontsize=9)
-        prevalence = metrics["models"][models[0]][part]["prevalence"]
-        ax.axhline(prevalence, color=PART_COLORS[part], ls="--", lw=1)
-    ax.plot([], [], color="#555", ls="--", lw=1, label="Mô hình ngẫu nhiên (= tỷ lệ gian lận)")
-    ax.set_xticks(range(len(models)), [MODEL_LABELS.get(m, m) for m in models])
-    _style(ax, "PR-AUC (thanh lỗi: khoảng tin cậy 95%)", "PR-AUC")
-    ax.legend(frameon=False)
-    return _save(fig, out / "pr_auc.png")
-
-
-def plot_recall_targets(metrics: dict[str, Any], out: Path) -> Path:
-    """Recall at the precision target and at the FPR target, per model and partition."""
-    parts, models = _eval_parts(metrics), list(metrics["models"])
-    sample = metrics["models"][models[0]][parts[0]]
-    p_target = sample["recall_at_precision"]["precision_target"]
-    f_target = sample["recall_at_fpr"]["fpr_target"]
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
-    for ax, key, title in (
-        (axes[0], "recall_at_precision", f"Recall khi precision ≥ {p_target:g}"),
-        (axes[1], "recall_at_fpr", f"Recall khi FPR ≤ {f_target:.0%}"),
-    ):
-        width = 0.8 / len(parts)
-        for j, part in enumerate(parts):
-            xs = [i + (j - (len(parts) - 1) / 2) * width for i in range(len(models))]
-            vals = [metrics["models"][m][part][key]["recall"] for m in models]
-            bars = ax.bar(xs, vals, width * 0.9, color=PART_COLORS[part], label=PART_LABELS[part])
-            ax.bar_label(bars, fmt="%.2f", padding=3, fontsize=9)
-        ax.set_xticks(range(len(models)), [MODEL_LABELS.get(m, m) for m in models])
-        ax.set_ylim(0, 1.05)
-        _style(ax, title, "Recall")
-    axes[0].legend(frameon=False)
-    return _save(fig, out / "recall_targets.png")
-
-
-def plot_split(metrics: dict[str, Any], split: dict[str, Any], out: Path) -> Path:
-    """Rows and fraud rate of each chronological partition."""
+def _fraud_rates(metrics: dict[str, Any], split: dict[str, Any]) -> dict[str, float]:
     rates = dict(split.get("fraud_rate", {}))
     first = next(iter(metrics["models"].values()))
     for part in _eval_parts(metrics):
         rates.setdefault(part, first[part]["prevalence"])
+    return rates
+
+
+def plot_split(metrics: dict[str, Any], split: dict[str, Any], out: Path) -> Path:
+    """One time axis cut into train, validation and test, with size and fraud rate."""
+    rates = _fraud_rates(metrics, split)
     parts = [p for p in PART_LABELS if p in split["rows"]]
-    fig, ax = plt.subplots(figsize=(7, 3.6))
-    bars = ax.bar(
-        [PART_LABELS[p] for p in parts],
-        [split["rows"][p] for p in parts],
-        color=[PART_COLORS[p] for p in parts],
+    total = sum(split["rows"][p] for p in parts)
+    fig, ax = plt.subplots(figsize=(9, 2.1))
+    left = 0.0
+    for part in parts:
+        n = split["rows"][part]
+        width = n / total
+        ax.barh(0, width - 0.003, left=left, height=0.5, color=PART_COLORS[part])
+        ink = "#ffffff" if part != "train" else INK
+        ax.text(
+            left + width / 2,
+            0,
+            f"{PART_LABELS[part]} · {width:.0%}",
+            ha="center",
+            va="center",
+            color=ink,
+            fontsize=11,
+            fontweight="bold",
+        )
+        rate = f"gian lận {vn_percent(rates[part])}" if part in rates else "chưa mở"
+        ax.text(
+            left + width / 2,
+            -0.42,
+            f"{vn_number(n)} giao dịch\n{rate}",
+            ha="center",
+            va="top",
+            color=INK_2,
+            fontsize=9.5,
+        )
+        left += width
+    ax.annotate(
+        "",
+        xy=(1.0, 0.42),
+        xytext=(0.0, 0.42),
+        arrowprops={"arrowstyle": "->", "color": MUTED, "lw": 1.2},
     )
-    labels = [
-        f"{split['rows'][p]:,} dòng\n" + (f"gian lận {rates[p]:.2%}" if p in rates else "chưa mở")
-        for p in parts
-    ]
-    ax.bar_label(bars, labels=labels, padding=3, fontsize=9)
-    ax.set_ylim(0, max(split["rows"].values()) * 1.3)
-    _style(ax, "Chia dữ liệu theo thời gian", "Số giao dịch")
+    ax.text(0.0, 0.5, "cũ hơn", color=MUTED, fontsize=9, va="bottom")
+    ax.text(1.0, 0.5, "mới hơn (thời gian →)", color=MUTED, fontsize=9, va="bottom", ha="right")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(-1.0, 0.75)
+    ax.axis("off")
+    ax.set_title(
+        "Dữ liệu chia theo thời gian, không xáo trộn",
+        loc="left",
+        fontsize=12,
+        fontweight="bold",
+        color=INK,
+    )
     return _save(fig, out / "split.png")
+
+
+def plot_results(metrics: dict[str, Any], out: Path) -> Path:
+    """Validation vs test per model: PR-AUC (95% CI) and recall at the FPR target."""
+    parts, models = _eval_parts(metrics), list(metrics["models"])
+    sample = metrics["models"][models[0]][parts[0]]
+    f_target = sample["recall_at_fpr"]["fpr_target"]
+    prevalence = [
+        sample_part["prevalence"]
+        for sample_part in (metrics["models"][models[0]][p] for p in parts)
+    ]
+    panels = (
+        (
+            "pr_auc",
+            "PR-AUC (vệt mờ: khoảng tin cậy 95%)",
+            (min(prevalence), max(prevalence)),
+            "ngẫu nhiên",
+        ),
+        (
+            "recall_at_fpr",
+            f"Tỷ lệ gian lận bắt được khi chỉ báo nhầm {f_target:.0%} giao dịch tốt",
+            (f_target, f_target),
+            "ngẫu nhiên",
+        ),
+    )
+    fig, axes = plt.subplots(1, 2, figsize=(10, 2.9), sharey=True)
+    ys = list(range(len(models)))[::-1]
+    for ax, (key, title, rand, rand_label) in zip(axes, panels, strict=True):
+        vmax = 0.0
+        for y, model in zip(ys, models, strict=True):
+            vals = []
+            for part in parts:
+                m = metrics["models"][model][part]
+                v = m["pr_auc"] if key == "pr_auc" else m[key]["recall"]
+                vals.append(v)
+                if key == "pr_auc":
+                    ci = m["pr_auc_ci"]
+                    ax.plot(
+                        [ci["low"], ci["high"]],
+                        [y, y],
+                        color=PART_COLORS[part],
+                        lw=4,
+                        alpha=0.35,
+                        solid_capstyle="round",
+                        zorder=2,
+                    )
+                vmax = max(vmax, v)
+            if len(vals) == 2:
+                ax.plot(vals, [y, y], color=GRID, lw=2, zorder=1)
+            for part, v in zip(parts, vals, strict=True):
+                ax.scatter(
+                    v,
+                    y,
+                    s=90,
+                    color=PART_COLORS[part],
+                    edgecolor="#ffffff",
+                    linewidth=2,
+                    zorder=3,
+                    label=PART_LABELS[part] if y == ys[0] else None,
+                )
+                # Lower value labelled on its left, higher on its right: never overlap.
+                left_side = len(vals) == 2 and v == min(vals) and v != max(vals)
+                ax.annotate(
+                    vn_number(v, 3 if key == "pr_auc" else 2),
+                    (v, y),
+                    xytext=(-9 if left_side else 9, 0),
+                    textcoords="offset points",
+                    ha="right" if left_side else "left",
+                    va="center",
+                    fontsize=9,
+                    color=INK_2,
+                )
+        ax.axvspan(rand[0], rand[1] + 1e-3, color=MUTED, alpha=0.25, lw=0)
+        ax.axvline(rand[1], color=MUTED, ls="--", lw=1)
+        ax.text(rand[1], len(models) - 0.45, f" {rand_label}", color=MUTED, fontsize=8.5, va="top")
+        ax.set_xlim(-0.02, max(vmax * 1.25, 0.1))
+        ax.xaxis.set_major_formatter(lambda x, _: vn_number(x, 2))
+        ax.set_title(title, loc="left", fontsize=10.5, fontweight="bold", color=INK)
+        ax.spines[["top", "right", "left"]].set_visible(False)
+        ax.spines["bottom"].set_color("#c3c2b7")
+        ax.tick_params(colors=INK_2, length=0)
+        ax.grid(axis="x", color=GRID, lw=0.8)
+        ax.set_axisbelow(True)
+        ax.set_ylim(-0.6, len(models) - 0.4)
+    axes[0].set_yticks(ys, [MODEL_LABELS.get(m, m) for m in models], fontsize=10, color=INK)
+    fig.legend(
+        *axes[0].get_legend_handles_labels(),
+        loc="lower center",
+        ncol=len(parts),
+        frameon=False,
+        fontsize=9.5,
+        bbox_to_anchor=(0.5, -0.02),
+    )
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    return _save(fig, out / "results.png", tight=False)
 
 
 def summary_table(metrics: dict[str, Any]) -> str:
@@ -148,7 +231,8 @@ def summary_table(metrics: dict[str, Any]) -> str:
     lines = [
         f"Run `{metrics['run_id']}` (stage: {metrics['stage']})",
         "",
-        f"| Mô hình | Tập | PR-AUC [95% CI] | Tỷ lệ gian lận | Recall @ precision {p_target:g} "
+        "| Mô hình | Tập | PR-AUC [95% CI] | Tỷ lệ gian lận "
+        f"| Recall @ precision {vn_number(p_target, 1)} "
         f"| Recall @ FPR {f_target:.0%} |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
@@ -158,16 +242,19 @@ def summary_table(metrics: dict[str, Any]) -> str:
             ci = m["pr_auc_ci"]
             lines.append(
                 f"| {MODEL_LABELS.get(model, model)} | {PART_LABELS[part]} "
-                f"| {m['pr_auc']:.3f} [{ci['low']:.3f}, {ci['high']:.3f}] "
-                f"| {m['prevalence']:.2%} | {m['recall_at_precision']['recall']:.2f} "
-                f"| {m['recall_at_fpr']['recall']:.2f} |"
+                f"| {vn_number(m['pr_auc'], 3)} "
+                f"[{vn_number(ci['low'], 3)}; {vn_number(ci['high'], 3)}] "
+                f"| {vn_percent(m['prevalence'])} "
+                f"| {vn_number(m['recall_at_precision']['recall'], 2)} "
+                f"| {vn_number(m['recall_at_fpr']['recall'], 2)} |"
             )
     return "\n".join(lines) + "\n"
 
 
-def _save(fig: plt.Figure, path: Path) -> Path:
-    fig.tight_layout()
-    fig.savefig(path, dpi=150)
+def _save(fig: plt.Figure, path: Path, tight: bool = True) -> Path:
+    if tight:
+        fig.tight_layout()
+    fig.savefig(path, dpi=200, facecolor="#ffffff")
     plt.close(fig)
     return path
 
@@ -180,8 +267,7 @@ def build_report(run_dir: Path, out: Path) -> list[Path]:
     summary.write_text(summary_table(metrics), encoding="utf-8")
     return [
         plot_split(metrics, split, out),
-        plot_pr_auc(metrics, out),
-        plot_recall_targets(metrics, out),
+        plot_results(metrics, out),
         summary,
     ]
 

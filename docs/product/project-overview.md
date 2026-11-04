@@ -1,7 +1,7 @@
 # Payment_Intelligence_Ecosystem — Tổng quan đề tài
 
 > Tài liệu giới thiệu ban đầu. **Phần I** dành cho mentor và người hướng dẫn: đề tài, phạm vi, phương pháp, kế hoạch, rủi ro, tài liệu tham khảo. **Phần II** là phụ lục kỹ thuật cho team phát triển.
-> Cài đặt và lệnh chi tiết: xem [`README.md`](../../README.md). Cập nhật: 2026-11-03 (tuần 1–2 của lịch 6 tuần).
+> Cài đặt và lệnh chi tiết: xem [`README.md`](../../README.md). Cập nhật: 2026-11-04 (hết tuần 3 của lịch 6 tuần).
 
 ---
 
