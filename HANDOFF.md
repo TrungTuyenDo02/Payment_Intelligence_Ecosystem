@@ -5,7 +5,7 @@
 
 ## 1. Đang ở đâu
 
-Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. Tuần 4 sẽ làm Stage D. Mọi thứ đã nằm trên `main` (commit `96f4da7`, PR #6).
+Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D): D01–D05 xong**, detector đã chỉnh trên bộ tuning; còn bước đánh giá một lần trên bộ report (cần chủ dự án). Cập nhật 2026-11-04.
 
 | Tuần | Stage | Trạng thái |
 | --- | --- | --- |
@@ -46,26 +46,25 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. Tuần 4 sẽ làm 
 | `configs/demo.yaml` | tuning (chỉnh detector) | `sim-485cacc9c858` | 25.573 / 30.050 | outage, latency, error burst, outage yếu x1,5 |
 | `configs/report.yaml` | report (chỉ để báo cáo) | `sim-f6e6749ff0bf` | 25.151 / 29.340 | outage, latency, **traffic drop**, outage yếu x1,5 |
 
-- `make test`: 318 test pass khi có PostgreSQL (3 test database tự bỏ qua nếu không có).
+- `make test`: 345 test pass khi có PostgreSQL, kể cả Stage D (7 test database tự bỏ qua nếu không có).
 - Sửa đổi 2026-11-04 (đặc tả Stage C, mục 10): 150 payment/giờ thay cho 30, và thêm một sự cố yếu x1,5 mỗi config.
 
 ## 3. Việc cần làm tiếp
 
-### 3.1 Chờ chủ dự án (chặn Stage D)
+### 3.1 Chờ chủ dự án (chặn phần cuối Stage D)
 
 | # | Việc | Ghi chú |
 | --- | --- | --- |
-| 1 | ~~Duyệt giả định~~ (chủ dự án đồng ý 2026-11-04) trong [README generator](shared/synthetic-generator/README.md) và kịch bản bất thường | Tỷ lệ lỗi 15/22/30% **cố ý để cao** |
-| 2 | ~~Đặt `status: frozen` cho `demo.yaml` và `report.yaml`~~ | **Xong (2026-11-04):** agent đặt theo yêu cầu rõ ràng của chủ dự án trong chat |
-| 3 | ~~Quyết định có thêm kịch bản bất thường yếu hơn (khoảng x1,5) không~~ | **Đã quyết (2026-11-04):** thêm vào cả hai config, cùng với 150 payment/giờ. KPI dùng SQL views (ADR 0005); nếu tuần 5 thiếu thời gian thì cắt API chấm điểm trước |
+| 1 | Xem kết quả tuning trong [báo cáo Stage D](docs/architecture/stage-d-report.md), mục 2 | D-B: 3/4 bất thường, 0 báo nhầm/ngày; D-A: 2/4, 1 báo nhầm/ngày; cả hai trượt sự cố x1,5 |
+| 2 | Đặt `status: frozen` cho `projects/payment-reliability/configs/detector.yaml` | Sau đó không chỉnh ngưỡng nữa |
+| 3 | Chạy `make detect-report` một lần, rồi `make detect-plot` cho lần chạy đó | Hoặc yêu cầu agent làm; số được bổ sung vào báo cáo Stage D |
 
-### 3.2 Stage D (tuần 4) — đề xuất thứ tự
+Đã xong trước đó (2026-11-04): duyệt giả định generator, `frozen` hai config mô phỏng, 150 payment/giờ, sự cố yếu x1,5, đặc tả Stage D, ADR 0005 (SQL views).
 
-1. **Đặc tả Stage D**: [`stage-d-spec.md`](docs/architecture/stage-d-spec.md), đã duyệt 2026-11-04 (quyết định ở mục 10).
-2. **Tầng KPI: SQL views** ([ADR 0005](docs/decisions/0005-kpi-layer-sql-views.md), chủ dự án chọn 2026-11-04). Không thêm `dbt-postgres`.
-3. **KPI độ tin cậy, tính theo attempt** (quyết định của chủ dự án): tỷ lệ thành công, thành công ngay lần đầu, tỷ lệ retry, độ trễ p50/p95, lỗi theo provider và mã lỗi. Tách lỗi nghiệp vụ (`DECLINED`, `INVALID_REQUEST`) khỏi lỗi kỹ thuật (quyết định 2 của đặc tả Stage C).
-4. **Bộ phát hiện bất thường** trên chuỗi KPI theo thời gian. Chỉ chỉnh trên `sim-485cacc9c858` (tuning), chỉ báo cáo trên `sim-f6e6749ff0bf` (report). Báo cáo là "kiểm chứng trên bất thường đã biết", không phải hiệu năng thực tế (rủi ro 2 trong tổng quan). Detector **không được đọc** `anomaly_labels.json`; chỉ phần đánh giá được đọc.
-5. Danh sách sự cố (gộp các điểm bất thường liền nhau) làm đầu vào cho dashboard ở Stage F.
+### 3.2 Sau Stage D
+
+- **Stage E (tuần 5):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02. Nếu thiếu thời gian, cắt API chấm điểm trước (quyết định 2026-11-04). Cần đặc tả Stage E.
+- **Stage F (tuần 6):** dashboard đọc `incidents.json` và KPI; nên gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 2.3).
 
 ### 3.3 Việc nhỏ, không chặn
 
@@ -104,6 +103,14 @@ make db-init
 make ingest SIM=sim-485cacc9c858
 ```
 
+```bash
+make kpi SIM=sim-485cacc9c858
+```
+
+```bash
+make detect
+```
+
 Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, không commit). Không cần nó cho Stage C và D.
 
 ## 5. Quy tắc làm việc
@@ -124,4 +131,5 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [Contract `payment-event`](contracts/payment-event/) | Schema 1.0.0 và changelog (quy tắc giữa các attempt) |
 | [Đặc tả](docs/architecture/stage-c-spec.md) và [báo cáo](docs/architecture/stage-c-report.md) Stage C | Thiết kế, quyết định, kết quả, hạn chế |
 | [README generator](shared/synthetic-generator/README.md) | Mọi giả định của dữ liệu giả lập |
-| [ADR 0001–0004](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL |
+| [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
+| [ADR 0001–0005](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views |

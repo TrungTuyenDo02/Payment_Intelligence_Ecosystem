@@ -15,10 +15,10 @@ CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
 export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk:projects/payment-reliability
 
-.PHONY: help setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-report
+.PHONY: help setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-plot detect-report
 
 help:
-	@echo "Targets: setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-report"
+	@echo "Targets: setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-plot detect-report"
 
 setup:
 ifeq ($(UV),)
@@ -80,6 +80,9 @@ detect:
 
 tune:
 	$(RUN) python -m payment_reliability.cli tune $(if $(DETECTOR_CONFIG),--config $(DETECTOR_CONFIG),)
+
+detect-plot:
+	$(RUN) python -m payment_reliability.cli plot $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
 
 # One-time evaluation on the report simulation; config must be frozen by the OWNER.
 detect-report:

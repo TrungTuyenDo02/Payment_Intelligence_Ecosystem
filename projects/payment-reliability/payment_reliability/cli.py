@@ -1,8 +1,9 @@
-"""Stage D commands: `make kpi`, `make detect`, `make tune`, `make detect-report`.
+"""Stage D commands behind `make kpi`, `detect`, `tune`, `detect-plot` and `detect-report`.
 
 - kpi: export the KPI views of one simulation to Parquet (needs PostgreSQL).
 - detect: run both detectors on the tuning simulation and evaluate them.
 - tune: grid search of thresholds on the tuning simulation only.
+- plot: chart of a detection run (KPI and scores around each anomaly window).
 - detect-report: one-time evaluation on the report simulation of a config the owner froze.
 """
 
@@ -196,6 +197,11 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
     k = sub.add_parser("kpi")
     k.add_argument("--sim", required=True)
+    pl = sub.add_parser("plot")
+    pl.add_argument("--run-dir", type=Path, help="default: latest folder under detections/")
+    pl.add_argument(
+        "--out", type=Path, default=REPO_ROOT / "docs/assets/results/stage-d-tuning.png"
+    )
     for name in ("detect", "tune", "detect-report"):
         p = sub.add_parser(name)
         p.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -212,6 +218,16 @@ def main(argv: list[str] | None = None) -> int:
 
             with connect() as conn:
                 print(export_kpis(conn, args.sim, kpi_root))
+            return 0
+        if args.cmd == "plot":
+            from payment_reliability.plots import plot_run
+
+            runs = sorted((args.artifacts_dir / "detections").glob("*/evaluation.json"),
+                          key=lambda p: p.stat().st_mtime)  # fmt: skip
+            if not args.run_dir and not runs:
+                raise DetectError("no detection run found; run `make detect` first")
+            run_dir = args.run_dir or runs[-1].parent
+            print(plot_run(run_dir, kpi_root, sim_root, args.out))
             return 0
         cfg = load_config(args.config)
         if args.cmd == "detect":

@@ -49,6 +49,7 @@ def make_kpis(
             "latency_p50_ms": lat,
         }
     )
+    prov["technical_failure_rate"] = prov["technical_failures"] / attempts
     prov = pd.concat([prov, prov.assign(provider_id="ALL")], ignore_index=True)
     qr = rng.binomial(attempts, 0.5, n_buckets)
     method = pd.concat(
@@ -60,6 +61,7 @@ def make_kpis(
         ],
         ignore_index=True,
     )  # fmt: skip
+    method["method_share"] = method["first_attempts"] / attempts
     return {"provider_15m": prov, "method_15m": method, "errors_15m": pd.DataFrame()}
 
 
@@ -296,3 +298,18 @@ def test_tune_ranks_feasible_settings_first() -> None:
     grid = cli.tune(cfg, make_kpis(step=(200, 206), step_p=0.45), labels)
     best = grid[grid["detector"] == "pooled"].iloc[0]
     assert best["feasible"] and best["detected"] == 1
+
+
+def test_plot_of_a_run_is_written(tmp_path: Path) -> None:
+    from payment_reliability.plots import plot_run
+
+    cfg, root = _workspace(tmp_path)
+    sid = cfg["simulations"]["tuning"]
+    label = {"anomaly_id": "anom-01", "type": "provider_outage",
+             "start": "2026-01-07T02:00:00.000Z", "end": "2026-01-07T03:30:00.000Z",
+             "magnitude": 4, "provider_id": "prov_a", "payment_method": None,
+             "error_code": None}  # fmt: skip
+    (root / "simulations" / sid / "anomaly_labels.json").write_text(json.dumps([label]))
+    run = cli.cmd_detect(cfg, root / "kpi", root / "simulations", root)
+    out = plot_run(run, root / "kpi", root / "simulations", tmp_path / "chart.png")
+    assert out.stat().st_size > 0
