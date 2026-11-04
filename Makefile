@@ -13,7 +13,7 @@ CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 # POSTGRES_* from .env (never committed); defaults in code match compose.yaml.
 -include .env
 export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
-export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk
+export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk:projects/payment-reliability
 
 .PHONY: help setup lint test up down eda baseline baseline-final report simulate db-init ingest
 
