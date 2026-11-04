@@ -16,12 +16,14 @@ import pandas as pd
 from dataset_management.manifest import (
     ChecksumMismatchError,
     DatasetFileNotFoundError,
+    DatasetManifest,
     load_manifest,
     verify_files,
 )
 
 from fraud_risk.adapters.ieee_cis import (
     DatasetNotFoundError,
+    IeeeCisData,
     IeeeCisSchemaError,
     check_files,
     load_ieee_cis,
@@ -47,7 +49,7 @@ from fraud_risk.features.baseline_features import (
     build_features,
 )
 from fraud_risk.features.guards import check_label_leakage
-from fraud_risk.scripts.config import BaselineConfig, ConfigError, load_config
+from fraud_risk.scripts.config import BaselineConfig, ConfigError, DataConfig, load_config
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 ACCURACY_NOTE = (
@@ -58,6 +60,20 @@ ACCURACY_NOTE = (
 
 class ConfigNotFrozenError(RuntimeError):
     """`--stage final` needs a config the owner has set to `status: frozen`."""
+
+
+def load_checked_data(
+    data_cfg: DataConfig, data_dir: Path | None, manifest_path: Path | None, artifacts_dir: Path
+) -> tuple[IeeeCisData, DatasetManifest]:
+    """IEEE-CIS files checked against the dataset manifest, then loaded (X, y, time)."""
+    directory = resolve_data_dir(data_dir)
+    check_files(directory, data_cfg.use_identity)
+    manifest = load_manifest(manifest_path or Path(data_cfg.manifest))
+    verify_files(manifest, directory, required_files(data_cfg.use_identity))
+    data = load_ieee_cis(
+        directory, use_identity=data_cfg.use_identity, parquet_dir=artifacts_dir / "parquet"
+    )
+    return data, manifest
 
 
 def fit_baselines(
@@ -110,14 +126,7 @@ def run(
             f"{config_path} has status '{cfg.status}'. Only the owner sets 'status: frozen' "
             "before the one-time test evaluation."
         )
-    directory = resolve_data_dir(data_dir)
-    check_files(directory, cfg.data.use_identity)
-    manifest = load_manifest(manifest_path or Path(cfg.data.manifest))
-    verify_files(manifest, directory, required_files(cfg.data.use_identity))
-
-    data = load_ieee_cis(
-        directory, use_identity=cfg.data.use_identity, parquet_dir=artifacts_dir / "parquet"
-    )
+    data, manifest = load_checked_data(cfg.data, data_dir, manifest_path, artifacts_dir)
     split = time_split(data.time, cfg.split.train_frac, cfg.split.valid_frac)
     run_hash = compute_run_hash(raw, cfg.seed, manifest.checksum, split.boundaries)
     run_id = run_id_from_hash(run_hash)

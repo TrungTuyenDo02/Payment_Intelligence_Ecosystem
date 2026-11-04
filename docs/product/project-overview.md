@@ -44,8 +44,8 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | A | Khung repo, tooling, PostgreSQL, contract `payment-event`, công cụ manifest dataset |
 | B | Baseline gian lận trên IEEE-CIS: adapter, chia theo thời gian, EDA, metrics, baseline luật và Logistic Regression, run log |
 | C | Bộ sinh dữ liệu thanh toán giả lập (dựa trên luật, tái lập bằng `simulation_id`) và pipeline ingestion |
-| D | Mô hình dữ liệu (dbt), KPI độ tin cậy, bộ phát hiện bất thường |
-| E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting, API chấm điểm |
+| D | Mô hình dữ liệu (SQL views, [ADR 0005](../decisions/0005-kpi-layer-sql-views.md)), KPI độ tin cậy, bộ phát hiện bất thường |
+| E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting (API chấm điểm đã cắt, quyết định 2026-11-04) |
 | F | Dashboard và báo cáo |
 
 ### 3.3 Ngoài phạm vi
@@ -75,10 +75,10 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | 1–2 | A, B | Baseline có số liệu validation; một lần chạy test | Duyệt contract; ADR 0003 đã chọn: để `gap_days` sang Stage E |
 | 3 | C | Dữ liệu sự kiện giả lập (khoảng 25 nghìn payment, sau sửa đổi 2026-11-04) tái lập được, nạp vào PostgreSQL | Đặc tả Stage C đã duyệt; driver đã chọn ([ADR 0004](../decisions/0004-postgres-driver.md)) |
 | 4 | D | Bảng KPI, danh sách bất thường và sự cố | ADR dbt (phương án dự phòng: SQL views) |
-| 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting, API chấm điểm | Đăng ký trước danh sách config chạy test; ADR framework API |
-| 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard |
+| 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting (API đã cắt) | Đăng ký trước danh sách config chạy test (xong: chỉ `gbm.yaml`) |
+| 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard (xong: [ADR 0007](../decisions/0007-static-html-dashboard.md)) |
 
-**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). **Stage C: C01–C05 xong code** ([báo cáo](../architecture/stage-c-report.md)): sau sửa đổi ngày 2026-11-04 (150 payment/giờ, thêm sự cố yếu x1,5), demo `tuning` sinh 25.573 payment, 30.050 sự kiện; config `report` riêng. Đã nạp thử cả hai vào PostgreSQL; hai config mô phỏng đã `frozen` (2026-11-04). **Stage D: D01–D05 xong** ([đặc tả](../architecture/stage-d-spec.md), [báo cáo](../architecture/stage-d-report.md)): trên bộ tuning, detector D-B bắt 3/4 bất thường sau 15 phút, không báo nhầm; không bắt được sự cố yếu x1,5. Còn chờ chủ dự án xem kết quả, đặt `frozen` cho config detector và chạy đánh giá một lần trên bộ report.
+**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). **Stage C: C01–C05 xong code** ([báo cáo](../architecture/stage-c-report.md)): sau sửa đổi ngày 2026-11-04 (150 payment/giờ, thêm sự cố yếu x1,5), demo `tuning` sinh 25.573 payment, 30.050 sự kiện; config `report` riêng. Đã nạp thử cả hai vào PostgreSQL; hai config mô phỏng đã `frozen` (2026-11-04). **Stage D hoàn tất** ([đặc tả](../architecture/stage-d-spec.md), [báo cáo](../architecture/stage-d-report.md)): detector D-B bắt 3/4 bất thường trên bộ tuning và 2/4 trên bộ report (`det-08335c6af086`, đánh giá một lần với config `frozen`), không báo nhầm lần nào; trượt sự cố mất lưu lượng (loại chưa gặp khi chỉnh) và sự cố yếu x1,5. Đường cơ sở D-A: 0/4 trên report, 2 báo nhầm mỗi ngày.
 
 ## 6. Rủi ro và hạn chế đã biết
 
@@ -181,8 +181,26 @@ Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào
 | D02 | `make kpi` ra Parquet | Xong |
 | D03 | Detector D-A và D-B | Xong |
 | D04 | Gộp sự cố | Xong |
-| D05 | Đánh giá, `make tune`, `make detect`, `make detect-report` | Xong; đã chỉnh trên tuning, **chưa chạy report** |
-| D06 | Báo cáo và biểu đồ | Phần tuning xong ([báo cáo](../architecture/stage-d-report.md)); phần report chờ chủ dự án |
+| D05 | Đánh giá, `make tune`, `make detect`, `make detect-report` | Xong; report đã chạy một lần (`det-08335c6af086`) |
+| D06 | Báo cáo và biểu đồ | Xong ([báo cáo](../architecture/stage-d-report.md)) |
+
+### Stage E
+
+| ID | Việc | Trạng thái |
+| --- | --- | --- |
+| E01 | `gap_days` cho split (ADR 0003) | Xong |
+| E02 | Thực thể lặp lại, mã hoá theo nhãn | Xong |
+| E03 | Thí nghiệm rò rỉ (`make leakage`, chỉ validation) | Code xong; chờ chạy trên IEEE-CIS |
+| E04 | Gradient Boosting (`make gbm`, `make gbm-final`) | Code xong; chờ chạy trên IEEE-CIS; test một lần sau khi chủ dự án `frozen` |
+| E05 | Báo cáo | Khung ([báo cáo](../architecture/stage-e-report.md)); chờ số thật |
+| — | API chấm điểm | Cắt (chủ dự án, 2026-11-04) |
+
+### Stage F
+
+| ID | Việc | Trạng thái |
+| --- | --- | --- |
+| F01 | Dashboard HTML tĩnh (`make dashboard`, ADR 0007) | Xong; phần Product 02 hiện số khi có run IEEE-CIS trên máy |
+| F02 | Dàn ý báo cáo thực tập ([dàn ý](../report/report-outline.md)) | Xong; mục 4.3 và 4.4 chờ số Stage E |
 
 ## 9. Quy tắc bắt buộc
 

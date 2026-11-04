@@ -13,12 +13,12 @@ CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 # POSTGRES_* from .env (never committed); defaults in code match compose.yaml.
 -include .env
 export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
-export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk:projects/payment-reliability
+export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:shared/dashboard:projects/fraud-risk:projects/payment-reliability
 
-.PHONY: help setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-plot detect-report
+.PHONY: help setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard
 
 help:
-	@echo "Targets: setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-plot detect-report"
+	@echo "Targets: setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard"
 
 setup:
 ifeq ($(UV),)
@@ -57,6 +57,18 @@ baseline-final:
 report:
 	$(RUN) python -m fraud_risk.scripts.plot_results $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
 
+# Stage E (stage-e-spec.md). leakage: validation only. gbm: validation; gbm-final: test once,
+# config frozen by the OWNER.
+GBM_CONFIG ?= projects/fraud-risk/configs/gbm.yaml
+leakage:
+	$(RUN) python -m fraud_risk.experiments.leakage
+
+gbm:
+	$(RUN) python -m fraud_risk.scripts.run_gbm --config $(GBM_CONFIG) --stage validation
+
+gbm-final:
+	$(RUN) python -m fraud_risk.scripts.run_gbm --config $(GBM_CONFIG) --stage final $(if $(FORCE),--force,)
+
 # Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
 SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)
 simulate:
@@ -81,9 +93,14 @@ detect:
 tune:
 	$(RUN) python -m payment_reliability.cli tune $(if $(DETECTOR_CONFIG),--config $(DETECTOR_CONFIG),)
 
+# RUN_DIR=artifacts/detections/<run_id>[/report] OUT=docs/assets/results/<name>.png
 detect-plot:
-	$(RUN) python -m payment_reliability.cli plot $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
+	$(RUN) python -m payment_reliability.cli plot $(if $(RUN_DIR),--run-dir $(RUN_DIR),) $(if $(OUT),--out $(OUT),)
 
 # One-time evaluation on the report simulation; config must be frozen by the OWNER.
 detect-report:
 	$(RUN) python -m payment_reliability.cli detect-report $(if $(DETECTOR_CONFIG),--config $(DETECTOR_CONFIG),) $(if $(FORCE),--force,)
+
+# Stage F: static dashboard from artifacts/ (ADR 0007), written to artifacts/dashboard/index.html.
+dashboard:
+	$(RUN) python -m dashboard.build

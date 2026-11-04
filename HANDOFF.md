@@ -5,7 +5,7 @@
 
 ## 1. Đang ở đâu
 
-Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D): D01–D05 xong**, detector đã chỉnh trên bộ tuning; còn bước đánh giá một lần trên bộ report (cần chủ dự án). Cập nhật 2026-11-04.
+Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D) đã xong**: chỉnh trên bộ tuning, đánh giá một lần trên bộ report (`det-08335c6af086`). Cập nhật 2026-11-04.
 
 | Tuần | Stage | Trạng thái |
 | --- | --- | --- |
@@ -51,20 +51,22 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 
 ## 3. Việc cần làm tiếp
 
-### 3.1 Chờ chủ dự án (chặn phần cuối Stage D)
+### 3.1 Kết quả Stage D
 
-| # | Việc | Ghi chú |
+| Detector | Tuning (`det-3ddc26cff253`) | Report (`det-08335c6af086`, một lần) |
 | --- | --- | --- |
-| 1 | Xem kết quả tuning trong [báo cáo Stage D](docs/architecture/stage-d-report.md), mục 2 | D-B: 3/4 bất thường, 0 báo nhầm/ngày; D-A: 2/4, 1 báo nhầm/ngày; cả hai trượt sự cố x1,5 |
-| 2 | Đặt `status: frozen` cho `projects/payment-reliability/configs/detector.yaml` | Sau đó không chỉnh ngưỡng nữa |
-| 3 | Chạy `make detect-report` một lần, rồi `make detect-plot` cho lần chạy đó | Hoặc yêu cầu agent làm; số được bổ sung vào báo cáo Stage D |
+| D-B gộp cửa sổ | 3/4, 0 báo nhầm/ngày | 2/4, 0 báo nhầm/ngày |
+| D-A z-score bền vững | 2/4, 1,0 báo nhầm/ngày | 0/4, 2,0 báo nhầm/ngày |
 
-Đã xong trước đó (2026-11-04): duyệt giả định generator, `frozen` hai config mô phỏng, 150 payment/giờ, sự cố yếu x1,5, đặc tả Stage D, ADR 0005 (SQL views).
+- Config detector đã `frozen` (agent đặt theo yêu cầu của chủ dự án, commit `e331ec1`, trước khi chạy report). **Không chạy lại `make detect-report` với config này**; `artifacts/detect_report_runs.json` chỉ tồn tại trên máy đã chạy, nên trên máy khác phải tự giữ quy tắc này.
+- Cả hai detector trượt `traffic_drop` (loại không có trong tuning) và sự cố x1,5. Muốn thử ngưỡng riêng cho từng loại KPI là config mới và cần bộ report mới.
 
 ### 3.2 Sau Stage D
 
-- **Stage E (tuần 5):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02. Nếu thiếu thời gian, cắt API chấm điểm trước (quyết định 2026-11-04). Cần đặc tả Stage E.
-- **Stage F (tuần 6):** dashboard đọc `incidents.json` và KPI; nên gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 2.3).
+- **Stage E (tuần 5): code xong, chờ chạy trên IEEE-CIS.** [Đặc tả](docs/architecture/stage-e-spec.md) (duyệt theo uỷ quyền, quyết định ở mục 9), [báo cáo khung](docs/architecture/stage-e-report.md), [ADR 0006](docs/decisions/0006-gradient-boosting-sklearn.md). API chấm điểm đã cắt. Trên máy có dataset:
+  1. `make leakage` (chỉ validation) và `make gbm` (train và validation), gửi kết quả để điền báo cáo.
+  2. Chủ dự án đặt `status: frozen` cho `projects/fraud-risk/configs/gbm.yaml`, commit, push, rồi `make gbm-final` **một lần**. Đây là config Stage E duy nhất được đăng ký trước cho tập test.
+- **Stage F (tuần 6): xong.** `make dashboard` sinh `artifacts/dashboard/index.html` cho cả hai sản phẩm ([đặc tả](docs/architecture/stage-f-spec.md), [ADR 0007](docs/decisions/0007-static-html-dashboard.md)). [Dàn ý báo cáo thực tập](docs/report/report-outline.md) gắn từng số với run id; mục 4.3 và 4.4 chờ số Stage E. Chưa làm: gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 3.3).
 
 ### 3.3 Việc nhỏ, không chặn
 
@@ -132,4 +134,6 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [Đặc tả](docs/architecture/stage-c-spec.md) và [báo cáo](docs/architecture/stage-c-report.md) Stage C | Thiết kế, quyết định, kết quả, hạn chế |
 | [README generator](shared/synthetic-generator/README.md) | Mọi giả định của dữ liệu giả lập |
 | [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
-| [ADR 0001–0005](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views |
+| [Đặc tả](docs/architecture/stage-e-spec.md) và [báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ, Gradient Boosting |
+| [Đặc tả Stage F](docs/architecture/stage-f-spec.md), [dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo |
+| [ADR 0001–0007](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh |

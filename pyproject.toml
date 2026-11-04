@@ -32,6 +32,7 @@ package = false
 pythonpath = [
     "shared/dataset-management",
     "shared/synthetic-generator",
+    "shared/dashboard",
     "projects/fraud-risk",
     "projects/payment-reliability",
 ]
@@ -39,7 +40,7 @@ testpaths = ["tests", "contracts", "shared", "projects"]
 addopts = "--import-mode=importlib"
 
 [tool.coverage.run]
-source = ["fraud_risk", "dataset_management", "synthetic_generator", "payment_reliability"]
+source = ["fraud_risk", "dataset_management", "synthetic_generator", "payment_reliability", "dashboard"]
 
 [tool.ruff]
 line-length = 100

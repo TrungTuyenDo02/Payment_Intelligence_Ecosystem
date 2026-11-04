@@ -82,3 +82,11 @@ def ieee_dir(tmp_path: Path) -> Path:
     directory = tmp_path / "raw" / "ieee-cis"
     write_ieee_dir(directory, txn, ident)
     return directory
+
+
+@pytest.fixture(scope="module")
+def ieee_dir_module(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Like `ieee_dir` but larger (3,000 rows) and shared by the tests of one module."""
+    directory = tmp_path_factory.mktemp("ieee") / "raw" / "ieee-cis"
+    write_ieee_dir(directory, *make_synthetic_ieee(n=3000, seed=3))
+    return directory
