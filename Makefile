@@ -15,10 +15,11 @@ CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
 export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:shared/dashboard:projects/fraud-risk:projects/payment-reliability
 
-.PHONY: help setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard
+
+.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard
 
 help:
-	@echo "Targets: setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard"
+	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard"
 
 setup:
 ifeq ($(UV),)
@@ -28,6 +29,11 @@ ifeq ($(UV),)
 else
 	uv sync
 endif
+	@$(MAKE) --no-print-directory hooks
+
+# Git hooks in .githooks/ (commit-msg drops AI-tool attribution lines). Safe to run again.
+hooks:
+	@if git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .githooks && echo "git hooks: .githooks"; fi
 
 lint:
 	$(RUN) ruff check .

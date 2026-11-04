@@ -28,6 +28,14 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 
 ## Kết quả đến nay
 
+| Giai đoạn | Kết quả | Trạng thái |
+| --- | --- | --- |
+| A, B · Baseline gian lận | Logistic Regression PR-AUC test 0,165, luật 0,078 (`run-d6faa4699008`) | ✅ Xong, test đã chạy một lần |
+| C · Dữ liệu giả lập | 2 bộ 7 ngày, khoảng 25 nghìn payment mỗi bộ, nạp PostgreSQL không lỗi | ✅ Xong |
+| D · KPI và detector | Detector chính bắt 2/4 sự cố trên bộ report, 0 báo nhầm (`det-08335c6af086`) | ✅ Xong, report đã chạy một lần |
+| E · Rò rỉ, Gradient Boosting | Code và test xong | ⏳ Chờ chạy trên IEEE-CIS |
+| F · Dashboard, báo cáo | `make dashboard`, [báo cáo PDF](docs/report/bao-cao-thuc-tap.pdf) | ✅ Xong; phần Stage E chờ số |
+
 **Product 02: phát hiện gian lận trên IEEE-CIS.** Dữ liệu được chia theo thời gian: mô hình học trên phần cũ, được đánh giá trên phần mới hơn, giống như khi chạy thật.
 
 <p align="center"><img src="docs/assets/results/split.png" alt="Train 60%, validation 20%, test 20% theo thời gian, kèm số giao dịch và tỷ lệ gian lận" width="85%"></p>
@@ -47,6 +55,12 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 Detector chính bắt được sự cố về lỗi và độ trễ trong 15–30 phút và không báo nhầm. Nó trượt sự cố mất lưu lượng (loại chưa gặp khi chỉnh ngưỡng) và sự cố yếu x1,5. Chi tiết: [báo cáo Stage D](docs/architecture/stage-d-report.md).
 
 <p align="center"><img src="docs/assets/results/stage-d-report.png" alt="KPI và điểm của hai detector quanh bốn sự cố trên bộ report" width="100%"></p>
+
+**Dashboard** (`make dashboard`): một trang HTML tĩnh cho cả hai sản phẩm, mở được không cần mạng. Ảnh dưới là phần Product 01 trên bộ report.
+
+<p align="center"><img src="docs/assets/results/dashboard-product01.png" alt="Dashboard Product 01: ô số tổng, bảng theo provider, tỷ lệ lỗi và độ trễ theo giờ, danh sách sự cố" width="85%"></p>
+
+**Product 02, Stage E:** thí nghiệm rò rỉ dữ liệu và Gradient Boosting đã có code và test, chờ chạy trên dữ liệu thật ([đặc tả](docs/architecture/stage-e-spec.md)).
 
 ## Nguyên tắc
 
@@ -118,6 +132,8 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 
 | Tài liệu | Nội dung |
 | --- | --- |
+| [Bài báo khoa học (PDF)](docs/report/bai-bao-khoa-hoc.pdf) · [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Bài báo 9 trang; báo cáo đầy đủ có giải thích kiến thức nền |
+| [Hướng dẫn thao tác GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch, rủi ro, tài liệu tham khảo |
 | [Bàn giao công việc](HANDOFF.md) | Trạng thái hiện tại và việc tiếp theo |
 | [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md) | 9 quyết định đã duyệt và bằng chứng |
