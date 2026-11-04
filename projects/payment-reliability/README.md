@@ -11,7 +11,7 @@ Results: [`docs/architecture/stage-d-report.md`](../../docs/architecture/stage-d
 3. `make tune`: threshold grid on the **tuning** simulation only, to `artifacts/tuning/<id>/grid.csv`.
 4. `make detect`: both detectors on the tuning simulation, to `artifacts/detections/<run_id>/`
    (`config.yaml`, `scores.parquet`, `incidents.json`, `evaluation.json`, `git_sha.txt`, `environment.txt`).
-5. `make detect-plot [RUN_DIR=...]`: chart to `docs/assets/results/stage-d-tuning.png`.
+5. `make detect-plot [RUN_DIR=...] [OUT=...]`: chart, by default of the latest tuning run to `docs/assets/results/stage-d-tuning.png`.
 6. `make detect-report`: **once**, on the report simulation, only after the owner sets
    `status: frozen` in `configs/detector.yaml`. Refuses a hash already in `artifacts/detect_report_runs.json`.
 
