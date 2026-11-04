@@ -61,8 +61,8 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. Tuần 4 sẽ làm 
 
 ### 3.2 Stage D (tuần 4) — đề xuất thứ tự
 
-1. **Viết đặc tả Stage D** (`docs/architecture/stage-d-spec.md`, bản nháp) theo cách đã làm với Stage C: mục tiêu, phạm vi, task D01–D0x với tiêu chí nghiệm thu, danh sách câu hỏi cho chủ dự án. Chủ dự án duyệt rồi mới viết code.
-2. **ADR 0005: dbt hay SQL views** cho tầng mô hình dữ liệu. Phương án dự phòng đã ghi trong kế hoạch là SQL views. Nếu chọn dbt thì cần `dbt-postgres` (thư viện mới, ADR 0004 đã nhắc).
+1. **Đặc tả Stage D**: bản nháp ở [`stage-d-spec.draft.md`](docs/architecture/stage-d-spec.draft.md). Chủ dự án trả lời 5 câu hỏi ở mục 10 và duyệt (đổi tên thành `stage-d-spec.md`) rồi mới viết code.
+2. **Tầng KPI: SQL views** ([ADR 0005](docs/decisions/0005-kpi-layer-sql-views.md), chủ dự án chọn 2026-11-04). Không thêm `dbt-postgres`.
 3. **KPI độ tin cậy, tính theo attempt** (quyết định của chủ dự án): tỷ lệ thành công, thành công ngay lần đầu, tỷ lệ retry, độ trễ p50/p95, lỗi theo provider và mã lỗi. Tách lỗi nghiệp vụ (`DECLINED`, `INVALID_REQUEST`) khỏi lỗi kỹ thuật (quyết định 2 của đặc tả Stage C).
 4. **Bộ phát hiện bất thường** trên chuỗi KPI theo thời gian. Chỉ chỉnh trên `sim-485cacc9c858` (tuning), chỉ báo cáo trên `sim-f6e6749ff0bf` (report). Báo cáo là "kiểm chứng trên bất thường đã biết", không phải hiệu năng thực tế (rủi ro 2 trong tổng quan). Detector **không được đọc** `anomaly_labels.json`; chỉ phần đánh giá được đọc.
 5. Danh sách sự cố (gộp các điểm bất thường liền nhau) làm đầu vào cho dashboard ở Stage F.
