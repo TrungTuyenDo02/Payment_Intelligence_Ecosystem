@@ -86,7 +86,7 @@ def test_labels_match_config(tuning: Any) -> None:
     cfg, _, _ = tuning
     labels = anomaly_labels(cfg)
     assert [lab["type"] for lab in labels] == [a.type for a in cfg.anomalies]
-    assert [lab["anomaly_id"] for lab in labels] == ["anom-01", "anom-02", "anom-03"]
+    assert [lab["anomaly_id"] for lab in labels] == ["anom-01", "anom-02", "anom-03", "anom-04"]
     outage = labels[0]
     assert outage["provider_id"] == "prov_002"
     assert outage["start"] == "2026-01-06T05:00:00.000Z"
@@ -161,6 +161,21 @@ def test_provider_outage_raises_failures_inside_window(tuning: Any) -> None:
     assert fail_hit > 0.6 > 0.4 > fail_base
     extra = [p["error_code"] for p in hit if p["error_code"]]
     assert sum(c in ("TIMEOUT", "PROVIDER_ERROR") for c in extra) / len(extra) > 0.7
+
+
+@pytest.mark.parametrize("fixture", ["tuning", "report"])
+def test_weak_outage_is_small_but_real(fixture: str, request: pytest.FixtureRequest) -> None:
+    """The x1.5 scenario (owner, 2026-11-04) raises failures clearly less than the strong ones."""
+    cfg, with_anom, without = request.getfixturevalue(fixture)
+    weak = [lab for lab in anomaly_labels(cfg) if lab["magnitude"] == 1.5]
+    assert len(weak) == 1 and weak[0]["type"] == "provider_outage"
+    label = weak[0]
+
+    def fail_rate(events: list[dict[str, Any]]) -> float:
+        rows = _in_window(events, label, label["provider_id"])
+        return sum(p["status"] == "FAILED" for p in rows) / len(rows)
+
+    assert 1.2 < fail_rate(with_anom) / fail_rate(without) < 1.9
 
 
 def test_latency_degradation_inside_window(tuning: Any) -> None:

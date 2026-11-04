@@ -43,10 +43,11 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. Tuần 4 sẽ làm 
 
 | Config | Mục đích | `simulation_id` | Payment / sự kiện | Bất thường |
 | --- | --- | --- | --- | --- |
-| `configs/demo.yaml` | tuning (chỉnh detector) | `sim-30fb2cffe123` | 4.945 / 5.766 | outage, latency, error burst |
-| `configs/report.yaml` | report (chỉ để báo cáo) | `sim-37237f17e79a` | 5.020 / 5.827 | outage, latency, **traffic drop** |
+| `configs/demo.yaml` | tuning (chỉnh detector) | `sim-485cacc9c858` | 25.573 / 30.050 | outage, latency, error burst, outage yếu x1,5 |
+| `configs/report.yaml` | report (chỉ để báo cáo) | `sim-f6e6749ff0bf` | 25.151 / 29.340 | outage, latency, **traffic drop**, outage yếu x1,5 |
 
-- `make test`: 316 test pass khi có PostgreSQL (3 test database tự bỏ qua nếu không có).
+- `make test`: 318 test pass khi có PostgreSQL (3 test database tự bỏ qua nếu không có).
+- Sửa đổi 2026-11-04 (đặc tả Stage C, mục 10): 150 payment/giờ thay cho 30, và thêm một sự cố yếu x1,5 mỗi config.
 
 ## 3. Việc cần làm tiếp
 
@@ -56,14 +57,14 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. Tuần 4 sẽ làm 
 | --- | --- | --- |
 | 1 | Duyệt giả định trong [README generator](shared/synthetic-generator/README.md) và kịch bản bất thường | Tỷ lệ lỗi 15/22/30% **cố ý để cao** |
 | 2 | Đặt `status: frozen` cho `shared/synthetic-generator/configs/demo.yaml` và `report.yaml` | Bắt buộc trước khi chỉnh detector (đặc tả mục 4). Chỉ chủ dự án được đặt `frozen` |
-| 3 | Quyết định có thêm kịch bản bất thường yếu hơn (khoảng x1,5) không | Hiện x3–x5 có thể quá dễ phát hiện (báo cáo Stage C, mục 4) |
+| 3 | ~~Quyết định có thêm kịch bản bất thường yếu hơn (khoảng x1,5) không~~ | **Đã quyết (2026-11-04):** thêm vào cả hai config, cùng với 150 payment/giờ. KPI dùng SQL views (ADR 0005); nếu tuần 5 thiếu thời gian thì cắt API chấm điểm trước |
 
 ### 3.2 Stage D (tuần 4) — đề xuất thứ tự
 
 1. **Viết đặc tả Stage D** (`docs/architecture/stage-d-spec.md`, bản nháp) theo cách đã làm với Stage C: mục tiêu, phạm vi, task D01–D0x với tiêu chí nghiệm thu, danh sách câu hỏi cho chủ dự án. Chủ dự án duyệt rồi mới viết code.
 2. **ADR 0005: dbt hay SQL views** cho tầng mô hình dữ liệu. Phương án dự phòng đã ghi trong kế hoạch là SQL views. Nếu chọn dbt thì cần `dbt-postgres` (thư viện mới, ADR 0004 đã nhắc).
 3. **KPI độ tin cậy, tính theo attempt** (quyết định của chủ dự án): tỷ lệ thành công, thành công ngay lần đầu, tỷ lệ retry, độ trễ p50/p95, lỗi theo provider và mã lỗi. Tách lỗi nghiệp vụ (`DECLINED`, `INVALID_REQUEST`) khỏi lỗi kỹ thuật (quyết định 2 của đặc tả Stage C).
-4. **Bộ phát hiện bất thường** trên chuỗi KPI theo thời gian. Chỉ chỉnh trên `sim-30fb2cffe123` (tuning), chỉ báo cáo trên `sim-37237f17e79a` (report). Báo cáo là "kiểm chứng trên bất thường đã biết", không phải hiệu năng thực tế (rủi ro 2 trong tổng quan). Detector **không được đọc** `anomaly_labels.json`; chỉ phần đánh giá được đọc.
+4. **Bộ phát hiện bất thường** trên chuỗi KPI theo thời gian. Chỉ chỉnh trên `sim-485cacc9c858` (tuning), chỉ báo cáo trên `sim-f6e6749ff0bf` (report). Báo cáo là "kiểm chứng trên bất thường đã biết", không phải hiệu năng thực tế (rủi ro 2 trong tổng quan). Detector **không được đọc** `anomaly_labels.json`; chỉ phần đánh giá được đọc.
 5. Danh sách sự cố (gộp các điểm bất thường liền nhau) làm đầu vào cho dashboard ở Stage F.
 
 ### 3.3 Việc nhỏ, không chặn
@@ -100,7 +101,7 @@ make db-init
 ```
 
 ```bash
-make ingest SIM=sim-30fb2cffe123
+make ingest SIM=sim-485cacc9c858
 ```
 
 Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, không commit). Không cần nó cho Stage C và D.

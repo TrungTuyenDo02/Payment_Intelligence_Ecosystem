@@ -49,7 +49,7 @@ make ingest SIM=<simulation_id>
 
 | Assumption | Value in `demo.yaml` | Why |
 | --- | --- | --- |
-| Period | 7 days from Monday 2026-01-05, 00:00 UTC | Spec decision 4 (small demo) |
+| Period | 7 days from Monday 2026-01-05, 00:00 UTC | Spec decision 4 |
 | Providers | 3 (`prov_001`..`prov_003`) | Spec decision 4 |
 | Merchants | 20 (`mer_0001`..), weight of merchant *i* ∝ 1 / *i*^1.1 (Zipf) | A few large merchants carry most traffic |
 | Currency | VND only, amounts rounded to 1,000 VND, at least 1,000 | Contract allows only VND, which has no sub-unit |
@@ -60,7 +60,7 @@ make ingest SIM=<simulation_id>
 | Assumption | Value | Why |
 | --- | --- | --- |
 | Arrivals | Poisson count per UTC hour, uniform time inside the hour | Standard simple arrival model |
-| Mean rate | 30 payments per hour, scaled by hour-of-day x day-of-week factors (each normalised to mean 1) | About 5 thousand payments in 7 days |
+| Mean rate | 150 payments per hour, scaled by hour-of-day x day-of-week factors (each normalised to mean 1) | About 25 thousand payments in 7 days, so each provider has about 12 attempts per 15-minute bucket on average (raised from 30 by the owner, 2026-11-04; spec amendment A1) |
 | Hour-of-day | Low at night (0.1 at 01:00–04:00), peaks at 12:00 (1.8) and 20:00 (2.0) local | Lunch and evening shopping peaks |
 | Day-of-week | Friday 1.1, Saturday 1.2, Sunday 0.9, other days 1.0 | Mild weekend effect |
 | Payment method | QR 45%, E_WALLET 25%, CARD 20%, BANK_TRANSFER 10% | QR is the most common method in Vietnam (NAPAS context, overview 7.4) |
@@ -95,8 +95,10 @@ Each anomaly has a half-open UTC window `[start, start + duration)` and a `magni
 
 | Config | Anomalies |
 | --- | --- |
-| `demo.yaml` (tuning) | `provider_outage` prov_002 x4, 90 min · `latency_degradation` prov_001 x3, 3 h · `error_burst` NETWORK_ERROR x3, 45 min |
-| `report.yaml` (report) | `provider_outage` prov_003 x3, 60 min · `latency_degradation` prov_002 x2.5, 2 h · **`traffic_drop`** QR x5, 2 h (a type tuning never sees) |
+| `demo.yaml` (tuning) | `provider_outage` prov_002 x4, 90 min · `latency_degradation` prov_001 x3, 3 h · `error_burst` NETWORK_ERROR x3, 45 min · **weak** `provider_outage` prov_001 x1.5, 2 h |
+| `report.yaml` (report) | `provider_outage` prov_003 x3, 60 min · `latency_degradation` prov_002 x2.5, 2 h · **`traffic_drop`** QR x5, 2 h (a type tuning never sees) · **weak** `provider_outage` prov_002 x1.5, 2 h |
+
+The weak x1.5 scenarios (owner, 2026-11-04; spec amendment A2) are smaller than the random spread of one 15-minute bucket, so a detector must pool several buckets to see them. They show where detection stops working, not only that obvious incidents are caught.
 
 ## Guarantees (all tested)
 
