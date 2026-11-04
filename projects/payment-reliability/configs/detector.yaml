@@ -1,0 +1,21 @@
+# Stage D detector config (stage-d-spec.md sections 4-7).
+# status: only the owner may set "frozen"; make detect-report refuses anything else.
+status: draft
+simulations:
+  tuning: sim-485cacc9c858 # demo.yaml: tune here only
+  report: sim-f6e6749ff0bf # report.yaml: evaluated once, after this file is frozen
+detectors:
+  baseline_buckets: 96 # 24 hours of 15-minute buckets before the scored bucket(s)
+  min_history_buckets: 48 # at least 12 hours with data, else no score
+  # Chosen by `make tune` on the tuning simulation (2026-11-04): most anomalies detected with
+  # at most 1 false incident per day; ties -> shorter delay, then the higher threshold.
+  robust_z: # D-A, baseline
+    threshold: 7.0
+  pooled: # D-B, main
+    pool_buckets: 2 # 30 minutes
+    threshold: 8.0
+incidents:
+  max_gap_buckets: 1
+evaluation:
+  grace_minutes: 15
+  max_false_per_day: 1 # tuning objective (spec Q4)
