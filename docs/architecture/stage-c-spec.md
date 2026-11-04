@@ -113,3 +113,14 @@ Quyết định khi duyệt đặc tả (2026-11-04):
 | 11 | Chép đặc tả vào `AGENTS.md` | Không chép; file này là nguồn chính, đổi tên thành `stage-c-spec.md` |
 
 Không còn việc nào chặn việc viết code Stage C.
+
+## 10. Sửa đổi sau khi duyệt
+
+Các sửa đổi dưới đây do chủ dự án quyết định ngày 2026-11-04, khi chuẩn bị Stage D. Nội dung ở các mục trên giữ nguyên để thấy quyết định ban đầu.
+
+| # | Sửa đổi | Thay cho | Lý do |
+| --- | --- | --- | --- |
+| A1 | 150 payment mỗi giờ (khoảng 25 nghìn payment, khoảng 30 nghìn sự kiện cho 7 ngày) | Quyết định 4: 30 payment mỗi giờ | Ở 30 payment/giờ, mỗi provider chỉ có khoảng 2,5 attempt trong một khung 15 phút. Độ dao động ngẫu nhiên của tỷ lệ lỗi (±22 điểm %) lớn hơn chính tỷ lệ lỗi 15%, nên KPI theo provider ở Stage D không dùng được. Ở 150 payment/giờ, độ dao động còn khoảng ±10 điểm % |
+| A2 | Mỗi config thêm một sự cố yếu `provider_outage` x1,5 trong 2 giờ: `demo.yaml` trên `prov_001`, `report.yaml` trên `prov_002`, khác ngày | Mục 4: chỉ có bất thường x2,5–x5 | Bất thường mạnh thì phương pháp nào cũng bắt được (Wu và Keogh, tổng quan 7.2). Sự cố yếu cho thấy giới hạn của detector |
+
+Hai sửa đổi đổi `simulation_id` (xem [báo cáo](stage-c-report.md), mục 2). Code generator không đổi, nên `GENERATOR_VERSION` giữ 0.2.0.

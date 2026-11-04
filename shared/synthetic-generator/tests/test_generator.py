@@ -41,8 +41,8 @@ def _by_payment(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]
 
 def test_demo_size_matches_spec(demo_events: list[dict[str, Any]]) -> None:
     payments = len(_by_payment(demo_events))
-    assert 4_500 < payments < 5_600  # 7 days x 24 h x 30 per hour = 5,040 expected
-    assert 5_500 < len(demo_events) < 6_500  # about 6 thousand events with retries (owner)
+    assert 23_000 < payments < 27_500  # 7 days x 24 h x 150 per hour = 25,200 expected
+    assert 27_500 < len(demo_events) < 32_500  # about 30 thousand events with retries
 
 
 def test_every_event_passes_the_contract(demo_events: list[dict[str, Any]]) -> None:
