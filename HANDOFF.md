@@ -5,7 +5,7 @@
 
 ## 1. Đang ở đâu
 
-Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D): D01–D05 xong**, detector đã chỉnh trên bộ tuning; còn bước đánh giá một lần trên bộ report (cần chủ dự án). Cập nhật 2026-11-04.
+Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D) đã xong**: chỉnh trên bộ tuning, đánh giá một lần trên bộ report (`det-08335c6af086`). Cập nhật 2026-11-04.
 
 | Tuần | Stage | Trạng thái |
 | --- | --- | --- |
@@ -51,15 +51,15 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 
 ## 3. Việc cần làm tiếp
 
-### 3.1 Chờ chủ dự án (chặn phần cuối Stage D)
+### 3.1 Kết quả Stage D
 
-| # | Việc | Ghi chú |
+| Detector | Tuning (`det-3ddc26cff253`) | Report (`det-08335c6af086`, một lần) |
 | --- | --- | --- |
-| 1 | Xem kết quả tuning trong [báo cáo Stage D](docs/architecture/stage-d-report.md), mục 2 | D-B: 3/4 bất thường, 0 báo nhầm/ngày; D-A: 2/4, 1 báo nhầm/ngày; cả hai trượt sự cố x1,5 |
-| 2 | Đặt `status: frozen` cho `projects/payment-reliability/configs/detector.yaml` | Sau đó không chỉnh ngưỡng nữa |
-| 3 | Chạy `make detect-report` một lần, rồi `make detect-plot` cho lần chạy đó | Hoặc yêu cầu agent làm; số được bổ sung vào báo cáo Stage D |
+| D-B gộp cửa sổ | 3/4, 0 báo nhầm/ngày | 2/4, 0 báo nhầm/ngày |
+| D-A z-score bền vững | 2/4, 1,0 báo nhầm/ngày | 0/4, 2,0 báo nhầm/ngày |
 
-Đã xong trước đó (2026-11-04): duyệt giả định generator, `frozen` hai config mô phỏng, 150 payment/giờ, sự cố yếu x1,5, đặc tả Stage D, ADR 0005 (SQL views).
+- Config detector đã `frozen` (agent đặt theo yêu cầu của chủ dự án, commit `e8c5783`, trước khi chạy report). **Không chạy lại `make detect-report` với config này**; `artifacts/detect_report_runs.json` chỉ tồn tại trên máy đã chạy, nên trên máy khác phải tự giữ quy tắc này.
+- Cả hai detector trượt `traffic_drop` (loại không có trong tuning) và sự cố x1,5. Muốn thử ngưỡng riêng cho từng loại KPI là config mới và cần bộ report mới.
 
 ### 3.2 Sau Stage D
 

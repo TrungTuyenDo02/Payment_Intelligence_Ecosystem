@@ -22,7 +22,8 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 <p align="center"><img src="docs/assets/diagrams/roadmap.svg" alt="Lộ trình 6 tuần: A, B, C đã xong; D đang làm ở tuần 4" width="100%"></p>
 
 - **Đã xong (tuần 1–3):** khung repo, contract `payment-event` 1.0.0, hai baseline gian lận đã đánh giá trên tập test, bộ sinh dữ liệu thanh toán giả lập và nạp vào PostgreSQL.
-- **Tuần 4:** KPI độ tin cậy và hai detector đã xong và đã chỉnh trên bộ dữ liệu tuning. Còn bước đánh giá một lần trên bộ report.
+- **Tuần 4 (xong):** KPI độ tin cậy, hai detector, chỉnh ngưỡng trên bộ tuning và đánh giá một lần trên bộ report.
+- **Tiếp theo (tuần 5):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02.
 
 ## Kết quả đến nay
 
@@ -35,7 +36,16 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 - **Kết quả giảm từ validation sang test.** Dữ liệu thay đổi theo thời gian, nên con số trên validation lạc quan hơn thực tế. Đây là lý do tập test chỉ được mở **một lần**, với cấu hình đã chốt trước.
 - Bảng số đầy đủ: [`summary.md`](docs/assets/results/summary.md) (lần chạy `run-d6faa4699008`).
 
-**Product 01: dữ liệu thanh toán giả lập.** Mỗi lần mô phỏng 7 ngày tạo khoảng 25 nghìn payment (khoảng 30 nghìn sự kiện, có retry), với 4 sự cố được cài sẵn, trong đó có một sự cố yếu để thử giới hạn của detector. Mọi sự kiện qua kiểm tra contract và được nạp vào PostgreSQL không lỗi. Trên bộ dùng để chỉnh ngưỡng (tuning), detector chính bắt được 3/4 sự cố trong 15 phút, không báo nhầm, và không bắt được sự cố yếu x1,5 ([báo cáo Stage D](docs/architecture/stage-d-report.md)). Đây chưa phải kết quả cuối: số dùng cho báo cáo sẽ lấy từ một bộ dữ liệu riêng, chạy đúng một lần.
+**Product 01: dữ liệu thanh toán giả lập.** Mỗi lần mô phỏng 7 ngày tạo khoảng 25 nghìn payment (khoảng 30 nghìn sự kiện, có retry), với 4 sự cố được cài sẵn, trong đó có một sự cố yếu để thử giới hạn của detector. Mọi sự kiện qua kiểm tra contract và được nạp vào PostgreSQL không lỗi. Detector được chỉnh ngưỡng trên một bộ dữ liệu (tuning), rồi đánh giá **một lần** trên bộ khác (report) có seed khác và một loại sự cố chưa gặp:
+
+| Detector | Tuning: bắt được / báo nhầm mỗi ngày | Report: bắt được / báo nhầm mỗi ngày |
+| --- | --- | --- |
+| Gộp cửa sổ, tính theo số attempt (chính) | 3/4 · 0 | **2/4 · 0** |
+| z-score bền vững (đường cơ sở) | 2/4 · 1,0 | 0/4 · 2,0 |
+
+Detector chính bắt được sự cố về lỗi và độ trễ trong 15–30 phút và không báo nhầm. Nó trượt sự cố mất lưu lượng (loại chưa gặp khi chỉnh ngưỡng) và sự cố yếu x1,5. Chi tiết: [báo cáo Stage D](docs/architecture/stage-d-report.md).
+
+<p align="center"><img src="docs/assets/results/stage-d-report.png" alt="KPI và điểm của hai detector quanh bốn sự cố trên bộ report" width="100%"></p>
 
 ## Nguyên tắc
 
