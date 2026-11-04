@@ -101,11 +101,16 @@ def test_runner_rejects_time_split_with_overlap(data: IeeeCisData, cfg: Baseline
         fit_baselines(data.X, data.y, data.time, tampered, cfg)
 
 
+# The only module allowed to use the leaky split besides split.py: the Stage E experiment that
+# measures how much it inflates the score (validation only, never a model for test).
+RANDOM_SPLIT_ALLOWED = {"evaluation/split.py", "experiments/leakage.py"}
+
+
 def test_random_split_only_defined_in_split_module() -> None:
-    """No module except split.py may call random_split (static check of the source)."""
+    """No module except split.py and the leakage experiment may use random_split (static check)."""
     offenders = []
     for path in PACKAGE.rglob("*.py"):
-        if path.name == "split.py":
+        if path.relative_to(PACKAGE).as_posix() in RANDOM_SPLIT_ALLOWED:
             continue
         for node in ast.walk(ast.parse(path.read_text())):
             names = []

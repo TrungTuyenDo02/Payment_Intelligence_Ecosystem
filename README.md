@@ -23,7 +23,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 
 - **Đã xong (tuần 1–3):** khung repo, contract `payment-event` 1.0.0, hai baseline gian lận đã đánh giá trên tập test, bộ sinh dữ liệu thanh toán giả lập và nạp vào PostgreSQL.
 - **Tuần 4 (xong):** KPI độ tin cậy, hai detector, chỉnh ngưỡng trên bộ tuning và đánh giá một lần trên bộ report.
-- **Tiếp theo (tuần 5):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02.
+- **Tuần 5 (đang làm):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02. Code xong, chờ chạy trên dữ liệu IEEE-CIS ([đặc tả Stage E](docs/architecture/stage-e-spec.md)).
 
 ## Kết quả đến nay
 
@@ -90,6 +90,8 @@ make lint test
 | `make baseline` | Hai baseline, đánh giá trên validation |
 | `make baseline-final` | Đánh giá test một lần, chỉ với config đã `frozen` (chỉ chủ dự án chạy) |
 | `make report` | Vẽ biểu đồ và bảng số cho lần chạy gần nhất (`RUN_DIR=...` để chọn lần khác) |
+| `make leakage` | Thí nghiệm rò rỉ dữ liệu (chỉ trên validation) |
+| `make gbm` / `make gbm-final` | Gradient Boosting trên validation / đánh giá test một lần với config đã `frozen` (chỉ chủ dự án chạy) |
 
 **Dữ liệu IEEE-CIS:** tải [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) từ Kaggle (cần đăng nhập và chấp nhận điều khoản cuộc thi), đặt `train_transaction.csv` và `train_identity.csv` vào `datasets/raw/ieee-cis/` (không commit). Tạo manifest checksum:
 
@@ -119,8 +121,9 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md) | 9 quyết định đã duyệt và bằng chứng |
 | [Đặc tả](docs/architecture/stage-c-spec.md) · [Báo cáo](docs/architecture/stage-c-report.md) Stage C | Bộ sinh dữ liệu giả lập và ingestion |
 | [Đặc tả](docs/architecture/stage-d-spec.md) · [Báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI độ tin cậy và phát hiện bất thường |
+| [Đặc tả](docs/architecture/stage-e-spec.md) · [Báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting |
 | [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
-| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0005) |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0006) |
 
 ## Giấy phép
 

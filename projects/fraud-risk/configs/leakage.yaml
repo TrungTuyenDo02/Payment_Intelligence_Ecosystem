@@ -1,0 +1,39 @@
+# Stage E leakage experiment (stage-e-spec.md section 4). Scored on VALIDATION only: no test rows
+# are scored and no test labels are read, so this config never needs to be frozen for test.
+status: draft
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split: # the frozen baseline split; gap variants below change only the end of train
+  train_frac: 0.6
+  valid_frac: 0.2
+
+metrics:
+  precision_target: 0.5
+  fpr_target: 0.05
+  bootstrap_resamples: 200
+  threshold_method: max_f1
+
+features: # identical to configs/baseline.yaml
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day]
+
+logistic:
+  C: 1.0
+  max_iter: 1000
+
+gap_days: [7, 14] # sensitivity analysis (ADR 0003), not "the right" gap
+
+target_encoding: # card1 = card identifier; a high-cardinality ID, encoded instead of raw
+  column: card1
+  smoothing: 100
+
+entity_overlap: # descriptive only (ADR 0003). The 3-column key is a common heuristic from
+  # public notebooks of the competition; the idea is cited, no code is copied (rule 13).
+  keys:
+    - [card1]
+    - [card1, addr1, P_emaildomain]
