@@ -184,6 +184,17 @@ Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào
 | D05 | Đánh giá, `make tune`, `make detect`, `make detect-report` | Xong; report đã chạy một lần (`det-08335c6af086`) |
 | D06 | Báo cáo và biểu đồ | Xong ([báo cáo](../architecture/stage-d-report.md)) |
 
+### Stage E
+
+| ID | Việc | Trạng thái |
+| --- | --- | --- |
+| E01 | `gap_days` cho split (ADR 0003) | Xong |
+| E02 | Thực thể lặp lại, mã hoá theo nhãn | Xong |
+| E03 | Thí nghiệm rò rỉ (`make leakage`, chỉ validation) | Code xong; chờ chạy trên IEEE-CIS |
+| E04 | Gradient Boosting (`make gbm`, `make gbm-final`) | Code xong; chờ chạy trên IEEE-CIS; test một lần sau khi chủ dự án `frozen` |
+| E05 | Báo cáo | Khung ([báo cáo](../architecture/stage-e-report.md)); chờ số thật |
+| — | API chấm điểm | Cắt (chủ dự án, 2026-11-04) |
+
 ## 9. Quy tắc bắt buộc
 
 - Không dữ liệu thật, không dữ liệu thẻ, không secret trong repo. Không commit dataset, Parquet, mô hình, bảng EDA hay `.env`.

@@ -20,7 +20,7 @@ K = {
     "prod": ("#1b2a4a", "#1b2a4a", "#ffffff", "#c9d3e6"),
     "muted": ("#f5f5f5", "#b5b5b5", "#8a8a8a", "#8a8a8a"),
 }
-STATUS = [("goal", "Đã xong"), ("warn", "Tiếp theo"), ("todo", "Chưa làm")]
+STATUS = [("goal", "Đã xong"), ("warn", "Đang làm"), ("todo", "Chưa làm")]
 
 
 class Svg:
@@ -123,7 +123,7 @@ for x, (t, k) in zip(
         ("Adapter + chia\ntheo thời gian", "goal"),
         ("EDA + quyết định\ntiền xử lý", "goal"),
         ("Baseline: luật\n+ Logistic Reg.", "goal"),
-        ("Mô hình mạnh hơn\n+ API chấm điểm", "warn"),
+        ("Rò rỉ dữ liệu\n+ Gradient Boosting", "warn"),
     ],
     strict=True,
 ):
@@ -183,7 +183,7 @@ stages = [
     ("B · Fraud baseline", 0, 2, "goal", "Adapter, split, EDA, 2 baseline, run log"),
     ("C · Dữ liệu giả lập", 2, 1, "goal", "Bộ sinh dữ liệu\n+ ingestion"),
     ("D · Reliability", 3, 1, "goal", "KPI\n+ bất thường"),
-    ("E · Fraud nâng cao", 4, 1, "warn", "Rò rỉ, GBM\n+ API chấm điểm"),
+    ("E · Fraud nâng cao", 4, 1, "warn", "Rò rỉ + GBM\n(API: cắt)"),
     ("F · Hoàn thiện", 5, 1, "todo", "Dashboard\n+ báo cáo"),
 ]
 for i, (name, start, length, kind, desc) in enumerate(stages):
@@ -203,7 +203,7 @@ tx = GX + 4 * GW
 s.add(
     f'<line x1="{tx}" y1="46" x2="{tx}" y2="366" stroke="#d14343" stroke-width="2" stroke-dasharray="4 3"/>'
 )
-s.text(tx, 384, "hiện tại: xong Stage D", 12, "#d14343", "middle", bold=True)
+s.text(tx, 384, "hiện tại: tuần 5", 12, "#d14343", "middle", bold=True)
 s.legend(30, 404, STATUS, gap=175)
 s.save("roadmap.svg")
 

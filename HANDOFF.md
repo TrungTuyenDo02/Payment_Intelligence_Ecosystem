@@ -63,7 +63,9 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 
 ### 3.2 Sau Stage D
 
-- **Stage E (tuần 5):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02. Nếu thiếu thời gian, cắt API chấm điểm trước (quyết định 2026-11-04). Cần đặc tả Stage E.
+- **Stage E (tuần 5): code xong, chờ chạy trên IEEE-CIS.** [Đặc tả](docs/architecture/stage-e-spec.md) (duyệt theo uỷ quyền, quyết định ở mục 9), [báo cáo khung](docs/architecture/stage-e-report.md), [ADR 0006](docs/decisions/0006-gradient-boosting-sklearn.md). API chấm điểm đã cắt. Trên máy có dataset:
+  1. `make leakage` (chỉ validation) và `make gbm` (train và validation), gửi kết quả để điền báo cáo.
+  2. Chủ dự án đặt `status: frozen` cho `projects/fraud-risk/configs/gbm.yaml`, commit, push, rồi `make gbm-final` **một lần**. Đây là config Stage E duy nhất được đăng ký trước cho tập test.
 - **Stage F (tuần 6):** dashboard đọc `incidents.json` và KPI; nên gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 2.3).
 
 ### 3.3 Việc nhỏ, không chặn
@@ -132,4 +134,5 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [Đặc tả](docs/architecture/stage-c-spec.md) và [báo cáo](docs/architecture/stage-c-report.md) Stage C | Thiết kế, quyết định, kết quả, hạn chế |
 | [README generator](shared/synthetic-generator/README.md) | Mọi giả định của dữ liệu giả lập |
 | [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
-| [ADR 0001–0005](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views |
+| [Đặc tả](docs/architecture/stage-e-spec.md) và [báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ, Gradient Boosting |
+| [ADR 0001–0006](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn |

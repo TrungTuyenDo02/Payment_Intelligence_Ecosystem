@@ -15,10 +15,10 @@ CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
 export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk:projects/payment-reliability
 
-.PHONY: help setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-plot detect-report
+.PHONY: help setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report
 
 help:
-	@echo "Targets: setup lint test up down eda baseline baseline-final report simulate db-init ingest kpi detect tune detect-plot detect-report"
+	@echo "Targets: setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report"
 
 setup:
 ifeq ($(UV),)
@@ -56,6 +56,18 @@ baseline-final:
 # Charts + summary table from the latest run (or RUN_DIR=artifacts/runs/<run_id>[/test]).
 report:
 	$(RUN) python -m fraud_risk.scripts.plot_results $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
+
+# Stage E (stage-e-spec.md). leakage: validation only. gbm: validation; gbm-final: test once,
+# config frozen by the OWNER.
+GBM_CONFIG ?= projects/fraud-risk/configs/gbm.yaml
+leakage:
+	$(RUN) python -m fraud_risk.experiments.leakage
+
+gbm:
+	$(RUN) python -m fraud_risk.scripts.run_gbm --config $(GBM_CONFIG) --stage validation
+
+gbm-final:
+	$(RUN) python -m fraud_risk.scripts.run_gbm --config $(GBM_CONFIG) --stage final $(if $(FORCE),--force,)
 
 # Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
 SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)

@@ -1,8 +1,10 @@
-"""Tests for the chronological split (T05)."""
+"""Tests for the chronological split (T05) and its gap option (Stage E)."""
 
+import numpy as np
 import pandas as pd
 import pytest
 from fraud_risk.evaluation.split import (
+    DAY_SECONDS,
     SplitError,
     assert_no_time_overlap,
     random_split,
@@ -83,3 +85,38 @@ def test_overlap_detected(time: pd.Series) -> None:
     leaked = type(s)("time", s.train.append(s.test[:1]), s.valid, s.test[1:], s.boundaries)
     with pytest.raises(SplitError, match="overlaps"):
         assert_no_time_overlap(leaked, time)
+
+
+# --- gap_days (ADR 0003, Stage E) ---
+
+
+def _days_series(n_days: int = 100, per_day: int = 10) -> pd.Series:
+    t = np.repeat(np.arange(n_days) * DAY_SECONDS, per_day) + np.tile(np.arange(per_day), n_days)
+    return pd.Series(t, index=pd.RangeIndex(len(t)))
+
+
+def test_gap_drops_only_the_end_of_train() -> None:
+    time = _days_series()
+    plain = time_split(time, 0.6, 0.2)
+    gapped = time_split(time, 0.6, 0.2, gap_days=7)
+    assert gapped.valid.equals(plain.valid) and gapped.test.equals(plain.test)
+    assert set(gapped.train) | set(gapped.excluded) == set(plain.train)
+    assert not set(gapped.train) & set(gapped.excluded)
+    cut = time[plain.train].max()
+    assert (time[gapped.train] <= cut - 7 * DAY_SECONDS).all()
+    assert (time[gapped.excluded] > cut - 7 * DAY_SECONDS).all()
+    assert len(gapped.excluded) == 70  # 7 days x 10 rows
+    assert gapped.to_dict()["rows"]["gap_excluded"] == 70
+    assert gapped.boundaries["gap_days"] == 7
+
+
+def test_no_gap_keeps_the_stage_b_boundaries() -> None:
+    """gap_days=0 must not add keys: the frozen baseline run id depends on the boundaries (D6)."""
+    split = time_split(_days_series(), 0.6, 0.2, gap_days=0)
+    assert set(split.boundaries) == {"train_frac", "valid_frac", "train", "valid", "test"}
+    assert len(split.excluded) == 0 and "gap_excluded" not in split.to_dict()["rows"]
+
+
+def test_negative_gap_is_refused() -> None:
+    with pytest.raises(SplitError, match="gap_days"):
+        time_split(_days_series(), 0.6, 0.2, gap_days=-1)
