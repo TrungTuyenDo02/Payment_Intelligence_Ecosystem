@@ -1,0 +1,10 @@
+#!/bin/sh
+# commit-msg hook: drop AI-tool attribution lines from the commit message (owner's choice).
+# Removes "Co-Authored-By: ... Claude/Anthropic", "Claude-Session: ..." and
+# "Generated with/by [Claude Code](...)" lines, then trailing blank lines.
+# Enabled by `make hooks` (also run by `make setup`): git config core.hooksPath .githooks
+msg="$1"
+tmp="$msg.tmp.$$"
+grep -v -i -E '^(co-authored-by:.*(claude|anthropic)|claude-session:|.*generated (with|by) \[claude code\])' "$msg" \
+  | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}' > "$tmp"
+mv "$tmp" "$msg"

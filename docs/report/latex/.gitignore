@@ -1,0 +1,6 @@
+# LaTeX build outputs (the PDF is copied to docs/report/)
+*.aux
+*.log
+*.out
+*.toc
+bao-cao-thuc-tap.pdf
