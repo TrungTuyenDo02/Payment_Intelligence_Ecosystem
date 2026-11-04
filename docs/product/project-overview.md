@@ -78,7 +78,7 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting, API chấm điểm | Đăng ký trước danh sách config chạy test; ADR framework API |
 | 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard |
 
-**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). **Stage C: C01–C05 xong code** ([báo cáo](../architecture/stage-c-report.md)): sau sửa đổi ngày 2026-11-04 (150 payment/giờ, thêm sự cố yếu x1,5), demo `tuning` sinh 25.573 payment, 30.050 sự kiện; config `report` riêng. Đã nạp thử cả hai vào PostgreSQL. Còn chờ chủ dự án duyệt giả định và `frozen` hai config mô phỏng trước Stage D.
+**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). **Stage C: C01–C05 xong code** ([báo cáo](../architecture/stage-c-report.md)): sau sửa đổi ngày 2026-11-04 (150 payment/giờ, thêm sự cố yếu x1,5), demo `tuning` sinh 25.573 payment, 30.050 sự kiện; config `report` riêng. Đã nạp thử cả hai vào PostgreSQL; hai config mô phỏng đã `frozen` (2026-11-04). **Stage D: D01–D05 xong** ([đặc tả](../architecture/stage-d-spec.md), [báo cáo](../architecture/stage-d-report.md)): trên bộ tuning, detector D-B bắt 3/4 bất thường sau 15 phút, không báo nhầm; không bắt được sự cố yếu x1,5. Còn chờ chủ dự án xem kết quả, đặt `frozen` cho config detector và chạy đánh giá một lần trên bộ report.
 
 ## 6. Rủi ro và hạn chế đã biết
 
@@ -169,9 +169,20 @@ Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào
 | --- | --- | --- |
 | C01 | Config mô phỏng và `simulation_id` | Xong |
 | C02 | Mô hình sinh cơ bản, `make simulate` | Xong |
-| C03 | Chèn bất thường, ground truth, config `tuning` và `report` | Xong; config còn `draft` |
+| C03 | Chèn bất thường, ground truth, config `tuning` và `report` | Xong; config đã `frozen` (2026-11-04) |
 | C04 | Schema PostgreSQL, `make db-init`, `make ingest` | Xong; test tích hợp pass trên `postgres:16` tạm |
 | C05 | README giả định, báo cáo | Xong ([báo cáo](../architecture/stage-c-report.md)) |
+
+### Stage D
+
+| ID | Việc | Trạng thái |
+| --- | --- | --- |
+| D01 | SQL views KPI 15 phút | Xong |
+| D02 | `make kpi` ra Parquet | Xong |
+| D03 | Detector D-A và D-B | Xong |
+| D04 | Gộp sự cố | Xong |
+| D05 | Đánh giá, `make tune`, `make detect`, `make detect-report` | Xong; đã chỉnh trên tuning, **chưa chạy report** |
+| D06 | Báo cáo và biểu đồ | Phần tuning xong ([báo cáo](../architecture/stage-d-report.md)); phần report chờ chủ dự án |
 
 ## 9. Quy tắc bắt buộc
 

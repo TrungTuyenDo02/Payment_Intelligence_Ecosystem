@@ -15,7 +15,7 @@ from psycopg.types.json import Jsonb
 
 from synthetic_generator.cli import REPO_ROOT, load_contract_rules
 
-SCHEMA_SQL = REPO_ROOT / "infrastructure" / "database" / "001_payment_events.sql"
+SCHEMA_DIR = REPO_ROOT / "infrastructure" / "database"
 SHARED_FIELDS = ("merchant_id", "amount", "payment_method", "currency")
 PAYLOAD_COLUMNS = (
     "payment_id",
@@ -147,9 +147,18 @@ def connect() -> psycopg.Connection:
     )
 
 
-def init_db(conn: psycopg.Connection) -> None:
-    conn.execute(SCHEMA_SQL.read_text("utf-8"))
+def schema_files() -> list[Path]:
+    """SQL files in number order: 001 tables (Stage C), 002 KPI views (Stage D), ..."""
+    return sorted(SCHEMA_DIR.glob("[0-9][0-9][0-9]_*.sql"))
+
+
+def init_db(conn: psycopg.Connection) -> list[str]:
+    """Run every schema file (each is idempotent); return the file names."""
+    files = schema_files()
+    for path in files:
+        conn.execute(path.read_text("utf-8"))
     conn.commit()
+    return [p.name for p in files]
 
 
 def ingest(conn: psycopg.Connection, sim_dir: Path) -> dict[str, Any]:
@@ -234,8 +243,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     with connect() as conn:
         if args.init_db:
-            init_db(conn)
-            print(f"tables ready ({SCHEMA_SQL.name})")
+            print(f"schema ready ({', '.join(init_db(conn))})")
         else:
             print(json.dumps(ingest(conn, args.sim_root / args.sim)))
 

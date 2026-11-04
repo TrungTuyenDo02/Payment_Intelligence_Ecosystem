@@ -38,6 +38,6 @@
 <rect x="30" y="393" width="14" height="14" rx="3" fill="#e3f5e6" stroke="#2e8b3e"/>
 <text x="50" y="404" text-anchor="start" font-size="12" font-weight="400" fill="#5a5f66">Đã xong</text>
 <rect x="205" y="393" width="14" height="14" rx="3" fill="#fdf3e1" stroke="#b7791f"/>
-<text x="225" y="404" text-anchor="start" font-size="12" font-weight="400" fill="#5a5f66">Tuần này (Stage D)</text>
+<text x="225" y="404" text-anchor="start" font-size="12" font-weight="400" fill="#5a5f66">Đang làm</text>
 <rect x="380" y="393" width="14" height="14" rx="3" fill="#ffffff" stroke="#9aa3b2" stroke-dasharray="3 2"/>
 <text x="400" y="404" text-anchor="start" font-size="12" font-weight="400" fill="#5a5f66">Chưa làm</text></svg>

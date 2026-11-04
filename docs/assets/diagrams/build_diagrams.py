@@ -20,7 +20,7 @@ K = {
     "prod": ("#1b2a4a", "#1b2a4a", "#ffffff", "#c9d3e6"),
     "muted": ("#f5f5f5", "#b5b5b5", "#8a8a8a", "#8a8a8a"),
 }
-STATUS = [("goal", "Đã xong"), ("warn", "Tuần này (Stage D)"), ("todo", "Chưa làm")]
+STATUS = [("goal", "Đã xong"), ("warn", "Đang làm"), ("todo", "Chưa làm")]
 
 
 class Svg:
@@ -107,9 +107,9 @@ for x, (t, k) in zip(
     [
         ("Bộ sinh dữ liệu\n(config + seed)", "goal"),
         ("Kiểm tra contract\n+ PostgreSQL", "goal"),
-        ("KPI theo\nthời gian", "warn"),
+        ("KPI theo\nthời gian", "goal"),
         ("Phát hiện\nbất thường", "warn"),
-        ("Danh sách sự cố\n+ dashboard", "todo"),
+        ("Dashboard\nsự cố", "todo"),
     ],
     strict=True,
 ):

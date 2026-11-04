@@ -22,7 +22,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 <p align="center"><img src="docs/assets/diagrams/roadmap.svg" alt="Lộ trình 6 tuần: A, B, C đã xong; D đang làm ở tuần 4" width="100%"></p>
 
 - **Đã xong (tuần 1–3):** khung repo, contract `payment-event` 1.0.0, hai baseline gian lận đã đánh giá trên tập test, bộ sinh dữ liệu thanh toán giả lập và nạp vào PostgreSQL.
-- **Đang làm (tuần 4):** KPI độ tin cậy và phát hiện bất thường trên dữ liệu giả lập.
+- **Tuần 4:** KPI độ tin cậy và hai detector đã xong và đã chỉnh trên bộ dữ liệu tuning. Còn bước đánh giá một lần trên bộ report.
 
 ## Kết quả đến nay
 
@@ -35,7 +35,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 - **Kết quả giảm từ validation sang test.** Dữ liệu thay đổi theo thời gian, nên con số trên validation lạc quan hơn thực tế. Đây là lý do tập test chỉ được mở **một lần**, với cấu hình đã chốt trước.
 - Bảng số đầy đủ: [`summary.md`](docs/assets/results/summary.md) (lần chạy `run-d6faa4699008`).
 
-**Product 01: dữ liệu thanh toán giả lập.** Mỗi lần mô phỏng 7 ngày tạo khoảng 25 nghìn payment (khoảng 30 nghìn sự kiện, có retry), với 4 sự cố được cài sẵn, trong đó có một sự cố yếu để thử giới hạn của detector. Mọi sự kiện qua kiểm tra contract và được nạp vào PostgreSQL không lỗi. Kết quả phát hiện bất thường sẽ có sau tuần 4.
+**Product 01: dữ liệu thanh toán giả lập.** Mỗi lần mô phỏng 7 ngày tạo khoảng 25 nghìn payment (khoảng 30 nghìn sự kiện, có retry), với 4 sự cố được cài sẵn, trong đó có một sự cố yếu để thử giới hạn của detector. Mọi sự kiện qua kiểm tra contract và được nạp vào PostgreSQL không lỗi. Trên bộ dùng để chỉnh ngưỡng (tuning), detector chính bắt được 3/4 sự cố trong 15 phút, không báo nhầm, và không bắt được sự cố yếu x1,5 ([báo cáo Stage D](docs/architecture/stage-d-report.md)). Đây chưa phải kết quả cuối: số dùng cho báo cáo sẽ lấy từ một bộ dữ liệu riêng, chạy đúng một lần.
 
 ## Nguyên tắc
 
@@ -72,7 +72,10 @@ make lint test
 | --- | --- |
 | `make up` / `make down` | Bật / tắt PostgreSQL 16 |
 | `make simulate` | Sinh dữ liệu thanh toán giả lập vào `artifacts/simulations/<simulation_id>/` (`CONFIG=...` để chọn kịch bản) |
-| `make db-init` / `make ingest SIM=<simulation_id>` | Tạo bảng / nạp một lần mô phỏng vào PostgreSQL |
+| `make db-init` / `make ingest SIM=<simulation_id>` | Tạo bảng và view KPI / nạp một lần mô phỏng vào PostgreSQL |
+| `make kpi SIM=<simulation_id>` | Xuất KPI 15 phút ra Parquet |
+| `make tune` / `make detect` / `make detect-plot` | Chỉnh ngưỡng, chạy detector, vẽ biểu đồ (chỉ trên bộ tuning) |
+| `make detect-report` | Đánh giá một lần trên bộ report, chỉ với config detector đã `frozen` (chỉ chủ dự án chạy) |
 | `make eda` | EDA trên phần train của IEEE-CIS |
 | `make baseline` | Hai baseline, đánh giá trên validation |
 | `make baseline-final` | Đánh giá test một lần, chỉ với config đã `frozen` (chỉ chủ dự án chạy) |
@@ -105,8 +108,9 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | [Bàn giao công việc](HANDOFF.md) | Trạng thái hiện tại và việc tiếp theo |
 | [Quyết định tiền xử lý (EDA)](docs/data-analysis/eda-summary.md) | 9 quyết định đã duyệt và bằng chứng |
 | [Đặc tả](docs/architecture/stage-c-spec.md) · [Báo cáo](docs/architecture/stage-c-report.md) Stage C | Bộ sinh dữ liệu giả lập và ingestion |
+| [Đặc tả](docs/architecture/stage-d-spec.md) · [Báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI độ tin cậy và phát hiện bất thường |
 | [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
-| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0004) |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0005) |
 
 ## Giấy phép
 
