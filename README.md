@@ -132,7 +132,7 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 
 | Tài liệu | Nội dung |
 | --- | --- |
-| [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Báo cáo đầy đủ: kiến thức nền, kết quả, hướng phát triển |
+| [Bài báo khoa học (PDF)](docs/report/bai-bao-khoa-hoc.pdf) · [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Bài báo 9 trang; báo cáo đầy đủ có giải thích kiến thức nền |
 | [Hướng dẫn thao tác GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch, rủi ro, tài liệu tham khảo |
 | [Bàn giao công việc](HANDOFF.md) | Trạng thái hiện tại và việc tiếp theo |
