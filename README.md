@@ -35,7 +35,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 - **Kết quả giảm từ validation sang test.** Dữ liệu thay đổi theo thời gian, nên con số trên validation lạc quan hơn thực tế. Đây là lý do tập test chỉ được mở **một lần**, với cấu hình đã chốt trước.
 - Bảng số đầy đủ: [`summary.md`](docs/assets/results/summary.md) (lần chạy `run-d6faa4699008`).
 
-**Product 01: dữ liệu thanh toán giả lập.** Bộ sinh dữ liệu tạo khoảng 5 nghìn payment (khoảng 5,8 nghìn sự kiện, có retry và 3 sự cố được cài sẵn). Mọi sự kiện qua kiểm tra contract và được nạp vào PostgreSQL không lỗi. Kết quả phát hiện bất thường sẽ có sau tuần 4.
+**Product 01: dữ liệu thanh toán giả lập.** Mỗi lần mô phỏng 7 ngày tạo khoảng 25 nghìn payment (khoảng 30 nghìn sự kiện, có retry), với 4 sự cố được cài sẵn, trong đó có một sự cố yếu để thử giới hạn của detector. Mọi sự kiện qua kiểm tra contract và được nạp vào PostgreSQL không lỗi. Kết quả phát hiện bất thường sẽ có sau tuần 4.
 
 ## Nguyên tắc
 
