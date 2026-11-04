@@ -58,7 +58,7 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 | D-B gộp cửa sổ | 3/4, 0 báo nhầm/ngày | 2/4, 0 báo nhầm/ngày |
 | D-A z-score bền vững | 2/4, 1,0 báo nhầm/ngày | 0/4, 2,0 báo nhầm/ngày |
 
-- Config detector đã `frozen` (agent đặt theo yêu cầu của chủ dự án, commit `e8c5783`, trước khi chạy report). **Không chạy lại `make detect-report` với config này**; `artifacts/detect_report_runs.json` chỉ tồn tại trên máy đã chạy, nên trên máy khác phải tự giữ quy tắc này.
+- Config detector đã `frozen` (agent đặt theo yêu cầu của chủ dự án, commit `e331ec1`, trước khi chạy report). **Không chạy lại `make detect-report` với config này**; `artifacts/detect_report_runs.json` chỉ tồn tại trên máy đã chạy, nên trên máy khác phải tự giữ quy tắc này.
 - Cả hai detector trượt `traffic_drop` (loại không có trong tuning) và sự cố x1,5. Muốn thử ngưỡng riêng cho từng loại KPI là config mới và cần bộ report mới.
 
 ### 3.2 Sau Stage D

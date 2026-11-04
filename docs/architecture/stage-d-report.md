@@ -2,7 +2,7 @@
 
 - **Ngày:** 2026-11-04 (tuần 4 của lịch 6 tuần)
 - **Đặc tả:** [`stage-d-spec.md`](stage-d-spec.md) (đã duyệt 2026-11-04), [ADR 0005](../decisions/0005-kpi-layer-sql-views.md) (SQL views).
-- **Trạng thái:** D01–D06 xong. Detector được chỉnh trên mô phỏng `tuning` (mục 2), rồi config được `frozen` và đánh giá **một lần** trên mô phỏng `report` (mục 3). Theo yêu cầu rõ ràng của chủ dự án trong chat (2026-11-04), agent đặt `frozen` và chạy `make detect-report`. Config đã `frozen` được commit và push (`e8c5783`) **trước** khi chạy report.
+- **Trạng thái:** D01–D06 xong. Detector được chỉnh trên mô phỏng `tuning` (mục 2), rồi config được `frozen` và đánh giá **một lần** trên mô phỏng `report` (mục 3). Theo yêu cầu rõ ràng của chủ dự án trong chat (2026-11-04), agent đặt `frozen` và chạy `make detect-report`. Config đã `frozen` được commit và push (`e331ec1`) **trước** khi chạy report.
 
 ## 1. Đã làm gì
 

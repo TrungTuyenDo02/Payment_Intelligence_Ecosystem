@@ -77,7 +77,7 @@
 
 ## 6. Đánh giá trung thực và hạn chế (1–2 trang)
 
-- Test một lần cho mỗi config đã chốt. Ở Stage D, config detector được commit và push (`e8c5783`) trước khi chạy bộ report; với Stage B, chủ dự án tự xác nhận thứ tự.
+- Test một lần cho mỗi config đã chốt. Ở Stage D, config detector được commit và push (`e331ec1`) trước khi chạy bộ report; với Stage B, chủ dự án tự xác nhận thứ tự.
 - Dữ liệu Product 01 là giả lập: kết quả là "kiểm chứng trên bất thường đã biết".
 - IEEE-CIS: nhãn lan theo tài khoản, có thực thể lặp lại giữa các tập (ADR 0003).
 - Mỗi bộ chỉ có 4 sự cố cài sẵn: là ví dụ minh hoạ, không phải tỷ lệ phát hiện.
