@@ -13,12 +13,12 @@ CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 # POSTGRES_* from .env (never committed); defaults in code match compose.yaml.
 -include .env
 export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
-export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:projects/fraud-risk:projects/payment-reliability
+export PYTHONPATH := shared/dataset-management:shared/synthetic-generator:shared/dashboard:projects/fraud-risk:projects/payment-reliability
 
-.PHONY: help setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report
+.PHONY: help setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard
 
 help:
-	@echo "Targets: setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report"
+	@echo "Targets: setup lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard"
 
 setup:
 ifeq ($(UV),)
@@ -100,3 +100,7 @@ detect-plot:
 # One-time evaluation on the report simulation; config must be frozen by the OWNER.
 detect-report:
 	$(RUN) python -m payment_reliability.cli detect-report $(if $(DETECTOR_CONFIG),--config $(DETECTOR_CONFIG),) $(if $(FORCE),--force,)
+
+# Stage F: static dashboard from artifacts/ (ADR 0007), written to artifacts/dashboard/index.html.
+dashboard:
+	$(RUN) python -m dashboard.build

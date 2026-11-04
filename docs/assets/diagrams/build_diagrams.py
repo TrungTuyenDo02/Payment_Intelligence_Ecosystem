@@ -109,7 +109,7 @@ for x, (t, k) in zip(
         ("Kiểm tra contract\n+ PostgreSQL", "goal"),
         ("KPI theo\nthời gian", "goal"),
         ("Phát hiện\nbất thường", "goal"),
-        ("Dashboard\nsự cố", "todo"),
+        ("Dashboard\nsự cố", "goal"),
     ],
     strict=True,
 ):
@@ -184,7 +184,7 @@ stages = [
     ("C · Dữ liệu giả lập", 2, 1, "goal", "Bộ sinh dữ liệu\n+ ingestion"),
     ("D · Reliability", 3, 1, "goal", "KPI\n+ bất thường"),
     ("E · Fraud nâng cao", 4, 1, "warn", "Rò rỉ + GBM\n(API: cắt)"),
-    ("F · Hoàn thiện", 5, 1, "todo", "Dashboard\n+ báo cáo"),
+    ("F · Hoàn thiện", 5, 1, "warn", "Dashboard\n+ báo cáo"),
 ]
 for i, (name, start, length, kind, desc) in enumerate(stages):
     y = 58 + i * 52
@@ -199,11 +199,11 @@ for i, (name, start, length, kind, desc) in enumerate(stages):
         dashed=(kind == "todo"),
         size=12 if length == 1 else 13,
     )
-tx = GX + 4 * GW
+tx = GX + 5 * GW
 s.add(
     f'<line x1="{tx}" y1="46" x2="{tx}" y2="366" stroke="#d14343" stroke-width="2" stroke-dasharray="4 3"/>'
 )
-s.text(tx, 384, "hiện tại: tuần 5", 12, "#d14343", "middle", bold=True)
+s.text(tx, 384, "hiện tại: tuần 6", 12, "#d14343", "middle", bold=True)
 s.legend(30, 404, STATUS, gap=175)
 s.save("roadmap.svg")
 
