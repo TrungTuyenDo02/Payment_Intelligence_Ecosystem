@@ -1,10 +1,7 @@
-# Đặc tả Stage D — KPI độ tin cậy và phát hiện bất thường (bản nháp)
+# Đặc tả Stage D — KPI độ tin cậy và phát hiện bất thường
 
-- **Trạng thái:** **Bản nháp**, chờ chủ dự án duyệt. Chưa viết code cho tới khi duyệt.
-- **Điều kiện bắt đầu code:**
-  1. Chủ dự án duyệt giả định của generator và đặt `status: frozen` cho `shared/synthetic-generator/configs/demo.yaml` và `report.yaml`.
-  2. Chủ dự án trả lời các câu hỏi ở mục 10.
-  3. Đặc tả này được duyệt và đổi tên thành `stage-d-spec.md`.
+- **Trạng thái:** **Đã duyệt** bởi chủ dự án trong chat (2026-11-04), chọn toàn bộ đề xuất ở mục 10. File này là nguồn chính cho Stage D.
+- **Điều kiện bắt đầu code:** đã đạt. Hai config mô phỏng đã `frozen` (agent đặt theo yêu cầu rõ ràng của chủ dự án trong chat, 2026-11-04); các câu hỏi ở mục 10 đã trả lời.
 - **Liên quan:**
   - [Đặc tả Stage C](stage-c-spec.md), gồm sửa đổi A1 và A2 ở mục 10.
   - [ADR 0002](../decisions/0002-product-boundaries.md): Product 01 chỉ dùng dữ liệu giả lập.
@@ -113,12 +110,13 @@ Mỗi view có chú thích về hạt và định nghĩa cột. Số đếm luô
 
 Mỗi task một nhánh `task/D0x-...`; chỉ xong khi `make lint` và `make test` đều pass.
 
-## 10. Câu hỏi cho chủ dự án
+## 10. Quyết định của chủ dự án (2026-11-04)
 
-| # | Câu hỏi | Đề xuất |
-| --- | --- | --- |
-| Q1 | Gán attempt vào khung theo `event_time` (lúc kết thúc) hay theo lúc bắt đầu (`event_time − latency_ms`)? | `event_time`: đó là thứ hệ thống giám sát thật nhìn thấy. Lệch so với lúc bắt đầu tối đa 10 giây, gần như không đổi kết quả với khung 15 phút |
-| Q2 | Làm cả hai detector (D-A làm đường cơ sở, D-B làm phương án chính), hay chỉ một? | Cả hai: so sánh với đường cơ sở cho thấy D-B có giá trị gì, giống cách Stage B so Logistic Regression với luật |
-| Q3 | Khi đánh giá, có bắt buộc sự cố phải đúng đối tượng không? | Bắt buộc đúng đối tượng cho số chính; báo cáo thêm số theo quy tắc "bất kỳ đối tượng nào" để thấy khác biệt |
-| Q4 | Mức báo nhầm chấp nhận được khi chỉnh ngưỡng là bao nhiêu sự cố mỗi ngày? | 1 sự cố mỗi ngày |
-| Q5 | Lưu danh sách sự cố ở đâu? | File JSON trong `artifacts/`, giống run log của Stage B. Stage F quyết định có cần bảng PostgreSQL không |
+| # | Câu hỏi | Quyết định | Lý do |
+| --- | --- | --- | --- |
+| Q1 | Gán attempt vào khung theo lúc kết thúc hay lúc bắt đầu? | Theo `event_time` (lúc kết thúc) | Đây là thời điểm hệ thống giám sát thật nhận được sự kiện, nên KPI giống cái người vận hành nhìn thấy. Lệch so với lúc bắt đầu tối đa 10 giây (ngưỡng timeout), rất nhỏ so với khung 15 phút |
+| Q2 | Làm một hay hai detector? | Cả hai: D-A làm đường cơ sở, D-B làm phương án chính | Không có đường cơ sở thì không biết D-B tốt hơn bao nhiêu, giống cách Stage B so Logistic Regression với luật. D-A gần như không tốn thêm công vì dùng chung dữ liệu và phần đánh giá |
+| Q3 | Có bắt buộc sự cố đúng đối tượng không? | Bắt buộc đúng đối tượng cho số chính; báo cáo thêm số theo quy tắc "bất kỳ đối tượng nào" | Người vận hành cần biết **provider nào** hỏng; báo đúng giờ nhưng sai provider vẫn dẫn đến xử lý sai. Số theo quy tắc lỏng cho thấy detector có "cảm nhận" được sự cố hay không |
+| Q4 | Mức báo nhầm chấp nhận được khi chỉnh ngưỡng? | Tối đa 1 sự cố báo nhầm mỗi ngày trên mô phỏng `tuning` | Một đội vận hành nhỏ có thể kiểm tra một cảnh báo nhầm mỗi ngày; nhiều hơn thì người ta bắt đầu bỏ qua cảnh báo. Con số là giả định và sẽ ghi rõ như vậy trong báo cáo |
+| Q5 | Lưu danh sách sự cố ở đâu? | File JSON trong `artifacts/detections/<run_id>/` | Giống run log Stage B, không cần đổi schema PostgreSQL. Stage F quyết định có cần bảng hay không khi biết dashboard đọc dữ liệu thế nào |
+| Q6 | Ai chốt config detector và chạy `make detect-report`? | Agent làm D01–D04 và chỉnh trên `tuning`, rồi **dừng** để chủ dự án xem kết quả. Chủ dự án đồng ý thì mới chốt và chạy `report` một lần | Giữ đúng tinh thần "chỉ chủ dự án chốt" của Stage B |

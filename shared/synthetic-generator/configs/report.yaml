@@ -2,7 +2,7 @@
 # Used only to report the Stage D detector, never to tune it (spec section 4).
 # All values are assumptions, not learned from real data.
 # status: only the owner may change this to "frozen" (AGENTS.md D5).
-status: draft
+status: frozen # set by the agent at the owner's explicit request in chat, 2026-11-04
 purpose: report
 seed: 2026
 

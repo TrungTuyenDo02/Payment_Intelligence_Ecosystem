@@ -55,13 +55,13 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. Tuần 4 sẽ làm 
 
 | # | Việc | Ghi chú |
 | --- | --- | --- |
-| 1 | Duyệt giả định trong [README generator](shared/synthetic-generator/README.md) và kịch bản bất thường | Tỷ lệ lỗi 15/22/30% **cố ý để cao** |
-| 2 | Đặt `status: frozen` cho `shared/synthetic-generator/configs/demo.yaml` và `report.yaml` | Bắt buộc trước khi chỉnh detector (đặc tả mục 4). Chỉ chủ dự án được đặt `frozen` |
+| 1 | ~~Duyệt giả định~~ (chủ dự án đồng ý 2026-11-04) trong [README generator](shared/synthetic-generator/README.md) và kịch bản bất thường | Tỷ lệ lỗi 15/22/30% **cố ý để cao** |
+| 2 | ~~Đặt `status: frozen` cho `demo.yaml` và `report.yaml`~~ | **Xong (2026-11-04):** agent đặt theo yêu cầu rõ ràng của chủ dự án trong chat |
 | 3 | ~~Quyết định có thêm kịch bản bất thường yếu hơn (khoảng x1,5) không~~ | **Đã quyết (2026-11-04):** thêm vào cả hai config, cùng với 150 payment/giờ. KPI dùng SQL views (ADR 0005); nếu tuần 5 thiếu thời gian thì cắt API chấm điểm trước |
 
 ### 3.2 Stage D (tuần 4) — đề xuất thứ tự
 
-1. **Đặc tả Stage D**: bản nháp ở [`stage-d-spec.draft.md`](docs/architecture/stage-d-spec.draft.md). Chủ dự án trả lời 5 câu hỏi ở mục 10 và duyệt (đổi tên thành `stage-d-spec.md`) rồi mới viết code.
+1. **Đặc tả Stage D**: [`stage-d-spec.md`](docs/architecture/stage-d-spec.md), đã duyệt 2026-11-04 (quyết định ở mục 10).
 2. **Tầng KPI: SQL views** ([ADR 0005](docs/decisions/0005-kpi-layer-sql-views.md), chủ dự án chọn 2026-11-04). Không thêm `dbt-postgres`.
 3. **KPI độ tin cậy, tính theo attempt** (quyết định của chủ dự án): tỷ lệ thành công, thành công ngay lần đầu, tỷ lệ retry, độ trễ p50/p95, lỗi theo provider và mã lỗi. Tách lỗi nghiệp vụ (`DECLINED`, `INVALID_REQUEST`) khỏi lỗi kỹ thuật (quyết định 2 của đặc tả Stage C).
 4. **Bộ phát hiện bất thường** trên chuỗi KPI theo thời gian. Chỉ chỉnh trên `sim-485cacc9c858` (tuning), chỉ báo cáo trên `sim-f6e6749ff0bf` (report). Báo cáo là "kiểm chứng trên bất thường đã biết", không phải hiệu năng thực tế (rủi ro 2 trong tổng quan). Detector **không được đọc** `anomaly_labels.json`; chỉ phần đánh giá được đọc.
