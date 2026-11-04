@@ -81,8 +81,9 @@ detect:
 tune:
 	$(RUN) python -m payment_reliability.cli tune $(if $(DETECTOR_CONFIG),--config $(DETECTOR_CONFIG),)
 
+# RUN_DIR=artifacts/detections/<run_id>[/report] OUT=docs/assets/results/<name>.png
 detect-plot:
-	$(RUN) python -m payment_reliability.cli plot $(if $(RUN_DIR),--run-dir $(RUN_DIR),)
+	$(RUN) python -m payment_reliability.cli plot $(if $(RUN_DIR),--run-dir $(RUN_DIR),) $(if $(OUT),--out $(OUT),)
 
 # One-time evaluation on the report simulation; config must be frozen by the OWNER.
 detect-report:

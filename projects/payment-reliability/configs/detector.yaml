@@ -1,6 +1,6 @@
 # Stage D detector config (stage-d-spec.md sections 4-7).
 # status: only the owner may set "frozen"; make detect-report refuses anything else.
-status: draft
+status: frozen # set by the agent at the owner's explicit request in chat (2026-11-04), before the report run
 simulations:
   tuning: sim-485cacc9c858 # demo.yaml: tune here only
   report: sim-f6e6749ff0bf # report.yaml: evaluated once, after this file is frozen
