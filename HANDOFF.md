@@ -66,7 +66,7 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 - **Stage E (tuần 5): code xong, chờ chạy trên IEEE-CIS.** [Đặc tả](docs/architecture/stage-e-spec.md) (duyệt theo uỷ quyền, quyết định ở mục 9), [báo cáo khung](docs/architecture/stage-e-report.md), [ADR 0006](docs/decisions/0006-gradient-boosting-sklearn.md). API chấm điểm đã cắt. Trên máy có dataset:
   1. `make leakage` (chỉ validation) và `make gbm` (train và validation), gửi kết quả để điền báo cáo.
   2. Chủ dự án đặt `status: frozen` cho `projects/fraud-risk/configs/gbm.yaml`, commit, push, rồi `make gbm-final` **một lần**. Đây là config Stage E duy nhất được đăng ký trước cho tập test.
-- **Stage F (tuần 6):** dashboard đọc `incidents.json` và KPI; nên gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 2.3).
+- **Stage F (tuần 6): xong.** `make dashboard` sinh `artifacts/dashboard/index.html` cho cả hai sản phẩm ([đặc tả](docs/architecture/stage-f-spec.md), [ADR 0007](docs/decisions/0007-static-html-dashboard.md)). [Dàn ý báo cáo thực tập](docs/report/report-outline.md) gắn từng số với run id; mục 4.3 và 4.4 chờ số Stage E. Chưa làm: gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 3.3).
 
 ### 3.3 Việc nhỏ, không chặn
 
@@ -135,4 +135,5 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [README generator](shared/synthetic-generator/README.md) | Mọi giả định của dữ liệu giả lập |
 | [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
 | [Đặc tả](docs/architecture/stage-e-spec.md) và [báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ, Gradient Boosting |
-| [ADR 0001–0006](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn |
+| [Đặc tả Stage F](docs/architecture/stage-f-spec.md), [dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo |
+| [ADR 0001–0007](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh |

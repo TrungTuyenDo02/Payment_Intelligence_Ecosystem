@@ -24,6 +24,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 - **Đã xong (tuần 1–3):** khung repo, contract `payment-event` 1.0.0, hai baseline gian lận đã đánh giá trên tập test, bộ sinh dữ liệu thanh toán giả lập và nạp vào PostgreSQL.
 - **Tuần 4 (xong):** KPI độ tin cậy, hai detector, chỉnh ngưỡng trên bộ tuning và đánh giá một lần trên bộ report.
 - **Tuần 5 (đang làm):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02. Code xong, chờ chạy trên dữ liệu IEEE-CIS ([đặc tả Stage E](docs/architecture/stage-e-spec.md)).
+- **Tuần 6:** dashboard HTML cho cả hai sản phẩm (`make dashboard`) và dàn ý báo cáo thực tập. Xong; phần Product 02 điền số sau khi chạy Stage E.
 
 ## Kết quả đến nay
 
@@ -91,6 +92,7 @@ make lint test
 | `make baseline-final` | Đánh giá test một lần, chỉ với config đã `frozen` (chỉ chủ dự án chạy) |
 | `make report` | Vẽ biểu đồ và bảng số cho lần chạy gần nhất (`RUN_DIR=...` để chọn lần khác) |
 | `make leakage` | Thí nghiệm rò rỉ dữ liệu (chỉ trên validation) |
+| `make dashboard` | Dashboard HTML cho cả hai sản phẩm, ghi vào `artifacts/dashboard/index.html` |
 | `make gbm` / `make gbm-final` | Gradient Boosting trên validation / đánh giá test một lần với config đã `frozen` (chỉ chủ dự án chạy) |
 
 **Dữ liệu IEEE-CIS:** tải [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) từ Kaggle (cần đăng nhập và chấp nhận điều khoản cuộc thi), đặt `train_transaction.csv` và `train_identity.csv` vào `datasets/raw/ieee-cis/` (không commit). Tạo manifest checksum:
@@ -123,7 +125,8 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | [Đặc tả](docs/architecture/stage-d-spec.md) · [Báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI độ tin cậy và phát hiện bất thường |
 | [Đặc tả](docs/architecture/stage-e-spec.md) · [Báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting |
 | [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
-| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0006) |
+| [Đặc tả Stage F](docs/architecture/stage-f-spec.md) · [Dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo thực tập |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0007) |
 
 ## Giấy phép
 
