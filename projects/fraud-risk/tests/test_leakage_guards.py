@@ -112,7 +112,7 @@ def test_random_split_only_defined_in_split_module() -> None:
     for path in PACKAGE.rglob("*.py"):
         if path.relative_to(PACKAGE).as_posix() in RANDOM_SPLIT_ALLOWED:
             continue
-        for node in ast.walk(ast.parse(path.read_text())):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             names = []
             if isinstance(node, ast.ImportFrom):
                 names = [alias.name for alias in node.names]
