@@ -1,20 +1,20 @@
-# Bàn giao công việc — 2026-11-04
+# Bàn giao công việc — 2026-11-06
 
 > Dành cho người tiếp tục dự án từ ngày 2026-11-05. Đọc file này trước, sau đó đọc [`README.md`](README.md) và [tổng quan đề tài](docs/product/project-overview.md).
 > Chủ dự án: Đỗ Trung Tuyến (@TrungTuyenDo02).
 
 ## 1. Đang ở đâu
 
-Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D) đã xong**: chỉnh trên bộ tuning, đánh giá một lần trên bộ report (`det-08335c6af086`). Cập nhật 2026-11-04.
+Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D) đã xong**: chỉnh trên bộ tuning, đánh giá một lần trên bộ report (`det-08335c6af086`). **Stage E đã chạy trên validation** (2026-11-06); còn `gbm-final`. Cập nhật 2026-11-06.
 
 | Tuần | Stage | Trạng thái |
 | --- | --- | --- |
 | 1–2 | A: khung repo, contract, manifest dataset | ✅ Xong. Contract `payment-event` **1.0.0 đã duyệt** (2026-11-03) |
 | 1–2 | B: baseline gian lận trên IEEE-CIS | ✅ Xong. Đã chạy test một lần với config `frozen` |
 | 3 | C: dữ liệu giả lập và ingestion PostgreSQL | ✅ Xong code và test. Hai config mô phỏng **còn `draft`** |
-| 4 | D: mô hình dữ liệu, KPI, phát hiện bất thường | ⏳ Chưa bắt đầu, chưa có đặc tả |
-| 5 | E: thí nghiệm rò rỉ, Gradient Boosting, API chấm điểm | Chưa bắt đầu |
-| 6 | F: dashboard, báo cáo thực tập | Chưa bắt đầu |
+| 4 | D: mô hình dữ liệu, KPI, phát hiện bất thường | ✅ Xong. Config detector `frozen`, đã đánh giá report một lần |
+| 5 | E: thí nghiệm rò rỉ, Gradient Boosting | ⏳ Đã chạy validation (`leak-827d929eaa73`, `run-f8807cb6f780`); `gbm.yaml` đã `frozen`; chờ `gbm-final`. API chấm điểm đã cắt |
+| 6 | F: dashboard, báo cáo thực tập | Dashboard xong; báo cáo chờ số test của Stage E |
 
 ## 2. Đã làm gì
 
@@ -63,9 +63,9 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 
 ### 3.2 Sau Stage D
 
-- **Stage E (tuần 5): code xong, chờ chạy trên IEEE-CIS.** [Đặc tả](docs/architecture/stage-e-spec.md) (duyệt theo uỷ quyền, quyết định ở mục 9), [báo cáo khung](docs/architecture/stage-e-report.md), [ADR 0006](docs/decisions/0006-gradient-boosting-sklearn.md). API chấm điểm đã cắt. Trên máy có dataset:
-  1. `make leakage` (chỉ validation) và `make gbm` (train và validation), gửi kết quả để điền báo cáo.
-  2. Chủ dự án đặt `status: frozen` cho `projects/fraud-risk/configs/gbm.yaml`, commit, push, rồi `make gbm-final` **một lần**. Đây là config Stage E duy nhất được đăng ký trước cho tập test.
+- **Stage E (tuần 5): đã chạy validation, chờ `gbm-final`.** [Đặc tả](docs/architecture/stage-e-spec.md), [báo cáo](docs/architecture/stage-e-report.md) (đã có số validation), [ADR 0006](docs/decisions/0006-gradient-boosting-sklearn.md). API chấm điểm đã cắt.
+  1. Xong (2026-11-06): `make leakage` → `leak-827d929eaa73`; `make gbm` → `run-f8807cb6f780` (PR-AUC validation 0,497).
+  2. `gbm.yaml` đã `status: frozen` (chủ dự án). Còn lại: `make gbm-final` **một lần**, rồi điền số test vào báo cáo Stage E và mục 4.3–4.4 của báo cáo thực tập.
 - **Stage F (tuần 6): xong.** `make dashboard` sinh `artifacts/dashboard/index.html` cho cả hai sản phẩm ([đặc tả](docs/architecture/stage-f-spec.md), [ADR 0007](docs/decisions/0007-static-html-dashboard.md)). [Dàn ý báo cáo thực tập](docs/report/report-outline.md) gắn từng số với run id; mục 4.3 và 4.4 chờ số Stage E. Chưa làm: gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 3.3).
 
 ### 3.3 Việc nhỏ, không chặn
@@ -75,7 +75,7 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 
 ## 4. Cách chạy
 
-Chạy mọi lệnh `make` trong **WSL Ubuntu** (thư mục `/mnt/f/VSF/prj`). `.venv` được tạo trong WSL; chạy `uv` từ Windows sẽ làm hỏng nó.
+Có hai môi trường, **mỗi môi trường một `.venv` riêng, đừng dùng chung**: (1) **WSL Ubuntu** (thư mục `/mnt/f/VSF/prj`), nơi chạy PostgreSQL; (2) **Windows** với `uv` và Git Bash (máy `Payment_Intelligence_Ecosystem`), đã kiểm tra `make lint`, `make test` và `make gbm`; 7 test database bị bỏ qua vì thiếu Docker.
 
 ```bash
 make setup
