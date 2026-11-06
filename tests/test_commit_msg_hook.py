@@ -2,6 +2,7 @@
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -27,5 +28,6 @@ def test_hook_removes_attribution_only(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no POSIX execute bit")
 def test_hook_is_executable() -> None:
     assert HOOK.stat().st_mode & 0o111
