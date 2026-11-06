@@ -2,7 +2,7 @@
 # frozen baseline, so the comparison with Logistic Regression is about the model only.
 # status: only the owner may change this to "frozen". It is the ONLY Stage E config pre-registered
 # for the test set (stage-e-spec.md section 6); every other Stage E run stays on validation.
-status: draft
+status: frozen
 seed: 42
 
 data:
