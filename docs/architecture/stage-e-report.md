@@ -2,7 +2,7 @@
 
 - **Ngày:** 2026-11-04 (tuần 5 của lịch 6 tuần)
 - **Đặc tả:** [`stage-e-spec.md`](stage-e-spec.md), [ADR 0006](../decisions/0006-gradient-boosting-sklearn.md).
-- **Trạng thái:** E01–E04 xong code và test. Thí nghiệm rò rỉ (`leak-827d929eaa73`) và Gradient Boosting trên validation (`run-f8807cb6f780`) đã chạy trên IEEE-CIS ngày 2026-11-06. Config `gbm.yaml` đã `frozen`; **số test chờ `gbm-final` (một lần)**.
+- **Trạng thái:** E01–E04 xong code và test. Thí nghiệm rò rỉ (`leak-827d929eaa73`) và Gradient Boosting trên validation (`run-f8807cb6f780`) đã chạy trên IEEE-CIS ngày 2026-11-06. Config `gbm.yaml` đã `frozen`; `gbm-final` đã chạy **một lần** (2026-11-06, cùng mã lần chạy `run-f8807cb6f780`, thư mục `test/`).
 
 ## 1. Đã làm gì
 
@@ -50,15 +50,20 @@ Lần chạy `run-f8807cb6f780` (validation). Lưới 8 tổ hợp, chọn theo 
 | --- | --- | --- | --- | --- |
 | Luật (Stage B) | 0,089 | 0,078 | 0,22 | `run-d6faa4699008` |
 | Logistic Regression (Stage B) | 0,245 | 0,165 | 0,28 | `run-d6faa4699008` |
-| Gradient Boosting | 0,497 [0,483; 0,514] | *chờ `gbm-final`* | *chờ* | `run-f8807cb6f780` (validation) |
+| Gradient Boosting | 0,497 [0,483; 0,514] | **0,408** [0,390; 0,424] | **0,51** | `run-f8807cb6f780` |
 
 Trên validation, Gradient Boosting có recall 0,588 tại FPR 5% và 0,480 khi giữ precision 0,50. PR-AUC trên train là 0,584, cao hơn validation 0,497, nên mô hình khớp train tốt hơn. **Hạn chế:** tổ hợp tốt nhất nằm ở cạnh lưới (`max_iter = 400` là giá trị lớn nhất), nên chưa biết tăng thêm có tốt hơn không. Kết quả validation còn có thể hơi lạc quan vì đã chọn tổ hợp trên chính tập này; chỉ số test mới là con số để báo cáo.
 
+**Kết quả trên test** (118.108 dòng, tỷ lệ gian lận 3,44%; ngưỡng 0,853 chọn trên validation, config `frozen`, commit `89a8ed5`, chạy một lần không `--force`):
+
+- PR-AUC 0,408 [0,390; 0,424], giảm 0,089 so với validation (0,497). Logistic Regression giảm 0,080 (0,245 xuống 0,165). Gradient Boosting vẫn cao gấp khoảng 2,5 lần Logistic Regression trên test (0,408 so với 0,165), khoảng tin cậy hai mô hình không giao nhau.
+- Tại ngưỡng đã chọn: precision 0,516, recall 0,371, F1 0,432, FPR 1,24%.
+- Recall tại FPR 5%: 0,514 (Logistic Regression 0,28). Giữ precision 0,50 thì recall là 0,379.
+- **Hạn chế:** sự sụt giảm từ validation sang test cho thấy chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian (mục 2). Chưa có giải thích nguyên nhân cụ thể, và mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
+
 ## 4. Việc chủ dự án cần làm (trên máy có dataset)
 
-1. `make leakage`, rồi gửi `summary.md` và `results.json`.
-2. `make gbm`, rồi gửi `metrics.json` và `models.json` của thư mục run.
-3. Nếu đồng ý với kết quả validation: đặt `status: frozen` trong `projects/fraud-risk/configs/gbm.yaml`, commit và push, **rồi mới** chạy `make gbm-final` một lần.
+Đã xong cả ba bước (2026-11-06): `make leakage`, `make gbm`, đặt `status: frozen` rồi `make gbm-final` một lần. **Không chạy lại `make gbm-final` với config này.** Thứ tự thực tế: commit bản đóng băng (`89a8ed5`) trước, chạy test, rồi mới push.
 
 ## 5. Kiểm tra trong môi trường của agent
 

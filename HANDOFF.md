@@ -5,7 +5,7 @@
 
 ## 1. Đang ở đâu
 
-Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D) đã xong**: chỉnh trên bộ tuning, đánh giá một lần trên bộ report (`det-08335c6af086`). **Stage E đã chạy trên validation** (2026-11-06); còn `gbm-final`. Cập nhật 2026-11-06.
+Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D) đã xong**: chỉnh trên bộ tuning, đánh giá một lần trên bộ report (`det-08335c6af086`). **Stage E đã chạy xong** (2026-11-06), gồm cả `gbm-final` một lần. Cập nhật 2026-11-06.
 
 | Tuần | Stage | Trạng thái |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 | 1–2 | B: baseline gian lận trên IEEE-CIS | ✅ Xong. Đã chạy test một lần với config `frozen` |
 | 3 | C: dữ liệu giả lập và ingestion PostgreSQL | ✅ Xong code và test. Hai config mô phỏng **còn `draft`** |
 | 4 | D: mô hình dữ liệu, KPI, phát hiện bất thường | ✅ Xong. Config detector `frozen`, đã đánh giá report một lần |
-| 5 | E: thí nghiệm rò rỉ, Gradient Boosting | ⏳ Đã chạy validation (`leak-827d929eaa73`, `run-f8807cb6f780`); `gbm.yaml` đã `frozen`; chờ `gbm-final`. API chấm điểm đã cắt |
+| 5 | E: thí nghiệm rò rỉ, Gradient Boosting | ✅ Xong: `leak-827d929eaa73`, `run-f8807cb6f780` (Gradient Boosting test PR-AUC 0,408). API chấm điểm đã cắt |
 | 6 | F: dashboard, báo cáo thực tập | Dashboard xong; báo cáo chờ số test của Stage E |
 
 ## 2. Đã làm gì
@@ -63,9 +63,9 @@ Lịch 6 tuần: **tuần 1–3 (Stage A, B, C) đã xong**. **Tuần 4 (Stage D
 
 ### 3.2 Sau Stage D
 
-- **Stage E (tuần 5): đã chạy validation, chờ `gbm-final`.** [Đặc tả](docs/architecture/stage-e-spec.md), [báo cáo](docs/architecture/stage-e-report.md) (đã có số validation), [ADR 0006](docs/decisions/0006-gradient-boosting-sklearn.md). API chấm điểm đã cắt.
+- **Stage E (tuần 5): xong.** [Đặc tả](docs/architecture/stage-e-spec.md), [báo cáo](docs/architecture/stage-e-report.md) (đã có số validation), [ADR 0006](docs/decisions/0006-gradient-boosting-sklearn.md). API chấm điểm đã cắt.
   1. Xong (2026-11-06): `make leakage` → `leak-827d929eaa73`; `make gbm` → `run-f8807cb6f780` (PR-AUC validation 0,497).
-  2. `gbm.yaml` đã `status: frozen` (chủ dự án). Còn lại: `make gbm-final` **một lần**, rồi điền số test vào báo cáo Stage E và mục 4.3–4.4 của báo cáo thực tập.
+  2. `gbm.yaml` đã `status: frozen`; `make gbm-final` đã chạy một lần: test PR-AUC 0,408, recall tại FPR 5% là 0,51. **Không chạy lại.** Còn lại: điền số test vào mục 4.3–4.4 của báo cáo thực tập (LaTeX/PDF).
 - **Stage F (tuần 6): xong.** `make dashboard` sinh `artifacts/dashboard/index.html` cho cả hai sản phẩm ([đặc tả](docs/architecture/stage-f-spec.md), [ADR 0007](docs/decisions/0007-static-html-dashboard.md)). [Dàn ý báo cáo thực tập](docs/report/report-outline.md) gắn từng số với run id; mục 4.3 và 4.4 chờ số Stage E. Chưa làm: gộp cảnh báo `ALL` với cảnh báo provider cùng lúc (báo cáo Stage D, mục 3.3).
 
 ### 3.3 Việc nhỏ, không chặn
