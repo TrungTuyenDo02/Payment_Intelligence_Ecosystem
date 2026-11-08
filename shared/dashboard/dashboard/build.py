@@ -24,6 +24,7 @@ matplotlib.use("Agg")
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
+import yaml  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LOCAL = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -113,6 +114,23 @@ def provider_summary(prov: pd.DataFrame) -> pd.DataFrame:
     return out.loc[sorted(out.index, key=lambda p: (p == "ALL", p))]
 
 
+def fold_echoes(incidents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Display only: drop an ALL incident that overlaps a provider incident and list it on
+    that provider incident as `echoes` (stage-d-report.md 3.3). incidents.json is unchanged."""
+    providers = [i for i in incidents if i["target"] != "ALL"]
+    out = [dict(i, echoes=[]) for i in providers]
+    for inc in incidents:
+        if inc["target"] != "ALL":
+            continue
+        # Same "%Y-%m-%dT%H:%M:%SZ" format, so string order is time order.
+        host = next((o for o in out if o["start"] < inc["end"] and inc["start"] < o["end"]), None)
+        if host is None:
+            out.append(dict(inc, echoes=[]))
+        else:
+            host["echoes"].append(inc["incident_id"])
+    return sorted(out, key=lambda i: i["start"])
+
+
 def failure_chart(prov: pd.DataFrame, incidents: list[dict[str, Any]]) -> str:
     """Hourly technical failure rate per provider, D-B incidents shaded on their provider."""
     providers = sorted(p for p in prov["provider_id"].unique() if p != "ALL")
@@ -195,6 +213,7 @@ def reliability_section(artifacts: Path) -> str:
     prov = pd.read_parquet(kpi_file)
     incidents = [i for i in json.loads((run / "incidents.json").read_text("utf-8"))
                  if i["detector"] == "pooled"]  # fmt: skip
+    incidents = fold_echoes(incidents)
     summary = provider_summary(prov)
     all_row = summary.loc["ALL"]
     days = (prov["bucket_start"].max() - prov["bucket_start"].min()) / pd.Timedelta("1D")
@@ -222,12 +241,22 @@ def reliability_section(artifacts: Path) -> str:
     inc_rows = [
         [escape(i["incident_id"]), escape(i["target"]),
          escape(", ".join(METRIC_VN.get(m, m) for m in i["metrics"])), local(i["start"]),
-         f"{i['buckets'] * 15} phút", local(i["first_alert_at"]), vn(i["max_score"], 1)]
+         f"{i['buckets'] * 15} phút", local(i["first_alert_at"]), vn(i["max_score"], 1),
+         escape(", ".join(i["echoes"])) or "—"]
         for i in incidents
     ]  # fmt: skip
     incident_table = (
         _table(
-            ["Sự cố", "Đối tượng", "Chỉ số", "Bắt đầu", "Kéo dài", "Cảnh báo lúc", "Điểm cao nhất"],
+            [
+                "Sự cố",
+                "Đối tượng",
+                "Chỉ số",
+                "Bắt đầu",
+                "Kéo dài",
+                "Cảnh báo lúc",
+                "Điểm cao nhất",
+                "Gộp ALL",
+            ],
             inc_rows,
             numeric_from=4,
         )  # fmt: skip
@@ -258,37 +287,90 @@ Lần chạy detector <code>{escape(evaluation["run_id"])}</code>, detector D-B 
 # ---------- Product 02 ----------
 
 
-def fraud_runs(artifacts: Path) -> list[tuple[str, dict[str, Any]]]:
-    """(run label, metrics.json) of every Stage B/E fraud run, test runs first per run id."""
+BASE_DERIVED = {"log_amount", "hour_of_day"}
+
+
+def fraud_runs(artifacts: Path) -> list[tuple[str, dict[str, Any], Path]]:
+    """(run label, metrics.json, its folder) of every Stage B/E fraud run, sorted by path."""
     out = []
     for path in sorted((artifacts / "runs").glob("**/metrics.json")):
         metrics = json.loads(path.read_text("utf-8"))
-        out.append((f"{metrics['run_id']} ({metrics['stage']})", metrics))
+        out.append((f"{metrics['run_id']} ({metrics['stage']})", metrics, path.parent))
     return out
 
 
+def feature_label(folder: Path) -> str:
+    """'20' or '23 (+3: card1_*)' from the run's config.yaml, so model variants differ."""
+    try:
+        feats = yaml.safe_load((folder / "config.yaml").read_text("utf-8"))["features"]
+    except (OSError, KeyError, TypeError):
+        return "—"
+    derived = feats.get("derived", [])
+    n = len(feats.get("numeric", [])) + len(feats.get("categorical", [])) + len(derived)
+    extra = [d for d in derived if d not in BASE_DERIVED]
+    groups = sorted({e.split("_")[0] for e in extra})  # card1_prev_count -> card1_*
+    return f"{n} (+{len(extra)}: {', '.join(g + '_*' for g in groups)})" if extra else str(n)
+
+
+def markdown_tables(text: str) -> str:
+    """The leakage summary.md as HTML: `|` lines become tables, other lines paragraphs."""
+    parts: list[str] = []
+    block: list[list[str]] = []
+
+    def flush() -> None:
+        if block:
+            parts.append(_table(block[0], block[1:]))
+            block.clear()
+
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("|"):
+            cells = [escape(c.strip().strip("`")) for c in line.strip("|").split("|")]
+            if not all(set(c) <= set("-: ") for c in cells):  # skip the | --- | row
+                block.append(cells)
+            continue
+        flush()
+        if line:
+            parts.append(f'<p class="meta">{escape(line.replace("`", ""))}</p>')
+    flush()
+    return "".join(parts)
+
+
 def fraud_section(artifacts: Path) -> str:
-    runs = fraud_runs(artifacts)
     rows = []
-    for label, metrics in runs:
+    for label, metrics, folder in fraud_runs(artifacts):
+        # A test run repeats the validation numbers of its run folder; show them once.
+        repeats_valid = folder.name == "test" and (folder.parent / "metrics.json").exists()
+        features = escape(feature_label(folder))
         for model, parts in metrics["models"].items():
             for part in ("valid", "test"):
-                if part not in parts:
+                if part not in parts or (part == "valid" and repeats_valid):
                     continue
                 m = parts[part]
                 ci = m["pr_auc_ci"]
                 rows.append([
-                    escape(MODEL_VN.get(model, model)),
+                    escape(MODEL_VN.get(model, model)), features,
                     "Validation" if part == "valid" else "<b>Test</b>",
                     f"{vn(m['pr_auc'])} [{vn(ci['low'])}; {vn(ci['high'])}]",
                     pct(m["prevalence"], 2),
-                    vn(m["recall_at_fpr"]["recall"], 2), f"<code>{escape(label)}</code>",
+                    # Runs made before fpr_target existed (run-515a1190a0a4) lack this metric.
+                    vn(m.get("recall_at_fpr", {}).get("recall"), 2),
+                    f"<code>{escape(label)}</code>",
                 ])  # fmt: skip
+    rows.sort(key=lambda r: (r[0], r[1], r[2] != "Validation"))  # validation before test
     table = (
         _table(
-            ["Mô hình", "Tập", "PR-AUC [95% CI]", "Tỷ lệ gian lận", "Recall @ FPR 5%", "Lần chạy"],
+            [
+                "Mô hình",
+                "Số đặc trưng",
+                "Tập",
+                "PR-AUC [95% CI]",
+                "Tỷ lệ gian lận",
+                "Recall @ FPR 5%",
+                "Lần chạy",
+            ],
             rows,
-            numeric_from=2,
+            numeric_from=3,
         )  # fmt: skip
         if rows
         else '<p class="empty">Chưa có lần chạy trong <code>artifacts/runs/</code> '
@@ -298,7 +380,7 @@ def fraud_section(artifacts: Path) -> str:
     )
     leak = sorted((artifacts / "experiments").glob("leak-*/summary.md"))
     leak_html = (
-        f"<pre>{escape(leak[-1].read_text('utf-8'))}</pre>"
+        markdown_tables(leak[-1].read_text("utf-8"))
         if leak
         else '<p class="empty">Chưa chạy <code>make leakage</code>.</p>'
     )
@@ -322,7 +404,7 @@ border-top:1px solid var(--line)}h3{font-size:15px;margin:20px 0 8px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px}
 .tile .label{color:var(--ink2);font-size:12px}.tile .value{font-size:22px;font-weight:600}
-table{border-collapse:collapse;width:100%;background:var(--surface);font-size:13px;display:block;
+table{border-collapse:collapse;width:100%;margin-bottom:12px;background:var(--surface);font-size:13px;display:block;
 overflow-x:auto}th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;
 white-space:nowrap}th{color:var(--ink2);font-weight:600}td.num{text-align:right;
 font-variant-numeric:tabular-nums}img{max-width:100%;margin:12px 0;background:#fff}

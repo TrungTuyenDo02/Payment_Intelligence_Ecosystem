@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from dashboard.build import build, find_detection_run, main, provider_summary, vn
+from dashboard.build import build, find_detection_run, fold_echoes, main, provider_summary, vn
 
 T0 = pd.Timestamp("2026-01-05T00:00:00Z")
 
@@ -105,3 +105,57 @@ def test_cli_writes_the_page(tmp_path: Path) -> None:
     out = tmp_path / "dash" / "index.html"
     assert main(["--artifacts-dir", str(_artifacts(tmp_path / "a")), "--out", str(out)]) == 0
     assert out.read_text("utf-8").startswith("<!doctype html>")
+
+
+def test_fold_echoes_merges_overlapping_all_incident_only():
+    def inc(iid, target, start, end):
+        return {"incident_id": iid, "target": target, "start": start, "end": end}
+
+    incidents = [
+        inc("pooled-001", "ALL", "2026-01-05T10:15:00Z", "2026-01-05T11:00:00Z"),
+        inc("pooled-002", "prov_003", "2026-01-05T10:00:00Z", "2026-01-05T11:30:00Z"),
+        inc("pooled-003", "ALL", "2026-01-06T02:00:00Z", "2026-01-06T02:30:00Z"),
+        inc("pooled-004", "prov_001", "2026-01-06T02:30:00Z", "2026-01-06T03:00:00Z"),
+    ]
+    out = fold_echoes(incidents)
+    assert [(i["incident_id"], i["echoes"]) for i in out] == [
+        ("pooled-002", ["pooled-001"]),
+        ("pooled-003", []),  # only touches pooled-004 at 02:30, no overlap
+        ("pooled-004", []),
+    ]
+    assert "echoes" not in incidents[0]  # input left as is
+
+
+def test_fraud_table_dedupes_labels_variants_and_tolerates_old_runs(tmp_path: Path) -> None:
+    def part(ap: float, with_fpr: bool = True) -> dict:
+        m = {"pr_auc": ap, "pr_auc_ci": {"low": ap - 0.01, "high": ap + 0.01}, "prevalence": 0.039}
+        return {**m, "recall_at_fpr": {"recall": 0.33}} if with_fpr else m
+
+    run = tmp_path / "runs" / "run-old"
+    (run / "test").mkdir(parents=True)
+    (run / "metrics.json").write_text(json.dumps(
+        {"run_id": "run-old", "stage": "validation", "models": {"logistic": {"valid": part(0.245)}}}
+    ))  # fmt: skip
+    # Made before fpr_target existed: no recall_at_fpr (used to raise KeyError).
+    old = {"valid": part(0.245, False), "test": part(0.165, False)}
+    (run / "test" / "metrics.json").write_text(
+        json.dumps({"run_id": "run-old", "stage": "final", "models": {"logistic": old}})
+    )
+    hist = tmp_path / "runs" / "run-hist"
+    hist.mkdir()
+    (hist / "config.yaml").write_text(
+        "features:\n  numeric: [a]\n  categorical: [b]\n  derived: [log_amount, card1_prev_count]\n"
+    )
+    (hist / "metrics.json").write_text(json.dumps(
+        {"run_id": "run-hist", "stage": "validation", "models": {"gbm": {"valid": part(0.497)}}}
+    ))  # fmt: skip
+    leak = tmp_path / "experiments" / "leak-x"
+    leak.mkdir(parents=True)
+    (leak / "summary.md").write_text(
+        "Run `leak-x`\n\n| A | B |\n| --- | --- |\n| `card1` | 0,987 |\n"
+    )
+
+    html = build(tmp_path)
+    assert html.count("0,245 [") == 1  # validation shown once, not again from the test run
+    assert "0,165 [" in html and "4 (+1: card1_*)" in html
+    assert ">card1</td>" in html and "| --- |" not in html and "<pre>" not in html
