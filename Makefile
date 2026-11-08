@@ -15,6 +15,10 @@ CONFIG ?= projects/fraud-risk/configs/baseline.yaml
 export POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT
 # PYTHONPATH separator: ";" on Windows (OS=Windows_NT), ":" elsewhere.
 SEP := $(if $(filter Windows_NT,$(OS)),;,:)
+# Windows and WSL share this folder: keep the Windows uv environment apart from WSL's .venv.
+ifeq ($(OS),Windows_NT)
+  export UV_PROJECT_ENVIRONMENT ?= .venv-win
+endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
 

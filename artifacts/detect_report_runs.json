@@ -1,0 +1,10 @@
+[
+  {
+    "hash": "08335c6af0869769aee85652774c44574f2f438b4cb4b2bf01713a72e9e19ea0",
+    "run_id": "det-08335c6af086",
+    "simulation_id": "sim-f6e6749ff0bf",
+    "at": "2026-11-04",
+    "forced": false,
+    "note": "evaluated on test on the owner's other machine; recorded here 2026-11-09 to block a re-run"
+  }
+]
