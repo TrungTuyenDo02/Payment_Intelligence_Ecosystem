@@ -190,9 +190,9 @@ Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào
 | --- | --- | --- |
 | E01 | `gap_days` cho split (ADR 0003) | Xong |
 | E02 | Thực thể lặp lại, mã hoá theo nhãn | Xong |
-| E03 | Thí nghiệm rò rỉ (`make leakage`, chỉ validation) | Code xong; chờ chạy trên IEEE-CIS |
-| E04 | Gradient Boosting (`make gbm`, `make gbm-final`) | Code xong; chờ chạy trên IEEE-CIS; test một lần sau khi chủ dự án `frozen` |
-| E05 | Báo cáo | Khung ([báo cáo](../architecture/stage-e-report.md)); chờ số thật |
+| E03 | Thí nghiệm rò rỉ (`make leakage`, chỉ validation) | Xong (`leak-827d929eaa73`) |
+| E04 | Gradient Boosting (`make gbm`, `make gbm-final`) | Xong (`run-f8807cb6f780`); test đã chạy một lần, PR-AUC 0,408 |
+| E05 | Báo cáo | Xong ([báo cáo](../architecture/stage-e-report.md)) |
 | — | API chấm điểm | Cắt (chủ dự án, 2026-11-04) |
 
 ### Stage F
@@ -200,7 +200,7 @@ Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào
 | ID | Việc | Trạng thái |
 | --- | --- | --- |
 | F01 | Dashboard HTML tĩnh (`make dashboard`, ADR 0007) | Xong; phần Product 02 hiện số khi có run IEEE-CIS trên máy |
-| F02 | Dàn ý báo cáo thực tập ([dàn ý](../report/report-outline.md)) | Xong; mục 4.3 và 4.4 chờ số Stage E |
+| F02 | Dàn ý báo cáo thực tập ([dàn ý](../report/report-outline.md)), báo cáo và bài báo PDF | Xong; mục 4.3 và 4.4 đã có số Stage E |
 
 ## 9. Quy tắc bắt buộc
 
