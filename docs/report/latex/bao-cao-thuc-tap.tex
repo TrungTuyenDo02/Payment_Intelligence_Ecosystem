@@ -93,7 +93,7 @@
 \end{itemize}
 Điểm nhấn của đề tài là \textbf{đánh giá trung thực}: dữ liệu chia theo thời gian, mọi bước học chỉ dùng tập huấn luyện, tập kiểm tra chỉ được mở \emph{một lần} cho mỗi cấu hình đã chốt, và mọi lần chạy đều tái lập được.
 
-Kết quả chính: Logistic Regression đạt PR-AUC 0,165 trên tập test (gấp khoảng 4,8 lần đoán ngẫu nhiên; baseline luật 0,078). Bộ phát hiện bất thường có tính đến số lượng giao dịch bắt được 2/4 sự cố trên bộ đánh giá độc lập, không báo nhầm lần nào trong 7 ngày; bộ cơ sở đơn giản bắt 0/4 và báo nhầm 14 lần. Thí nghiệm rò rỉ dữ liệu và Gradient Boosting đã có code và kiểm thử, đang chờ chạy trên dữ liệu thật.
+Kết quả chính: Logistic Regression đạt PR-AUC 0,165 trên tập test (gấp khoảng 4,8 lần đoán ngẫu nhiên; baseline luật 0,078). Bộ phát hiện bất thường có tính đến số lượng giao dịch bắt được 2/4 sự cố trên bộ đánh giá độc lập, không báo nhầm lần nào trong 7 ngày; bộ cơ sở đơn giản bắt 0/4 và báo nhầm 14 lần. Gradient Boosting đạt PR-AUC test 0,408, gấp khoảng 2,5 lần Logistic Regression, recall 0,51 tại FPR 5\%. Thí nghiệm rò rỉ cho thấy mã hoá theo nhãn có dùng nhãn validation làm PR-AUC tăng 0,063; tiền xử lý trên mọi dòng và khoảng trống thời gian không tạo khác biệt đo được; riêng chia ngẫu nhiên lại cho kết quả \emph{thấp hơn}, chưa giải thích hết.
 
 \vspace{0.5em}
 \begin{keypoint}
@@ -354,16 +354,46 @@ Khoảng trống 7, 14 ngày & Bỏ cuối train (độ trễ nhãn) \\ \bottomr
 
 Kèm bảng mô tả \emph{thực thể lặp lại}: bao nhiêu phần trăm dòng validation và test có thẻ (\code{card1}, và tổ hợp \code{card1}+\code{addr1}+\code{P\_emaildomain}) đã xuất hiện trong train. Tổ hợp ba cột là kinh nghiệm phổ biến trong các notebook công khai của cuộc thi; đề tài chỉ dùng ý tưởng, không sao chép code.
 
-\begin{pending}
-\textbf{Chưa có số trên IEEE-CIS.} Dataset chỉ có trên máy chủ dự án. Code đã kiểm thử: mọi biến thể đo trên cùng số dòng validation; đảo nhãn của tập test không làm đổi kết quả (thí nghiệm không đọc nhãn test). Trên dữ liệu thử 3.000 dòng, mã hoá rò rỉ đẩy PR-AUC từ 0,168 lên 0,967, chứng minh code phát hiện được rò rỉ. Bảng kết quả thật sẽ lấy từ \code{make leakage}.
-\end{pending}
+\begin{table}[H]\centering
+\caption{Lần chạy \code{leak-827d929eaa73}, chỉ trên validation (118.108 dòng). Không đọc nhãn test.}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Biến thể & PR-AUC [95\% CI] & Chênh & Recall @ FPR 5\% \\ \midrule
+Đúng quy tắc (Stage B) & 0,245 [0,235; 0,257] & +0,000 & 0,33 \\
+Chia ngẫu nhiên & 0,177 [0,168; 0,190] & $-$0,068 & 0,31 \\
+Tiền xử lý trên mọi dòng & 0,244 [0,234; 0,256] & $-$0,001 & 0,33 \\
+Mã hoá \code{card1} hợp lệ & 0,252 [0,242; 0,264] & +0,007 & 0,37 \\
+Mã hoá \code{card1} rò rỉ & 0,308 [0,297; 0,321] & \textbf{+0,063} & 0,43 \\
+Khoảng trống 7 ngày & 0,244 [0,233; 0,256] & $-$0,002 & 0,32 \\
+Khoảng trống 14 ngày & 0,241 [0,231; 0,253] & $-$0,004 & 0,32 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Thực thể lặp lại: 98,7\% dòng validation có \code{card1} đã gặp trong train; với \code{card1}+\code{addr1}+\code{P\_emaildomain} là 85,9\%.
+
+\begin{keypoint}
+\textbf{Đọc kết quả.} (1) Rò nhãn rõ nhất là mã hoá \code{card1} bằng nhãn validation: PR-AUC tăng 0,063, trong khi bản dùng nhãn train đúng cách chỉ tăng 0,007. (2) Tiền xử lý trên mọi dòng và khoảng trống 7--14 ngày đổi PR-AUC không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy (khoảng 0,02): với baseline này chúng không tạo khác biệt đo được. (3) \textbf{Ngược kỳ vọng}, chia ngẫu nhiên cho PR-AUC \emph{thấp hơn} 0,068. Tỷ lệ gian lận của validation ngẫu nhiên thấp hơn (3,55\% so với 3,90\%) chỉ giải thích khoảng một phần ba mức giảm; khoảng 0,046 còn lại \emph{chưa có lời giải thích}. Giả thuyết ``validation rơi vào giai đoạn gian lận bùng phát'' chỉ được hỗ trợ yếu, vì các tuần 4--10 của train cũng có tỷ lệ cao (3,8--4,6\%).
+\end{keypoint}
 
 \subsection{Gradient Boosting (Stage E)}
 Cùng đặc trưng, cùng cách chia, cùng quy trình chọn ngưỡng với Logistic Regression, nên khác biệt chỉ đến từ mô hình. Lưới 8 tổ hợp (\code{learning\_rate} 0,05/0,1; \code{max\_iter} 200/400; \code{max\_leaf\_nodes} 15/31), chọn theo PR-AUC validation.
 
-\begin{pending}
-\textbf{Chưa có số.} Kết quả validation từ \code{make gbm}; test một lần từ \code{make gbm-final} sau khi chủ dự án chốt cấu hình. Nếu Gradient Boosting không tốt hơn Logistic Regression, báo cáo vẫn ghi đúng như vậy.
-\end{pending}
+Tổ hợp được chọn: \code{learning\_rate} 0,1, \code{max\_iter} 400, \code{max\_leaf\_nodes} 15; ngưỡng 0,853 chọn trên validation (tối đa F1).
+
+\begin{table}[H]\centering
+\caption{Gradient Boosting \code{run-f8807cb6f780}, cấu hình \code{frozen} (commit \code{89a8ed5}), test mở một lần. Hai baseline lấy từ \code{run-d6faa4699008}.}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Mô hình & PR-AUC validation & PR-AUC test & Recall @ FPR 5\% (test) \\ \midrule
+Luật & 0,089 & 0,078 & 0,22 \\
+Logistic Regression & 0,245 & 0,165 [0,155; 0,176] & 0,28 \\
+Gradient Boosting & 0,497 [0,483; 0,514] & \textbf{0,408} [0,390; 0,424] & \textbf{0,51} \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\begin{keypoint}
+\textbf{Đọc kết quả.} (1) Trên test, Gradient Boosting cao gấp khoảng 2,5 lần Logistic Regression (0,408 so với 0,165); khoảng tin cậy không giao nhau. (2) Tại ngưỡng đã chọn: precision 0,516, recall 0,371, F1 0,432, FPR 1,24\%. (3) PR-AUC giảm 0,089 từ validation sang test (Logistic Regression giảm 0,080): chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian. (4) Tổ hợp tốt nhất nằm ở cạnh lưới (\code{max\_iter} = 400 là giá trị lớn nhất), nên chưa biết tăng thêm có tốt hơn không; mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
+\end{keypoint}
 
 % ================================================================ 5
 \section{Product 01 — Độ ổn định thanh toán}
@@ -429,7 +459,7 @@ Provider lỗi x1,5, 2 giờ & \code{prov\_002} & 2,2 / 2,6 & Trượt & Trượ
 
 % ================================================================ 6
 \section{Dashboard}
-\code{make dashboard} tạo một trang HTML tĩnh từ kết quả các lần chạy: không thêm thư viện, mở được không cần mạng, đính được vào báo cáo (ADR 0007). Phần Product 01 có ô số tổng, bảng theo provider, biểu đồ theo giờ Việt Nam có tô vùng sự cố, danh sách sự cố, và một bảng đối chiếu với sự cố cài sẵn được tách riêng (người vận hành thật không có nhãn). Biểu đồ ẩn các giờ có dưới 20 attempt, vì tỷ lệ tính trên vài attempt chủ yếu là nhiễu, đúng cái bẫy làm D-A báo nhầm.
+\code{make dashboard} tạo một trang HTML tĩnh từ kết quả các lần chạy: không thêm thư viện, mở được không cần mạng, đính được vào báo cáo (ADR 0007). Phần Product 01 có ô số tổng, bảng theo provider, biểu đồ theo giờ Việt Nam có tô vùng sự cố, danh sách sự cố (cảnh báo \code{ALL} trùng thời gian với cảnh báo một provider được gộp vào sự cố của provider đó, vì đó chỉ là tiếng vọng), và một bảng đối chiếu với sự cố cài sẵn được tách riêng (người vận hành thật không có nhãn). Biểu đồ ẩn các giờ có dưới 20 attempt, vì tỷ lệ tính trên vài attempt chủ yếu là nhiễu, đúng cái bẫy làm D-A báo nhầm.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.82\linewidth]{figures/dashboard-product01.png}
@@ -444,19 +474,18 @@ Provider lỗi x1,5, 2 giờ & \code{prov\_002} & 2,2 / 2,6 & Trượt & Trượ
   \item \textbf{IEEE-CIS}: nhãn lan theo tài khoản, cùng thẻ có thể xuất hiện ở cả train và test (ADR 0003). Chia theo thời gian không loại được hiện tượng này; thí nghiệm rò rỉ đo mức độ của nó.
   \item \textbf{Cỡ mẫu sự cố nhỏ}: 4 + 4 sự cố cài sẵn.
   \item \textbf{Giả định nhị thức của D-B} coi các attempt độc lập; retry của cùng payment không hoàn toàn độc lập.
-  \item \textbf{Tái lập dữ liệu giả lập phụ thuộc phiên bản numpy}: \code{uv.lock} chọn numpy khác nhau cho Python 3.11 và 3.13; nên dùng cùng phiên bản khi muốn khớp từng byte.
+  \item \textbf{Tái lập dữ liệu giả lập phụ thuộc phiên bản numpy}: \code{uv.lock} chọn numpy khác nhau cho Python 3.11 và 3.13; nên dùng cùng phiên bản khi muốn khớp từng byte. Mã lần chạy không chứa phiên bản thư viện: chạy lại thí nghiệm rò rỉ trên máy khác (Python 3.12) ra cùng mã \code{leak-827d929eaa73} nhưng lệch $\pm$0,001 ở 3 dòng; Gradient Boosting và hai baseline khớp hoàn toàn.
   \item \textbf{Hạ tầng}: PostgreSQL mới được kiểm chứng trên một bản cài tạm; đường \code{make up} trên WSL chưa thử.
-  \item \textbf{Stage E chưa có số thật} (mục 4.3, 4.4).
+  \item \textbf{Stage E}: mức giảm PR-AUC khi chia ngẫu nhiên chỉ giải thích được một phần; Gradient Boosting chọn ở cạnh lưới và chỉ dùng 20 đặc trưng (mục 4.3, 4.4).
 \end{itemize}
 
 % ================================================================ 8
 \section{Hướng phát triển}
 \begin{enumerate}
-  \item \textbf{Hoàn tất Stage E trên dữ liệu thật}: chạy thí nghiệm rò rỉ và Gradient Boosting, chạy test một lần.
+  \item \textbf{Giải thích kết quả chia ngẫu nhiên} của thí nghiệm rò rỉ, và mở rộng lưới Gradient Boosting (cần cấu hình mới và tập test mới).
   \item \textbf{API chấm điểm} (đã cắt khỏi 6 tuần): nhận một giao dịch, trả điểm rủi ro và lý do; chỉ hỗ trợ quyết định, không tự động chặn.
   \item \textbf{Ngưỡng riêng cho từng loại KPI}: chuỗi tỷ trọng ít nhiễu hơn chuỗi lỗi, nên một ngưỡng chung bỏ sót mất lưu lượng. Cần một bộ report mới để đánh giá trung thực.
   \item \textbf{Detector có mùa vụ}: so với cùng giờ các ngày trước (phân rã chuỗi thời gian \cite{fpp}), hoặc phương pháp dò thay đổi tích luỹ (CUSUM) để bắt sự cố yếu nhưng kéo dài.
-  \item \textbf{Gộp cảnh báo}: khi \code{ALL} và một provider cùng báo, dashboard nên gộp thành một sự cố.
   \item \textbf{Mô hình và đặc trưng}: LightGBM; đặc trưng theo thẻ chỉ dùng thông tin quá khứ; hiệu chỉnh xác suất; giải thích mô hình.
   \item \textbf{Nền tảng}: dbt thay SQL views khi số mô hình dữ liệu tăng; luồng sự kiện thời gian thực; theo dõi trôi dữ liệu.
   \item \textbf{Dữ liệu thật} khi có phê duyệt, cùng quy trình đánh giá đã xây.
