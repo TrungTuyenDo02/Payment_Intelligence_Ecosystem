@@ -1,0 +1,2 @@
+# Hooks run under sh in WSL/Linux; CRLF breaks them.
+.githooks/* text eol=lf

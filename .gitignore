@@ -1,6 +1,9 @@
 # Data: never commit (AGENTS.md hard rules 1-3)
 datasets/raw/
-artifacts/
+artifacts/*
+# Test-once registries are shared across machines (no data in them, only config hashes)
+!artifacts/test_runs.json
+!artifacts/detect_report_runs.json
 *.parquet
 *.csv
 # Small synthetic test fixtures are the only allowed CSVs
@@ -24,6 +27,8 @@ artifacts/
 __pycache__/
 *.py[cod]
 .venv/
+# Windows uv environment (the WSL one is .venv; sharing one folder breaks it)
+.venv-win/
 .pytest_cache/
 .ruff_cache/
 .coverage

@@ -123,7 +123,7 @@ for x, (t, k) in zip(
         ("Adapter + chia\ntheo thời gian", "goal"),
         ("EDA + quyết định\ntiền xử lý", "goal"),
         ("Baseline: luật\n+ Logistic Reg.", "goal"),
-        ("Rò rỉ dữ liệu\n+ Gradient Boosting", "warn"),
+        ("Rò rỉ dữ liệu\n+ Gradient Boosting", "goal"),
     ],
     strict=True,
 ):
@@ -183,8 +183,8 @@ stages = [
     ("B · Fraud baseline", 0, 2, "goal", "Adapter, split, EDA, 2 baseline, run log"),
     ("C · Dữ liệu giả lập", 2, 1, "goal", "Bộ sinh dữ liệu\n+ ingestion"),
     ("D · Reliability", 3, 1, "goal", "KPI\n+ bất thường"),
-    ("E · Fraud nâng cao", 4, 1, "warn", "Rò rỉ + GBM\n(API: cắt)"),
-    ("F · Hoàn thiện", 5, 1, "warn", "Dashboard\n+ báo cáo"),
+    ("E · Fraud nâng cao", 4, 1, "goal", "Rò rỉ + GBM\n(API: cắt)"),
+    ("F · Hoàn thiện", 5, 1, "goal", "Dashboard\n+ báo cáo"),
 ]
 for i, (name, start, length, kind, desc) in enumerate(stages):
     y = 58 + i * 52

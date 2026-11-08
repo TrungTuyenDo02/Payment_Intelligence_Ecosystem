@@ -19,12 +19,12 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 
 ## Tiến độ
 
-<p align="center"><img src="docs/assets/diagrams/roadmap.svg" alt="Lộ trình 6 tuần: A, B, C đã xong; D đang làm ở tuần 4" width="100%"></p>
+<p align="center"><img src="docs/assets/diagrams/roadmap.svg" alt="Lộ trình 6 tuần: cả sáu giai đoạn A–F đã xong" width="100%"></p>
 
 - **Đã xong (tuần 1–3):** khung repo, contract `payment-event` 1.0.0, hai baseline gian lận đã đánh giá trên tập test, bộ sinh dữ liệu thanh toán giả lập và nạp vào PostgreSQL.
 - **Tuần 4 (xong):** KPI độ tin cậy, hai detector, chỉnh ngưỡng trên bộ tuning và đánh giá một lần trên bộ report.
-- **Tuần 5 (đang làm):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02. Code xong, chờ chạy trên dữ liệu IEEE-CIS ([đặc tả Stage E](docs/architecture/stage-e-spec.md)).
-- **Tuần 6:** dashboard HTML cho cả hai sản phẩm (`make dashboard`) và dàn ý báo cáo thực tập. Xong; phần Product 02 điền số sau khi chạy Stage E.
+- **Tuần 5 (xong):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02, test đã chạy một lần ([báo cáo Stage E](docs/architecture/stage-e-report.md)).
+- **Tuần 6 (xong):** dashboard HTML cho cả hai sản phẩm (`make dashboard`), báo cáo thực tập và bài báo khoa học (PDF).
 
 ## Kết quả đến nay
 
@@ -33,8 +33,8 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 | A, B · Baseline gian lận | Logistic Regression PR-AUC test 0,165, luật 0,078 (`run-d6faa4699008`) | ✅ Xong, test đã chạy một lần |
 | C · Dữ liệu giả lập | 2 bộ 7 ngày, khoảng 25 nghìn payment mỗi bộ, nạp PostgreSQL không lỗi | ✅ Xong |
 | D · KPI và detector | Detector chính bắt 2/4 sự cố trên bộ report, 0 báo nhầm (`det-08335c6af086`) | ✅ Xong, report đã chạy một lần |
-| E · Rò rỉ, Gradient Boosting | Code và test xong | ⏳ Chờ chạy trên IEEE-CIS |
-| F · Dashboard, báo cáo | `make dashboard`, [báo cáo PDF](docs/report/bao-cao-thuc-tap.pdf) | ✅ Xong; phần Stage E chờ số |
+| E · Rò rỉ, Gradient Boosting | Gradient Boosting PR-AUC test 0,408 (`run-f8807cb6f780`); rò nhãn qua mã hoá `card1` +0,063 (`leak-827d929eaa73`) | ✅ Xong, test đã chạy một lần |
+| F · Dashboard, báo cáo | `make dashboard`, [báo cáo PDF](docs/report/bao-cao-thuc-tap.pdf) | ✅ Xong |
 
 **Product 02: phát hiện gian lận trên IEEE-CIS.** Dữ liệu được chia theo thời gian: mô hình học trên phần cũ, được đánh giá trên phần mới hơn, giống như khi chạy thật.
 
@@ -60,7 +60,15 @@ Detector chính bắt được sự cố về lỗi và độ trễ trong 15–3
 
 <p align="center"><img src="docs/assets/results/dashboard-product01.png" alt="Dashboard Product 01: ô số tổng, bảng theo provider, tỷ lệ lỗi và độ trễ theo giờ, danh sách sự cố" width="85%"></p>
 
-**Product 02, Stage E:** thí nghiệm rò rỉ dữ liệu và Gradient Boosting đã có code và test, chờ chạy trên dữ liệu thật ([đặc tả](docs/architecture/stage-e-spec.md)).
+**Product 02, Stage E:** cùng 20 đặc trưng và cùng cách chia ([báo cáo Stage E](docs/architecture/stage-e-report.md)).
+
+| Mô hình | PR-AUC validation | PR-AUC test | Recall @ FPR 5% (test) | Lần chạy |
+| --- | --- | --- | --- | --- |
+| Logistic Regression | 0,245 | 0,165 | 0,28 | `run-d6faa4699008` |
+| Gradient Boosting | 0,497 | **0,408** [0,390; 0,424] | **0,51** | `run-f8807cb6f780` |
+
+- **Gradient Boosting gấp khoảng 2,5 lần Logistic Regression trên test**, khoảng tin cậy không giao nhau. Tổ hợp tốt nhất nằm ở cạnh lưới, nên chưa biết tăng số cây có tốt hơn không.
+- **Thí nghiệm rò rỉ** (chỉ trên validation, `leak-827d929eaa73`): mã hoá `card1` bằng nhãn validation làm PR-AUC tăng 0,063. Tiền xử lý trên mọi dòng và khoảng trống 7–14 ngày không tạo khác biệt đo được. Chia ngẫu nhiên lại làm PR-AUC *giảm* 0,068, mới giải thích được khoảng một phần ba.
 
 ## Nguyên tắc
 
@@ -132,7 +140,7 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 
 | Tài liệu | Nội dung |
 | --- | --- |
-| [Bài báo khoa học (PDF)](docs/report/bai-bao-khoa-hoc.pdf) · [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Bài báo 9 trang; báo cáo đầy đủ có giải thích kiến thức nền |
+| [Bài báo khoa học (PDF)](docs/report/bai-bao-khoa-hoc.pdf) · [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Bài báo 10 trang; báo cáo đầy đủ có giải thích kiến thức nền |
 | [Hướng dẫn thao tác GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch, rủi ro, tài liệu tham khảo |
 | [Bàn giao công việc](HANDOFF.md) | Trạng thái hiện tại và việc tiếp theo |

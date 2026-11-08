@@ -61,6 +61,23 @@ Trên validation, Gradient Boosting có recall 0,588 tại FPR 5% và 0,480 khi 
 - Recall tại FPR 5%: 0,514 (Logistic Regression 0,28). Giữ precision 0,50 thì recall là 0,379.
 - **Hạn chế:** sự sụt giảm từ validation sang test cho thấy chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian (mục 2). Chưa có giải thích nguyên nhân cụ thể, và mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
 
+## 3b. Thí nghiệm bổ sung: đặc trưng lịch sử thực thể (2026-11-08, chỉ validation)
+
+Câu hỏi: thêm hành vi quá khứ của cùng thực thể có giúp Gradient Boosting không? Ba đặc trưng, chỉ dùng các giao dịch **trước đó**, không dùng nhãn (`_history` trong `baseline_features.py`, có test "đổi giao dịch sau không đổi đặc trưng của giao dịch trước"): số giao dịch trước, số tiền chia trung bình số tiền trước, số giây từ giao dịch trước. Cùng dữ liệu, cách chia, lưới và mô hình với `gbm.yaml`.
+
+| Config | Khoá thực thể | PR-AUC train | PR-AUC validation [95% CI] | Recall @ FPR 5% | Lần chạy |
+| --- | --- | --- | --- | --- | --- |
+| `gbm.yaml` (gốc) | — | 0,584 | 0,497 [0,483; 0,514] | 0,59 | `run-f8807cb6f780` |
+| `gbm-history-card1.yaml` | `card1` (13.553 giá trị) | 0,689 | 0,497 [0,484; 0,513] | 0,59 | `run-0865527c0943` |
+| `gbm-history-uid.yaml` | `card1+addr1+P_emaildomain` (90.375 nhóm) | 0,596 | 0,499 [0,484; 0,517] | 0,60 | `run-d15b7985126a` |
+
+**Đọc kết quả.**
+
+- **Không cải thiện đo được** trên validation: chênh không quá 0,002, nằm trong khoảng tin cậy.
+- Với `card1`, PR-AUC train tăng mạnh (0,584 → 0,689) mà validation đứng yên: mô hình học thuộc train hơn, không tổng quát hơn. `card1` có khoảng 44 giao dịch mỗi giá trị, nên nó không phải "một khách hàng".
+- Giả thuyết "đặc trưng mới trùng thông tin với `C1–C14`" đã được kiểm tra và **bác bỏ**: tương quan Spearman chỉ 0,01–0,15. Nguyên nhân chưa giải thích.
+- Hai config này `draft`, **không** đăng ký cho tập test; không chạy `gbm-final` với chúng.
+
 ## 4. Việc chủ dự án cần làm (trên máy có dataset)
 
 Đã xong cả ba bước (2026-11-06): `make leakage`, `make gbm`, đặt `status: frozen` rồi `make gbm-final` một lần. **Không chạy lại `make gbm-final` với config này.** Thứ tự thực tế: commit bản đóng băng (`89a8ed5`) trước, chạy test, rồi mới push.

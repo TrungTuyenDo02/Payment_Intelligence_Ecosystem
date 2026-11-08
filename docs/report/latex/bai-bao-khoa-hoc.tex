@@ -48,7 +48,7 @@
 \maketitle
 
 \begin{abstract}
-\noindent Bài báo trình bày một nền tảng dữ liệu nhỏ cho mảng thanh toán, chạy hoàn toàn trên máy cá nhân, gồm hai ứng dụng: (i) giám sát độ ổn định của hệ thống thanh toán trên dữ liệu sự kiện giả lập có cài sẵn sự cố, và (ii) chấm điểm rủi ro gian lận trên dataset công khai IEEE-CIS (590.540 giao dịch, khoảng 3,5\% gian lận). Trọng tâm của công trình là giao thức đánh giá: chia dữ liệu theo thời gian, mọi phép biến đổi chỉ học trên tập huấn luyện, tập kiểm tra chỉ được mở một lần cho mỗi cấu hình đã chốt, và mỗi lần chạy có định danh tất định. Trên IEEE-CIS, Logistic Regression đạt PR-AUC 0,165 [0,155; 0,176] trên tập kiểm tra, so với 0,078 của một baseline luật; kết quả giảm so với tập validation (0,245), phù hợp với hiện tượng trôi khái niệm. Với bài toán giám sát, một điểm số nhị thức gộp cửa sổ, có tính đến số giao dịch trong mỗi khung, phát hiện 2/4 sự cố trên một bộ đánh giá độc lập mà không có báo động nhầm nào trong 7 ngày, trong khi z-score bền vững làm cơ sở phát hiện 0/4 và báo nhầm 14 lần. Hai điểm mù được chỉ ra một cách trung thực: sự cố mất lưu lượng (loại không có trong dữ liệu chỉnh ngưỡng) và sự cố yếu (tăng 1,5 lần), nằm dưới giới hạn phát hiện ở mức lưu lượng mô phỏng.
+\noindent Bài báo trình bày một nền tảng dữ liệu nhỏ cho mảng thanh toán, chạy hoàn toàn trên máy cá nhân, gồm hai ứng dụng: (i) giám sát độ ổn định của hệ thống thanh toán trên dữ liệu sự kiện giả lập có cài sẵn sự cố, và (ii) chấm điểm rủi ro gian lận trên dataset công khai IEEE-CIS (590.540 giao dịch, khoảng 3,5\% gian lận). Trọng tâm của công trình là giao thức đánh giá: chia dữ liệu theo thời gian, mọi phép biến đổi chỉ học trên tập huấn luyện, tập kiểm tra chỉ được mở một lần cho mỗi cấu hình đã chốt, và mỗi lần chạy có định danh tất định. Trên IEEE-CIS, Logistic Regression đạt PR-AUC 0,165 [0,155; 0,176] trên tập kiểm tra, so với 0,078 của một baseline luật; kết quả giảm so với tập validation (0,245), phù hợp với hiện tượng trôi khái niệm. Gradient Boosting với cùng đặc trưng đạt 0,408 [0,390; 0,424]. Thí nghiệm rò rỉ có kiểm soát cho thấy mã hoá theo nhãn có dùng nhãn validation làm PR-AUC tăng 0,063. Với bài toán giám sát, một điểm số nhị thức gộp cửa sổ, có tính đến số giao dịch trong mỗi khung, phát hiện 2/4 sự cố trên một bộ đánh giá độc lập mà không có báo động nhầm nào trong 7 ngày, trong khi z-score bền vững làm cơ sở phát hiện 0/4 và báo nhầm 14 lần. Hai điểm mù được chỉ ra một cách trung thực: sự cố mất lưu lượng (loại không có trong dữ liệu chỉnh ngưỡng) và sự cố yếu (tăng 1,5 lần), nằm dưới giới hạn phát hiện ở mức lưu lượng mô phỏng.
 
 \medskip
 \noindent\textbf{Từ khoá:} phát hiện gian lận, dữ liệu mất cân bằng, rò rỉ dữ liệu, chia theo thời gian, phát hiện bất thường, giám sát thanh toán, tái lập.
@@ -217,7 +217,25 @@ Luật & Test & 0,078 [0,074; 0,082] & 3,44\% & 0,22 \\ \bottomrule
 
 Logistic Regression vượt baseline luật với khoảng tin cậy không chồng nhau, và trên test đạt khoảng 4,8 lần mức ngẫu nhiên. Kết quả giảm từ validation sang test, kể cả ở chỉ số không phụ thuộc tỷ lệ lớp (recall tại FPR 5\%: 0,33 xuống 0,28), cho thấy mức giảm không chỉ do tỷ lệ gian lận thấp hơn mà phù hợp với trôi khái niệm \cite{gama}. Giá trị 0 của baseline luật trên validation là do điểm luật chỉ nhận vài mức rời rạc: mức chặt nhất báo nhầm 5,1\% giao dịch hợp lệ, vượt ràng buộc 5\%. Có hai lần chạy test (\code{run-515a1190a0a4}, trước khi thêm chỉ số FPR, và \code{run-d6faa4699008}); mọi chỉ số chung trùng khớp, nên lần thứ hai không được dùng để chọn lại mô hình.
 
-\paragraph{Thí nghiệm rò rỉ và Gradient Boosting} Hai phần này đã được cài đặt và kiểm thử nhưng chưa chạy trên IEEE-CIS tại thời điểm viết; kết quả sẽ được bổ sung. Bài báo không đưa ra kết luận nào về chúng.
+\paragraph{Gradient Boosting} Lần chạy \code{run-f8807cb6f780} chọn $\nu=0{,}1$, 400 cây, 15 lá (PR-AUC validation 0,497 [0,483; 0,514]); cấu hình được chốt trước khi mở tập test một lần. Trên test, PR-AUC đạt \textbf{0,408} [0,390; 0,424], gấp khoảng 2,5 lần Logistic Regression với khoảng tin cậy không giao nhau; recall tại FPR 5\% là 0,51 (Logistic Regression 0,28). Mức giảm từ validation sang test (0,089) tương đương của Logistic Regression (0,080). Tổ hợp tốt nhất nằm ở cạnh lưới (số cây lớn nhất), nên chưa biết tăng thêm có tốt hơn không.
+
+\paragraph{Thí nghiệm rò rỉ} Bảng~\ref{tab:leak} báo cáo lần chạy \code{leak-827d929eaa73}, chỉ trên validation.
+
+\begin{table}[H]\centering
+\caption{Thí nghiệm rò rỉ trên validation (118.108 dòng), Logistic Regression của baseline.}\label{tab:leak}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Biến thể & PR-AUC [95\% CI] & Chênh \\ \midrule
+Đúng quy tắc & 0,245 [0,235; 0,257] & +0,000 \\
+(a) Chia ngẫu nhiên & 0,177 [0,168; 0,190] & $-$0,068 \\
+(b) Tiền xử lý trên mọi dòng & 0,244 [0,234; 0,256] & $-$0,001 \\
+(c) Mã hoá \code{card1} ngoài fold & 0,252 [0,242; 0,264] & +0,007 \\
+(d) Mã hoá \code{card1} rò nhãn & 0,308 [0,297; 0,321] & \textbf{+0,063} \\
+(e) Khoảng trống 7 / 14 ngày & 0,244 / 0,241 & $-$0,002 / $-$0,004 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Rò nhãn qua mã hoá theo nhãn (d) là biến thể duy nhất làm điểm tăng rõ. Biến thể (b) và (e) đổi PR-AUC không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy. Ngược kỳ vọng, chia ngẫu nhiên (a) cho điểm \emph{thấp hơn}; tỷ lệ gian lận thấp hơn của validation ngẫu nhiên (3,55\% so với 3,90\%) chỉ giải thích khoảng một phần ba mức giảm, phần còn lại chưa được giải thích. 98,7\% dòng validation có \code{card1} đã gặp trong train (85,9\% với \code{card1}+\code{addr1}+\code{P\_emaildomain}).
 
 \subsection{Giám sát độ ổn định thanh toán}\label{sec:res-rel}
 Ngưỡng chọn trên bộ tuning là 7 cho D-A và 8 cho D-B (gộp $k=2$ khung, tức 30 phút). Cấu hình được commit lúc 14:27:02 UTC, trước lần chạy duy nhất trên bộ report lúc 14:27:31 UTC.
@@ -266,13 +284,13 @@ Theo giao thức, ngưỡng không được chỉnh lại sau khi xem kết qu�
   \item \emph{Cỡ mẫu sự cố}: 4 + 4 sự cố; các tỷ lệ phát hiện chỉ có tính minh hoạ.
   \item \emph{Giả định độc lập}: D-B coi các attempt độc lập, trong khi retry của cùng payment có tương quan; điểm $z$ có thể bị phóng đại nhẹ.
   \item \emph{Nhãn IEEE-CIS}: theo mô tả của ban tổ chức, nhãn lan sang các giao dịch sau của cùng tài khoản, và cùng một thẻ có thể xuất hiện ở nhiều tập; chia theo thời gian không loại bỏ hiện tượng này. Thí nghiệm ở Mục~\ref{sec:leak} được thiết kế để đo nó.
-  \item \emph{Tái lập}: dữ liệu giả lập giống hệt từng byte chỉ khi cùng phiên bản numpy.
+  \item \emph{Tái lập}: dữ liệu giả lập giống hệt từng byte chỉ khi cùng phiên bản numpy; định danh lần chạy không chứa phiên bản thư viện, và thí nghiệm rò rỉ chạy lại trên môi trường khác lệch $\pm$0,001 ở 3 biến thể.
 \end{itemize}
 
 % ===================================================================== 7
 \section{Hướng phát triển}
 \begin{enumerate}
-  \item Chạy thí nghiệm rò rỉ và Gradient Boosting trên IEEE-CIS, đánh giá test một lần cho cấu hình đã đăng ký.
+  \item Giải thích vì sao chia ngẫu nhiên làm PR-AUC giảm; mở rộng lưới Gradient Boosting với cấu hình và tập test mới.
   \item Ngưỡng riêng cho từng loại KPI, đánh giá trên một bộ report mới.
   \item Detector có mùa vụ \cite{fpp} hoặc tích luỹ (CUSUM) cho sự cố yếu nhưng kéo dài.
   \item API chấm điểm chỉ hỗ trợ quyết định, không tự động chặn giao dịch.
@@ -282,7 +300,7 @@ Theo giao thức, ngưỡng không được chỉnh lại sau khi xem kết qu�
 
 % ===================================================================== 8
 \section{Kết luận}
-Bài báo trình bày một nền tảng dữ liệu tái lập được cho hai bài toán thanh toán và một giao thức đánh giá chung. Trên IEEE-CIS, Logistic Regression đạt PR-AUC 0,165 trên tập kiểm tra, hơn gấp đôi baseline luật (0,078). Trên dữ liệu giả lập, điểm số nhị thức gộp cửa sổ phát hiện các sự cố về lỗi và độ trễ trong 15--30 phút mà không báo nhầm, vượt rõ z-score bền vững; đồng thời, giao thức chỉnh ngưỡng và báo cáo trên hai bộ dữ liệu tách biệt cho thấy rõ giới hạn của nó với sự cố mất lưu lượng và sự cố yếu.
+Bài báo trình bày một nền tảng dữ liệu tái lập được cho hai bài toán thanh toán và một giao thức đánh giá chung. Trên IEEE-CIS, Logistic Regression đạt PR-AUC 0,165 trên tập kiểm tra, hơn gấp đôi baseline luật (0,078), và Gradient Boosting cùng đặc trưng đạt 0,408. Trên dữ liệu giả lập, điểm số nhị thức gộp cửa sổ phát hiện các sự cố về lỗi và độ trễ trong 15--30 phút mà không báo nhầm, vượt rõ z-score bền vững; đồng thời, giao thức chỉnh ngưỡng và báo cáo trên hai bộ dữ liệu tách biệt cho thấy rõ giới hạn của nó với sự cố mất lưu lượng và sự cố yếu.
 
 \section*{Lời cảm ơn}
 Tác giả cảm ơn người hướng dẫn và đơn vị thực tập. Mã nguồn được phát triển với sự hỗ trợ của một công cụ lập trình có trí tuệ nhân tạo; mọi quyết định thiết kế, cấu hình được chốt và số liệu báo cáo do tác giả duyệt.

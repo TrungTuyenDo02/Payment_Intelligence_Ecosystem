@@ -1,0 +1,21 @@
+[
+  {
+    "forced": false,
+    "hash": "515a1190a0a48d3f8faa8cf6b5915b6b2643582f6341617c828fc0db9c109579",
+    "recorded_at": "2026-11-02T18:53:08+00:00",
+    "run_id": "run-515a1190a0a4"
+  },
+  {
+    "forced": false,
+    "hash": "d6faa46990087eddb0a4078ef829933085e651a717c4af8d3ccc67475f6dc1cb",
+    "recorded_at": "2026-11-03T14:52:48+00:00",
+    "run_id": "run-d6faa4699008"
+  },
+  {
+    "forced": false,
+    "hash": "f8807cb6f7806b3bfb0105f0997a2af41ad9e17f46a0c8a774deec75624feddf",
+    "recorded_at": "2026-11-06",
+    "run_id": "run-f8807cb6f780",
+    "note": "evaluated on test on the owner's other machine; recorded here 2026-11-09 to block a re-run"
+  }
+]

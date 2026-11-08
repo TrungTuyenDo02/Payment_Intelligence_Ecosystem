@@ -1,6 +1,6 @@
 # Dàn ý báo cáo thực tập
 
-> Dàn ý để chủ dự án viết bản PDF. Mỗi số có run id, mỗi hình có file nguồn, để khi mentor hỏi thì truy lại được. Phần **[CHƯA CÓ SỐ]** chờ chạy trên dữ liệu IEEE-CIS (Stage E).
+> Dàn ý để chủ dự án viết bản PDF. Mỗi số có run id, mỗi hình có file nguồn, để khi mentor hỏi thì truy lại được.
 > Cập nhật: 2026-11-04.
 
 ## 1. Giới thiệu (1–2 trang)
@@ -43,16 +43,21 @@
 - Ghi rõ có 2 lần chạy test (`run-515a1190a0a4` và `run-d6faa4699008`); mọi metric chung trùng khớp (README, mục Kết quả).
 - Hình: `docs/assets/results/results.png`.
 
-### 4.3 Thí nghiệm rò rỉ (Stage E) [CHƯA CÓ SỐ]
+### 4.3 Thí nghiệm rò rỉ (Stage E) — `leak-827d929eaa73`
 
-- 7 biến thể, chỉ trên validation. Bảng từ `artifacts/experiments/leak-*/summary.md`.
-- Câu hỏi cần trả lời bằng số: chia ngẫu nhiên làm điểm cao lên bao nhiêu? Mã hoá rò rỉ cao lên bao nhiêu? Khoảng trống 7 và 14 ngày làm điểm giảm bao nhiêu? Bao nhiêu phần trăm thẻ ở validation đã gặp trong train?
+- 7 biến thể, chỉ trên validation (118.108 dòng). Bảng đầy đủ: báo cáo Stage E, mục 2.
+- Mã hoá `card1` rò nhãn: PR-AUC 0,245 → 0,308 (+0,063); bản hợp lệ chỉ +0,007.
+- Tiền xử lý trên mọi dòng, khoảng trống 7 và 14 ngày: thay đổi không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy.
+- Chia ngẫu nhiên: PR-AUC *giảm* 0,068 (0,177). Tỷ lệ gian lận thấp hơn chỉ giải thích khoảng một phần ba; phần còn lại chưa giải thích.
+- Thực thể lặp lại: 98,7% dòng validation có `card1` đã gặp trong train; 85,9% với `card1+addr1+P_emaildomain`.
 - Trích Kapoor và Narayanan (2023) cho cách phân loại rò rỉ.
 
-### 4.4 Gradient Boosting (Stage E) [CHƯA CÓ SỐ]
+### 4.4 Gradient Boosting (Stage E) — `run-f8807cb6f780`
 
-- Validation từ `make gbm`; test một lần từ `make gbm-final`. Thêm một dòng vào bảng 4.2.
-- Nếu Gradient Boosting không tốt hơn Logistic Regression thì vẫn báo cáo như vậy.
+- Chọn `learning_rate` 0,1, `max_iter` 400, `max_leaf_nodes` 15; ngưỡng 0,853. Config `frozen` ở commit `89a8ed5`, test chạy một lần.
+- PR-AUC validation 0,497 [0,483; 0,514], test **0,408** [0,390; 0,424], gấp khoảng 2,5 lần Logistic Regression; recall tại FPR 5% là 0,51.
+- Tại ngưỡng: precision 0,516, recall 0,371, F1 0,432, FPR 1,24%.
+- Hạn chế: tổ hợp tốt nhất ở cạnh lưới; chỉ 20 đặc trưng, chưa dùng bảng identity.
 
 ## 5. Product 01 — Độ ổn định thanh toán
 

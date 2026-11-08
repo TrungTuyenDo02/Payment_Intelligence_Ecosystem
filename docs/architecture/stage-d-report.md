@@ -115,4 +115,4 @@ Ngưỡng: D-A 7, D-B 8. Ngoài các cửa sổ bất thường, điểm cao nh�
 | --- | --- | --- |
 | Thử `make up` và `make db-init` từ WSL | Chủ dự án | Kiểm chứng đến nay dùng PostgreSQL 16 tạm |
 | Nếu muốn thử ngưỡng riêng cho từng loại KPI | Chủ dự án quyết | Là config mới; cần một bộ report mới (seed và sự cố khác), không dùng lại `sim-f6e6749ff0bf` |
-| Dashboard đọc `incidents.json`, gộp cảnh báo `ALL` với cảnh báo provider cùng lúc | Stage F | |
+| Dashboard đọc `incidents.json`, gộp cảnh báo `ALL` với cảnh báo provider cùng lúc | Stage F | Xong (2026-11-08): `fold_echoes` trong `shared/dashboard`, chỉ ở lớp hiển thị; `incidents.json` và đánh giá không đổi |

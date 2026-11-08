@@ -9,9 +9,44 @@ import pandas as pd
 LABEL = "isFraud"
 # Never usable as model inputs: the label, a row ID, and the raw time/order key.
 FORBIDDEN_FEATURES = frozenset({LABEL, "TransactionID", "TransactionDT"})
+
+
+# Entity keys for history features. card1 alone has ~13.6k values for 590k rows, so it mixes many
+# customers; card1+addr1+P_emaildomain (~90k groups) is closer to one customer.
+HISTORY_KEYS = {"card1": ("card1",), "uid": ("card1", "addr1", "P_emaildomain")}
+HISTORY_STATS = ("prev_count", "amt_vs_mean", "secs_since_prev")
+
+
+def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
+    """Behaviour of the same entity from EARLIER transactions only, no labels: what a live system
+    knows. Rows are taken in time order; ties keep file order, so a same-second transaction sees
+    the one listed before it but never the one after.
+    """
+    s = X.sort_values("TransactionDT", kind="stable")
+    g = s.groupby(list(key), dropna=False, sort=False)
+    if stat == "prev_count":
+        out = g.cumcount()
+    elif stat == "amt_vs_mean":
+        prev_sum = g["TransactionAmt"].cumsum() - s["TransactionAmt"]
+        # First transaction: 0/0 = NaN. A zero past mean would give inf, which models reject.
+        ratio = s["TransactionAmt"] / (prev_sum / g.cumcount())
+        out = ratio.replace([np.inf, -np.inf], np.nan)
+    else:  # secs_since_prev
+        out = s["TransactionDT"] - g["TransactionDT"].shift()
+    return out.reindex(X.index)
+
+
 DERIVED_FEATURES = {
-    "log_amount": ("TransactionAmt", lambda X: np.log1p(X["TransactionAmt"].clip(lower=0))),
-    "hour_of_day": ("TransactionDT", lambda X: (X["TransactionDT"] // 3600) % 24),
+    "log_amount": (("TransactionAmt",), lambda X: np.log1p(X["TransactionAmt"].clip(lower=0))),
+    "hour_of_day": (("TransactionDT",), lambda X: (X["TransactionDT"] // 3600) % 24),
+    **{
+        f"{k}_{stat}": (
+            (*key, "TransactionAmt", "TransactionDT"),
+            lambda X, key=key, stat=stat: _history(X, key, stat),
+        )
+        for k, key in HISTORY_KEYS.items()
+        for stat in HISTORY_STATS
+    },
 }
 
 
@@ -65,7 +100,7 @@ def build_features(X: pd.DataFrame, spec: FeatureSpec) -> pd.DataFrame:
     """Select and derive the configured features. Stateless: nothing is fitted here."""
     if LABEL in X.columns:
         raise LabelLeakError(f"'{LABEL}' must not be in the input of build_features")
-    sources = {DERIVED_FEATURES[d][0] for d in spec.derived}
+    sources = {c for d in spec.derived for c in DERIVED_FEATURES[d][0]}
     if missing := [c for c in [*spec.numeric, *spec.categorical, *sources] if c not in X.columns]:
         raise FeatureSpecError(f"missing input column(s): {missing}")
     out = pd.DataFrame(index=X.index)
