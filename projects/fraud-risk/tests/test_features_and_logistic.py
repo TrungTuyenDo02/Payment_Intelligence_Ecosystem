@@ -134,3 +134,32 @@ def test_high_cardinality_rejected(prepared: Prepared) -> None:
         LogisticBaseline(["C1"], ["card1_cat"], seed=0).fit(
             wide.loc[split.train], y.loc[split.train]
         )
+
+
+def test_card_history_uses_only_earlier_transactions():
+    # Rows out of time order on purpose; card 1 has amounts 10, 30, 20 at t=0, 50, 100.
+    X = pd.DataFrame(
+        {
+            "card1": [1, 2, 1, 1],
+            "TransactionAmt": [20.0, 5.0, 10.0, 30.0],
+            "TransactionDT": [100, 10, 0, 50],
+        },
+        index=[7, 8, 9, 10],
+    )
+    spec = FeatureSpec(
+        numeric=(),
+        categorical=(),
+        derived=("card1_prev_count", "card1_amt_vs_mean", "card1_secs_since_prev"),
+    )
+    f = build_features(X, spec)
+    assert f["card1_prev_count"].tolist() == [2, 0, 0, 1]
+    assert f.loc[7, "card1_amt_vs_mean"] == 20.0 / 20.0  # mean of 10 and 30
+    assert f.loc[10, "card1_amt_vs_mean"] == 3.0
+    assert f[["card1_amt_vs_mean", "card1_secs_since_prev"]].loc[[8, 9]].isna().all().all()
+    assert f.loc[7, "card1_secs_since_prev"] == 50
+
+    # Changing the latest transaction must not change any earlier row's features.
+    later = X.copy()
+    later.loc[7, "TransactionAmt"] = 9999.0
+    g = build_features(later, spec)
+    pd.testing.assert_frame_equal(f.drop(index=7), g.drop(index=7))
