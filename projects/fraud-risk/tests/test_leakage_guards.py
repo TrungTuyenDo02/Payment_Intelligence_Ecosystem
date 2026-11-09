@@ -101,9 +101,13 @@ def test_runner_rejects_time_split_with_overlap(data: IeeeCisData, cfg: Baseline
         fit_baselines(data.X, data.y, data.time, tampered, cfg)
 
 
-# The only module allowed to use the leaky split besides split.py: the Stage E experiment that
-# measures how much it inflates the score (validation only, never a model for test).
-RANDOM_SPLIT_ALLOWED = {"evaluation/split.py", "experiments/leakage.py"}
+# Modules allowed to use the leaky split besides split.py: the Stage E experiments that measure
+# how much it changes the score (validation only, never a model for test).
+RANDOM_SPLIT_ALLOWED = {
+    "evaluation/split.py",
+    "experiments/leakage.py",
+    "experiments/split_diagnostics.py",
+}
 
 
 def test_random_split_only_defined_in_split_module() -> None:

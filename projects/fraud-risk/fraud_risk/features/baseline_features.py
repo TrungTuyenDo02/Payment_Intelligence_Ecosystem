@@ -13,8 +13,37 @@ FORBIDDEN_FEATURES = frozenset({LABEL, "TransactionID", "TransactionDT"})
 
 # Entity keys for history features. card1 alone has ~13.6k values for 590k rows, so it mixes many
 # customers; card1+addr1+P_emaildomain (~90k groups) is closer to one customer.
-HISTORY_KEYS = {"card1": ("card1",), "uid": ("card1", "addr1", "P_emaildomain")}
+# "uidd" adds D1n = day of the transaction minus D1 (days since the card's first use, a common
+# public heuristic): it stays constant for one card, so it separates customers sharing a uid.
+HISTORY_KEYS = {
+    "card1": ("card1",),
+    "uid": ("card1", "addr1", "P_emaildomain"),
+    "uidd": ("card1", "addr1", "P_emaildomain", "D1n"),
+}
 HISTORY_STATS = ("prev_count", "amt_vs_mean", "secs_since_prev")
+# Windowed counts stay on one scale over time; the running `prev_count` grows with the date.
+HISTORY_WINDOWS = {"count_24h": 24 * 3600, "count_7d": 7 * 24 * 3600}
+# Group aggregates in the style of public notebooks of the competition (idea only, no code
+# copied), made causal: each row sees only EARLIER rows of its entity. `n_*` count the distinct
+# values seen so far; many C13 values inside one uid hint that it mixes several customers.
+AGG_STATS = {
+    "amt_std": (),
+    "amt_z": (),
+    "n_products": ("ProductCD",),
+    "n_c13": ("C13",),
+}
+
+
+def _entity_frame(X: pd.DataFrame, key: tuple[str, ...]) -> pd.DataFrame:
+    """X plus the derived key column `D1n` when the key needs it (no label involved)."""
+    if "D1n" in key:
+        X = X.assign(D1n=X["TransactionDT"] // 86400 - X["D1"])
+    return X
+
+
+def _source_columns(key: tuple[str, ...]) -> tuple[str, ...]:
+    """Raw input columns a key is built from."""
+    return tuple(c for k in key for c in (("D1", "TransactionDT") if k == "D1n" else (k,)))
 
 
 def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
@@ -22,6 +51,7 @@ def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
     knows. Rows are taken in time order; ties keep file order, so a same-second transaction sees
     the one listed before it but never the one after.
     """
+    X = _entity_frame(X, key)
     s = X.sort_values("TransactionDT", kind="stable")
     g = s.groupby(list(key), dropna=False, sort=False)
     if stat == "prev_count":
@@ -36,16 +66,74 @@ def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
     return out.reindex(X.index)
 
 
+def _window_count(X: pd.DataFrame, key: tuple[str, ...], seconds: int) -> pd.Series:
+    """Earlier transactions of the same entity within `seconds` before this one (no labels).
+
+    Rows are ordered by entity then time (ties keep file order), so a same-second transaction
+    counts the one listed before it but never the one after, as in `_history`.
+    """
+    X = _entity_frame(X, key)
+    gid = X.groupby(list(key), dropna=False, sort=False).ngroup().to_numpy(dtype="int64")
+    t = X["TransactionDT"].to_numpy(dtype="int64")
+    order = np.lexsort((t, gid))  # stable: gid first, then time
+    scale = 1 << 40  # larger than any TransactionDT, so gid * scale + t sorts by (gid, t)
+    combined = gid[order] * scale + t[order]
+    lower = np.searchsorted(combined, combined - seconds, side="left")
+    counts = np.empty(len(X), dtype="int64")
+    counts[order] = np.arange(len(X)) - lower
+    return pd.Series(counts, index=X.index)
+
+
+def _aggregate(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
+    """Std / z-score of the amount, or distinct ProductCD / C13 values, over EARLIER rows only."""
+    X = _entity_frame(X, key)
+    s = X.sort_values("TransactionDT", kind="stable")
+    g = s.groupby(list(key), dropna=False, sort=False)
+    if stat in ("amt_std", "amt_z"):
+        amount = s["TransactionAmt"].astype("float64")
+        n = g.cumcount().astype("float64")  # earlier rows of the entity
+        past_sum = amount.groupby([s[c] for c in key], dropna=False, sort=False).cumsum() - amount
+        sq = amount**2
+        past_sq = sq.groupby([s[c] for c in key], dropna=False, sort=False).cumsum() - sq
+        with np.errstate(divide="ignore", invalid="ignore"):
+            var = (past_sq - past_sum**2 / n) / (n - 1)
+            std = np.sqrt(var.clip(lower=0)).where(n >= 2)
+            out = std if stat == "amt_std" else (amount - past_sum / n) / std
+        out = out.replace([np.inf, -np.inf], np.nan)
+    else:
+        column = AGG_STATS[stat][0]
+        first = (~s.duplicated(subset=[*key, column])).astype("float64")  # new value for its entity
+        seen = first.groupby([s[c] for c in key], dropna=False, sort=False).cumsum() - first
+        out = seen.where(g.cumcount() > 0)  # no earlier rows: unknown, not zero
+    return out.reindex(X.index)
+
+
 DERIVED_FEATURES = {
     "log_amount": (("TransactionAmt",), lambda X: np.log1p(X["TransactionAmt"].clip(lower=0))),
     "hour_of_day": (("TransactionDT",), lambda X: (X["TransactionDT"] // 3600) % 24),
     **{
         f"{k}_{stat}": (
-            (*key, "TransactionAmt", "TransactionDT"),
+            (*_source_columns(key), "TransactionAmt", "TransactionDT"),
             lambda X, key=key, stat=stat: _history(X, key, stat),
         )
         for k, key in HISTORY_KEYS.items()
         for stat in HISTORY_STATS
+    },
+    **{
+        f"{k}_{name}": (
+            (*_source_columns(key), "TransactionDT"),
+            lambda X, key=key, seconds=seconds: _window_count(X, key, seconds),
+        )
+        for k, key in HISTORY_KEYS.items()
+        for name, seconds in HISTORY_WINDOWS.items()
+    },
+    **{
+        f"{k}_{stat}": (
+            (*_source_columns(key), "TransactionAmt", "TransactionDT", *extra),
+            lambda X, key=key, stat=stat: _aggregate(X, key, stat),
+        )
+        for k, key in HISTORY_KEYS.items()
+        for stat, extra in AGG_STATS.items()
     },
 }
 

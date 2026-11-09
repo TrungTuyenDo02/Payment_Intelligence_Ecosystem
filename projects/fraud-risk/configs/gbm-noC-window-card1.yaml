@@ -1,0 +1,30 @@
+# Open question 2: no C1-C14, windowed history per card1.
+# Validation only (stage-e-spec.md section 6); running it on test needs the owner's decision first.
+status: draft
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split:
+  train_frac: 0.6
+  valid_frac: 0.2
+  gap_days: 0
+
+metrics:
+  precision_target: 0.5
+  fpr_target: 0.05
+  bootstrap_resamples: 200
+  threshold_method: max_f1
+
+features:
+  numeric: [TransactionAmt]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day, card1_count_24h, card1_count_7d, card1_amt_vs_mean, card1_secs_since_prev]
+
+gbm:
+  grid:
+    learning_rate: [0.05, 0.1]
+    max_iter: [200, 400]
+    max_leaf_nodes: [15, 31]

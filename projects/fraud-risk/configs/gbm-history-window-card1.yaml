@@ -1,0 +1,32 @@
+# Gradient Boosting + windowed history counts per entity (24h, 7d) instead of the running count.
+# Same data, split, grid and model as gbm.yaml; only `derived` gains four features, so the
+# validation difference is about the features. NOT pre-registered for the test set: validation only
+# (stage-e-spec.md section 6). Running it on test needs the owner's decision first.
+status: draft
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split:
+  train_frac: 0.6
+  valid_frac: 0.2
+  gap_days: 0
+
+metrics:
+  precision_target: 0.5
+  fpr_target: 0.05
+  bootstrap_resamples: 200
+  threshold_method: max_f1
+
+features:
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day, card1_count_24h, card1_count_7d, card1_amt_vs_mean, card1_secs_since_prev]
+
+gbm:
+  grid:
+    learning_rate: [0.05, 0.1]
+    max_iter: [200, 400]
+    max_leaf_nodes: [15, 31]

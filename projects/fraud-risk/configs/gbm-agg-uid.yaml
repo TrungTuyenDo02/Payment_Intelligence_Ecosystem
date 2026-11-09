@@ -1,0 +1,31 @@
+# Open question 2, ideas from public notebooks of the competition, made causal: windowed history plus
+# expanding std / z-score of the amount and distinct ProductCD / C13 counts, per uid entity.
+# Validation only (stage-e-spec.md section 6); running it on test needs the owner's decision first.
+status: draft
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split:
+  train_frac: 0.6
+  valid_frac: 0.2
+  gap_days: 0
+
+metrics:
+  precision_target: 0.5
+  fpr_target: 0.05
+  bootstrap_resamples: 200
+  threshold_method: max_f1
+
+features:
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day, uid_count_24h, uid_count_7d, uid_amt_vs_mean, uid_secs_since_prev, uid_amt_std, uid_amt_z, uid_n_products, uid_n_c13]
+
+gbm:
+  grid:
+    learning_rate: [0.05, 0.1]
+    max_iter: [200, 400]
+    max_leaf_nodes: [15, 31]

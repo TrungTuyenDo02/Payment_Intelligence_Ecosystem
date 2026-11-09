@@ -163,3 +163,68 @@ def test_card_history_uses_only_earlier_transactions():
     later.loc[7, "TransactionAmt"] = 9999.0
     g = build_features(later, spec)
     pd.testing.assert_frame_equal(f.drop(index=7), g.drop(index=7))
+
+
+def test_windowed_counts_look_back_only_and_stay_on_one_scale():
+    # Card 1 at t = 0, 3600, 90000, 90000 (a tie), 700000; 24h = 86400 s, 7d = 604800 s.
+    X = pd.DataFrame(
+        {"card1": [1, 1, 1, 1, 1, 2], "TransactionDT": [0, 3600, 90000, 90000, 650000, 5]},
+    )
+    spec = FeatureSpec(numeric=(), categorical=(), derived=("card1_count_24h", "card1_count_7d"))
+    f = build_features(X, spec)
+    # t=90000: the first row (0) is 90000 s ago, outside 24h; 3600 is inside. The tie counts
+    # the earlier-listed row only. t=650000: only the two rows at 90000 are within 7 days.
+    assert f["card1_count_24h"].tolist() == [0, 1, 1, 2, 0, 0]
+    assert f["card1_count_7d"].tolist() == [0, 1, 2, 3, 2, 0]
+    later = X.copy()
+    later.loc[4, "TransactionDT"] = 800000  # moving the latest row must not change earlier rows
+    g = build_features(later, spec)
+    pd.testing.assert_frame_equal(f.drop(index=4), g.drop(index=4))
+
+
+def test_d1n_splits_one_uid_into_customers_and_ignores_the_future():
+    day = 86400
+    # One uid; D1n = day - D1 is 6 for rows 0 and 2, 1 for row 1, NaN for row 3.
+    X = pd.DataFrame(
+        {
+            "card1": 1, "addr1": 5.0, "P_emaildomain": "a.com",
+            "D1": [4.0, 9.0, 4.0, np.nan], "TransactionAmt": 10.0,
+            "TransactionDT": [10 * day, 10 * day + 10, 10 * day + 20, 10 * day + 30],
+        }
+    )  # fmt: skip
+    spec = FeatureSpec(numeric=(), categorical=(), derived=("uid_prev_count", "uidd_prev_count"))
+    f = build_features(X, spec)
+    assert f["uid_prev_count"].tolist() == [0, 1, 2, 3]
+    assert f["uidd_prev_count"].tolist() == [
+        0,
+        0,
+        1,
+        0,
+    ]  # rows 0 and 2 share D1n = 6; NaN is a group
+
+
+def test_causal_aggregates_match_hand_computation_and_ignore_the_future():
+    # One card; amounts 10, 20, 40 at t = 0, 10, 20; ProductCD W, W, C; C13 1, 2, 2.
+    X = pd.DataFrame(
+        {
+            "card1": [1, 1, 1, 2],
+            "TransactionAmt": [10.0, 20.0, 40.0, 5.0],
+            "TransactionDT": [0, 10, 20, 15],
+            "ProductCD": ["W", "W", "C", "W"],
+            "C13": [1.0, 2.0, 2.0, 1.0],
+        }
+    )
+    names = ("card1_amt_std", "card1_amt_z", "card1_n_products", "card1_n_c13")
+    f = build_features(X, FeatureSpec(numeric=(), categorical=(), derived=names))
+    # Row 2 sees amounts 10 and 20: std = sqrt(50) (sample std), z = (40 - 15) / sqrt(50).
+    assert np.isnan(f.loc[[0, 1, 3], ["card1_amt_std", "card1_amt_z"]].to_numpy()).all()
+    assert f.loc[2, "card1_amt_std"] == pytest.approx(np.sqrt(50))
+    assert f.loc[2, "card1_amt_z"] == pytest.approx(25 / np.sqrt(50))
+    # Distinct values among EARLIER rows; the first row of an entity has no history (NaN).
+    assert np.isnan(f.loc[0, "card1_n_products"]) and np.isnan(f.loc[3, "card1_n_c13"])
+    assert f["card1_n_products"].tolist()[1:3] == [1.0, 1.0]  # W; then W, W
+    assert f["card1_n_c13"].tolist()[1:3] == [1.0, 2.0]  # {1}; then {1, 2}
+    later = X.copy()
+    later.loc[2, ["TransactionAmt", "ProductCD", "C13"]] = [999.0, "H", 77.0]
+    g = build_features(later, FeatureSpec(numeric=(), categorical=(), derived=names))
+    pd.testing.assert_frame_equal(f.drop(index=2), g.drop(index=2))

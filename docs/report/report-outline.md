@@ -15,7 +15,7 @@
 
 - Trong và ngoài phạm vi: tổng quan đề tài, mục 3.
 - Quy tắc đánh giá: chia theo thời gian, fit chỉ trên train, chọn ngưỡng trên validation, test một lần cho mỗi config đã chốt, run id tất định.
-- Quy trình: đặc tả, rồi chủ dự án duyệt, rồi code và test, rồi báo cáo. Có ADR 0001–0007.
+- Quy trình: đặc tả, rồi chủ dự án duyệt, rồi code và test, rồi báo cáo. Có ADR 0001–0008.
 - Hình: `docs/assets/diagrams/roadmap.svg`, `docs/assets/diagrams/workflow.svg`.
 
 ## 3. Nền tảng dùng chung (1 trang)
@@ -96,5 +96,5 @@
 ## Phụ lục
 
 - Lệnh tái lập: README, mục "Chạy thử" và "Các lệnh khác".
-- Danh sách ADR 0001–0007 và các đặc tả Stage C–F.
+- Danh sách ADR 0001–0008 và các đặc tả Stage C–F.
 - Tài liệu tham khảo: tổng quan đề tài, mục 7.

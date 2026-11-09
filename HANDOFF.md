@@ -29,7 +29,7 @@
 3. **Muốn dashboard Product 01 hiện bộ report** thay vì bộ tuning: chép `artifacts/detections/det-08335c6af086/` từ máy chủ dự án. Không chạy lại `make detect-report`.
 4. Trên máy nào bị chặn cổng 5432 (Windows báo *access permissions* khi `make up`): tạo `.env` từ `.env.example` với `POSTGRES_PORT=55432`.
 5. Việc cũ, không chặn: bật WSL integration trong Docker Desktop; xoá các nhánh cũ đã merge trên GitHub (xem mục 3.3).
-6. Câu hỏi mở cho báo cáo (không bắt buộc): vì sao chia ngẫu nhiên làm PR-AUC giảm (báo cáo Stage E mục 2), và vì sao đặc trưng lịch sử thực thể không giúp (mục 3b). Mọi thử nghiệm tiếp theo chỉ chạy trên validation; mở tập test lần nữa cần chủ dự án quyết và phải ghi rõ trong báo cáo.
+6. Hai câu hỏi mở đã được phân tích (2026-11-09, chỉ validation, xem [báo cáo Stage E mục 2b và 3b](docs/architecture/stage-e-report.md)): chia ngẫu nhiên cho PR-AUC thấp hơn chủ yếu vì hai validation là hai tập dòng khác nhau (khoảng 0,03 còn chưa giải thích); đặc trưng lịch sử không giúp vì `C1–C14` đã chứa phần lớn thông tin theo thực thể (bỏ chúng thì 0,497 xuống 0,158). Khoá có `D1n` cho gợi ý nhỏ, chưa đủ ý nghĩa khi lấy mẫu theo cụm `card1`. Hai PDF đã build lại bằng MiKTeX + XeLaTeX (báo cáo thực tập 20 trang, bài báo 10 trang, 0 lỗi biên dịch); chưa xem từng trang bằng mắt. Mọi thử nghiệm tiếp theo chỉ chạy trên validation; mở tập test lần nữa cần chủ dự án quyết và phải ghi rõ trong báo cáo.
 
 ## 1. Đang ở đâu
 
@@ -170,4 +170,4 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
 | [Đặc tả](docs/architecture/stage-e-spec.md) và [báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ, Gradient Boosting |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md), [dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo |
-| [ADR 0001–0007](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh |
+| [ADR 0001–0008](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh, đặc trưng lịch sử thực thể chỉ nhìn quá khứ |
