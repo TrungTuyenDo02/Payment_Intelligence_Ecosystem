@@ -52,3 +52,25 @@ def test_diagnostics_never_use_test_rows_or_labels(data: Any) -> None:
     assert set(first["matrix"]) == {
         f"train_{m}__valid_{v}" for m in ("time", "random") for v in ("time", "random")
     }
+
+
+def test_paired_bootstrap_is_zero_for_equal_scores_and_seeded() -> None:
+    rng = np.random.default_rng(0)
+    y = pd.Series((rng.random(400) < 0.2).astype(int))
+    good = y.to_numpy() * 0.5 + rng.random(400)
+    weak = rng.random(400)
+    same = sd.paired_bootstrap_diff(y, good, good, n_resamples=50, seed=1)
+    assert same == {"diff": 0.0, "low": 0.0, "high": 0.0}
+    first = sd.paired_bootstrap_diff(y, good, weak, n_resamples=50, seed=1)
+    assert first == sd.paired_bootstrap_diff(y, good, weak, n_resamples=50, seed=1)
+    assert first["low"] > 0  # a clearly better ranking is better on every resample
+
+
+def test_paired_bootstrap_accepts_another_metric() -> None:
+    y = pd.Series([0, 1] * 50)
+    a = y.to_numpy() * 1.0
+    b = 1 - a  # perfectly wrong ranking
+    top = sd.paired_bootstrap_diff(
+        y, a, b, n_resamples=20, seed=0, metric=lambda yt, s: float(s[yt == 1].mean())
+    )
+    assert top["diff"] == 1.0

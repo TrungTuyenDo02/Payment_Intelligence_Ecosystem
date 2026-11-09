@@ -18,6 +18,7 @@ split) are used. Test rows are never scored and their labels are never read.
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -49,9 +50,15 @@ def reweighted_pr_auc(y: pd.Series, scores: np.ndarray, prevalence: float) -> fl
 
 
 def paired_bootstrap_diff(
-    y: pd.Series, scores_a: np.ndarray, scores_b: np.ndarray, *, n_resamples: int, seed: int
+    y: pd.Series,
+    scores_a: np.ndarray,
+    scores_b: np.ndarray,
+    *,
+    n_resamples: int,
+    seed: int,
+    metric: Callable[[np.ndarray, np.ndarray], float] = average_precision_score,
 ) -> dict[str, float]:
-    """PR-AUC(a) - PR-AUC(b) on the same rows, with a 95% percentile interval (seeded)."""
+    """metric(a) - metric(b) on the same rows (default PR-AUC), 95% percentile interval, seeded."""
     rng = np.random.default_rng(seed)
     yv = y.to_numpy()
     diffs = []
@@ -59,10 +66,7 @@ def paired_bootstrap_diff(
         idx = rng.integers(0, len(yv), len(yv))
         if yv[idx].sum() == 0:
             continue
-        diffs.append(
-            average_precision_score(yv[idx], scores_a[idx])
-            - average_precision_score(yv[idx], scores_b[idx])
-        )
+        diffs.append(metric(yv[idx], scores_a[idx]) - metric(yv[idx], scores_b[idx]))
     low, high = np.percentile(diffs, [2.5, 97.5])
     return {"diff": float(np.mean(diffs)), "low": float(low), "high": float(high)}
 
