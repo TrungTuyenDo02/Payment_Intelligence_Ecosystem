@@ -56,9 +56,18 @@ def _refit_valid_scores(
 
 
 def compare(
-    base_run: Path, candidate_runs: list[Path], data: Any, *, n_resamples: int = 500
+    base_run: Path,
+    candidate_runs: list[Path],
+    data: Any,
+    *,
+    n_resamples: int = 500,
+    cluster_by: str = "card1",
 ) -> dict[str, Any]:
-    """Paired bootstrap of PR-AUC and recall at FPR: candidate minus baseline, per candidate."""
+    """Paired bootstrap of PR-AUC and recall at FPR: candidate minus baseline, per candidate.
+
+    Each difference is given twice: resampling rows, and resampling whole `cluster_by` groups
+    (the honest one, since transactions of one card are correlated).
+    """
     cfg, base_scores = _refit_valid_scores(base_run, data)
     split = time_split(data.time, cfg.split.train_frac, cfg.split.valid_frac, cfg.split.gap_days)
     y: pd.Series = data.y.loc[split.valid]
@@ -73,14 +82,27 @@ def compare(
         if other_cfg.split != cfg.split or other_cfg.seed != cfg.seed:
             raise ValueError(f"{run_dir.name} uses a different split or seed than the baseline")
         kw = {"n_resamples": n_resamples, "seed": cfg.seed}
+        groups = data.X.loc[split.valid, cluster_by]
         out[run_dir.name] = {
             "pr_auc_diff": paired_bootstrap_diff(y, scores, base_scores, **kw),
+            "pr_auc_diff_clustered": paired_bootstrap_diff(
+                y, scores, base_scores, groups=groups, **kw
+            ),
             "recall_at_fpr_diff": paired_bootstrap_diff(
                 y, scores, base_scores, metric=recall, **kw
             ),
+            "recall_at_fpr_diff_clustered": paired_bootstrap_diff(
+                y, scores, base_scores, metric=recall, groups=groups, **kw
+            ),
         }
-    return {"baseline": base_run.name, "validation_rows": int(len(y)), "candidates": out,
-            "n_resamples": n_resamples, "evaluated_on": "valid"}  # fmt: skip
+    return {
+        "baseline": base_run.name,
+        "validation_rows": int(len(y)),
+        "candidates": out,
+        "n_resamples": n_resamples,
+        "cluster_by": cluster_by,
+        "evaluated_on": "valid",
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

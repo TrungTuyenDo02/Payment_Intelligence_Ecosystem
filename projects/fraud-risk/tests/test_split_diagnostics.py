@@ -74,3 +74,17 @@ def test_paired_bootstrap_accepts_another_metric() -> None:
         y, a, b, n_resamples=20, seed=0, metric=lambda yt, s: float(s[yt == 1].mean())
     )
     assert top["diff"] == 1.0
+
+
+def test_clustered_bootstrap_is_wider_when_rows_of_a_group_move_together() -> None:
+    rng = np.random.default_rng(3)
+    groups = pd.Series(np.repeat(np.arange(100), 10))  # 100 groups of 10 rows
+    y = pd.Series((rng.random(1000) < 0.2).astype(int))
+    effect = np.repeat(rng.normal(0, 1, 100), 10)  # group-level shift of model A's scores
+    a = y.to_numpy() * 0.5 + rng.random(1000) + effect
+    b = y.to_numpy() * 0.5 + rng.random(1000)
+    kw = {"n_resamples": 100, "seed": 0}
+    rows = sd.paired_bootstrap_diff(y, a, b, **kw)
+    clustered = sd.paired_bootstrap_diff(y, a, b, groups=groups, **kw)
+    assert clustered["high"] - clustered["low"] > rows["high"] - rows["low"]
+    assert clustered == sd.paired_bootstrap_diff(y, a, b, groups=groups, **kw)

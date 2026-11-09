@@ -57,13 +57,28 @@ def paired_bootstrap_diff(
     n_resamples: int,
     seed: int,
     metric: Callable[[np.ndarray, np.ndarray], float] = average_precision_score,
+    groups: pd.Series | None = None,
 ) -> dict[str, float]:
-    """metric(a) - metric(b) on the same rows (default PR-AUC), 95% percentile interval, seeded."""
+    """metric(a) - metric(b) on the same rows (default PR-AUC), 95% percentile interval, seeded.
+
+    With `groups` (one label per row, e.g. card1) whole groups are resampled instead of single
+    rows, because rows of one card are correlated; rows without a label count as their own group.
+    """
     rng = np.random.default_rng(seed)
     yv = y.to_numpy()
+    parts: list[np.ndarray] = []
+    if groups is not None:
+        codes = pd.factorize(groups)[0]
+        missing = codes < 0
+        codes[missing] = codes.max() + 1 + np.arange(missing.sum())
+        order = np.argsort(codes, kind="stable")
+        parts = np.split(order, np.flatnonzero(np.diff(codes[order])) + 1)
     diffs = []
     for _ in range(n_resamples):
-        idx = rng.integers(0, len(yv), len(yv))
+        if groups is None:
+            idx = rng.integers(0, len(yv), len(yv))
+        else:
+            idx = np.concatenate([parts[g] for g in rng.integers(0, len(parts), len(parts))])
         if yv[idx].sum() == 0:
             continue
         diffs.append(metric(yv[idx], scores_a[idx]) - metric(yv[idx], scores_b[idx]))
