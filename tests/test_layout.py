@@ -116,11 +116,15 @@ def test_package_importable(module: str) -> None:
 
 
 FORBIDDEN_SUFFIXES = (".parquet", ".joblib", ".pkl", ".pickle", ".onnx", ".pt", ".pth", ".h5")
+# Test-once registries hold only config hashes and are shared through git on purpose.
+ALLOWED_REGISTRIES = frozenset({"artifacts/test_runs.json", "artifacts/detect_report_runs.json"})
 
 
 def _forbidden(path: str) -> bool:
     """Data, model and secret files that must never be committed (hard rules 1-3)."""
     name = path.rsplit("/", 1)[-1]
+    if path in ALLOWED_REGISTRIES:
+        return False
     return (
         path.startswith(("datasets/raw/", "artifacts/"))
         or path.endswith(FORBIDDEN_SUFFIXES)
@@ -134,6 +138,9 @@ def _forbidden(path: str) -> bool:
     [
         ("datasets/raw/ieee-cis/train_transaction.csv", True),
         ("artifacts/runs/abc/metrics.json", True),
+        ("artifacts/test_runs.json", False),
+        ("artifacts/detect_report_runs.json", False),
+        ("artifacts/other.json", True),
         ("models/lr.pkl", True),
         ("data/x.parquet", True),
         ("notes/sample.csv", True),
