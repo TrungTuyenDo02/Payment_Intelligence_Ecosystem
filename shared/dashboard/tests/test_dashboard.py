@@ -159,3 +159,47 @@ def test_fraud_table_dedupes_labels_variants_and_tolerates_old_runs(tmp_path: Pa
     assert html.count("0,245 [") == 1  # validation shown once, not again from the test run
     assert "0,165 [" in html and "4 (+1: card1_*)" in html
     assert ">card1</td>" in html and "| --- |" not in html and "<pre>" not in html
+
+
+def _diag_results() -> dict:
+    def score(pr: float) -> dict:
+        return {"pr_auc": pr, "pr_auc_at_common_prevalence": pr, "prevalence": 0.04,
+                "recall_at_fpr": 0.33, "rows": 100}  # fmt: skip
+
+    weeks = [
+        {"week": w, "rows": 50, "prevalence": 0.03 + w / 1000, "pr_auc": 0.2} for w in range(6)
+    ]
+    return {
+        "matrix": {f"train_{a}__valid_{b}": score(0.2) for a in ("time", "random")
+                   for b in ("time", "random")},  # fmt: skip
+        "same_rows_in_time_valid_period": {
+            "pr_auc_diff_random_minus_time_train": {"diff": 0.01, "low": 0.005, "high": 0.015}},
+        "random_valid_without_early_weeks": {"early_weeks": 2, "scores": {"train_time": score(0.21)}},  # noqa: E501
+        "weekly_time_valid": weeks[3:], "weekly_random_valid": weeks,
+    }  # fmt: skip
+
+
+def test_new_sections_say_what_is_missing(tmp_path: Path) -> None:
+    html = build(_artifacts(tmp_path))
+    assert 'id="diag"' in html and 'id="paired"' in html and "<nav>" in html
+    assert "split_diagnostics" in html and "paired_comparison" in html  # hints, no crash
+
+
+def test_diagnostics_and_paired_sections_render(tmp_path: Path) -> None:
+    root = _artifacts(tmp_path)
+    exp = root / "experiments"
+    (exp / "diag-x").mkdir(parents=True)
+    (exp / "diag-x" / "results.json").write_text(json.dumps(_diag_results()))
+    diff = {"diff": 0.011, "low": 0.005, "high": 0.017}
+    cand = {"run-aaa": {"pr_auc_diff": diff, "recall_at_fpr_diff": diff,
+                        "pr_auc_diff_clustered": {"diff": 0.01, "low": -0.003, "high": 0.025},
+                        "recall_at_fpr_diff_clustered": diff}}  # fmt: skip
+    (exp / "paired-x.json").write_text(json.dumps({
+        "baseline": "run-base", "validation_rows": 1000, "n_resamples": 50,
+        "candidates": cand}))  # fmt: skip
+    html = build(root)
+    assert "Train theo thời gian" in html and "Validation ngẫu nhiên" in html
+    assert "data:image/png;base64" in html and "run-aaa" in html and "run-base" in html
+    assert (
+        html.count('class="ok"') == 2
+    )  # row CI and recall CI exclude 0; the clustered PR-AUC CI does not

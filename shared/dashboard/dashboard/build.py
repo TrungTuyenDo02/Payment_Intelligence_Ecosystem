@@ -309,7 +309,9 @@ def feature_label(folder: Path) -> str:
     n = len(feats.get("numeric", [])) + len(feats.get("categorical", [])) + len(derived)
     extra = [d for d in derived if d not in BASE_DERIVED]
     groups = sorted({e.split("_")[0] for e in extra})  # card1_prev_count -> card1_*
-    return f"{n} (+{len(extra)}: {', '.join(g + '_*' for g in groups)})" if extra else str(n)
+    label = f"{n} (+{len(extra)}: {', '.join(g + '_*' for g in groups)})" if extra else str(n)
+    # The counters C1-C14 carry most of the signal (stage-e-report 3b): flag runs without them.
+    return label if "C1" in feats.get("numeric", []) else f"{label} · bỏ C1–C14"
 
 
 def markdown_tables(text: str) -> str:
@@ -387,14 +389,141 @@ def fraud_section(artifacts: Path) -> str:
     return f"""
 <p class="meta">Dataset công khai IEEE-CIS, chia theo thời gian 60/20/20. Tập test chỉ mở một lần cho mỗi config đã chốt.
 Điểm rủi ro chỉ hỗ trợ quyết định, không tự động chặn giao dịch.</p>
+{fraud_tiles(artifacts)}
 <h3>So sánh mô hình</h3>{table}
 <h3>Thí nghiệm rò rỉ dữ liệu (chỉ validation)</h3>{leak_html}"""  # noqa: E501
+
+
+def _latest(artifacts: Path, pattern: str) -> Path | None:
+    found = sorted((artifacts / "experiments").glob(pattern))
+    return found[-1] if found else None
+
+
+def fraud_tiles(artifacts: Path) -> str:
+    """One tile per model: its test PR-AUC (one-time evaluation) and the run it came from."""
+    best: dict[str, tuple[float, str]] = {}
+    for label, metrics, _ in fraud_runs(artifacts):
+        for model, parts in metrics["models"].items():
+            if "test" in parts:
+                best[model] = (parts["test"]["pr_auc"], label.split(" ")[0])
+    if not best:
+        return ""
+    tiles = "".join(
+        f'<div class="tile"><div class="label">{escape(MODEL_VN.get(m, m))} · PR-AUC test</div>'
+        f'<div class="value">{vn(v)}</div><div class="label"><code>{escape(run)}</code></div></div>'
+        for m, (v, run) in sorted(best.items(), key=lambda kv: kv[1][0])
+    )
+    return f'<div class="tiles">{tiles}</div>'
+
+
+def diagnostics_chart(res: dict[str, Any]) -> str:
+    """Weekly fraud rate and PR-AUC of the two validation sets (time vs random split)."""
+    fig, (top, bottom) = plt.subplots(2, 1, figsize=(8, 5), sharex=True)
+    series = (
+        ("weekly_random_valid", "Validation ngẫu nhiên", PROVIDER_COLORS[1]),
+        ("weekly_time_valid", "Validation theo thời gian", PROVIDER_COLORS[0]),
+    )
+    for key, label, color in series:
+        weeks = res.get(key, [])
+        top.plot([e["week"] for e in weeks], [e["prevalence"] * 100 for e in weeks],
+                 marker="o", ms=3, color=color, label=label)  # fmt: skip
+        scored = [e for e in weeks if "pr_auc" in e]
+        bottom.plot([e["week"] for e in scored], [e["pr_auc"] for e in scored],
+                    marker="o", ms=3, color=color, label=label)  # fmt: skip
+    early = res.get("random_valid_without_early_weeks", {}).get("early_weeks", 0)
+    for ax in (top, bottom):
+        _style(ax)
+        if early:
+            ax.axvspan(-0.5, early - 0.5, color=GRID, alpha=0.6, lw=0)
+    top.set_ylabel("Tỷ lệ gian lận (%)", fontsize=8, color=INK_2)
+    bottom.set_ylabel("PR-AUC theo tuần", fontsize=8, color=INK_2)
+    bottom.set_xlabel(f"Tuần (vùng xám: tuần 0–{early - 1}, tỷ lệ gian lận thấp)", fontsize=8,
+                      color=INK_2)  # fmt: skip
+    top.legend(frameon=False, fontsize=8)
+    return f'<img alt="PR-AUC và tỷ lệ gian lận theo tuần" src="{_png(fig)}">'
+
+
+def diagnostics_section(artifacts: Path) -> str:
+    """Why a random split scores lower than a time split (`split_diagnostics`, train+valid only)."""
+    path = _latest(artifacts, "diag-*/results.json")
+    if path is None:
+        return ('<p class="empty">Chưa chạy <code>python -m fraud_risk.experiments.split_diagnostics'  # noqa: E501
+                "</code>.</p>")  # fmt: skip
+    res = json.loads(path.read_text("utf-8"))
+    names = {"time": "theo thời gian", "random": "ngẫu nhiên"}
+    rows = []
+    for key, v in res["matrix"].items():
+        train, valid = (part.split("_")[1] for part in key.split("__"))
+        rows.append([
+            f"Train {names[train]}", f"Validation {names[valid]}", vn(v["pr_auc"]),
+            vn(v["pr_auc_at_common_prevalence"]), pct(v["prevalence"], 2),
+            vn(v["recall_at_fpr"], 2),
+        ])  # fmt: skip
+    matrix = _table(
+        ["Huấn luyện", "Đánh giá", "PR-AUC", "PR-AUC cùng tỷ lệ gian lận", "Tỷ lệ gian lận",
+         "Recall @ FPR 5%"], rows, numeric_from=2)  # fmt: skip
+    late = res["random_valid_without_early_weeks"]["scores"]["train_time"]["pr_auc"]
+    same = res["same_rows_in_time_valid_period"]["pr_auc_diff_random_minus_time_train"]
+    facts = (
+        f'<p class="meta">Chỉ dùng train và validation (không đọc test) · <code>{escape(path.parent.name)}</code>. '  # noqa: E501
+        f"Đổi cách huấn luyện chỉ đổi PR-AUC 0,001–0,012; đổi tập đánh giá đổi khoảng 0,07. "
+        f"Bỏ các tuần đầu khỏi validation ngẫu nhiên: PR-AUC {vn(late)} (mô hình train theo thời gian). "  # noqa: E501
+        f"Trên cùng các dòng, train ngẫu nhiên hơn {vn(same['diff'], 4)} "
+        f"[{vn(same['low'], 4)}; {vn(same['high'], 4)}] (lấy mẫu theo dòng nên khoảng hẹp hơn thực tế).</p>"  # noqa: E501
+    )
+    return f"{facts}{matrix}{diagnostics_chart(res)}"
+
+
+def _run_label(artifacts: Path, run_id: str) -> str:
+    """Config name and feature set of a run, so the paired table is readable."""
+    folder = artifacts / "runs" / run_id
+    try:
+        status = yaml.safe_load((folder / "config.yaml").read_text("utf-8")).get("status", "")
+    except (OSError, AttributeError):
+        status = ""
+    return f"<code>{escape(run_id)}</code> · {escape(feature_label(folder))} đặc trưng · {escape(str(status))}"  # noqa: E501
+
+
+def paired_section(artifacts: Path) -> str:
+    """Paired bootstrap of GBM variants against the baseline run (`paired_comparison`)."""
+    files = sorted((artifacts / "experiments").glob("paired-*.json"))
+    if not files:
+        return ('<p class="empty">Chưa chạy <code>python -m fraud_risk.experiments.paired_comparison'  # noqa: E501
+                "</code>.</p>")  # fmt: skip
+    candidates: dict[str, dict[str, Any]] = {}
+    base, rows_n, boots = "", 0, 0
+    for f in files:
+        data = json.loads(f.read_text("utf-8"))
+        candidates.update(data["candidates"])
+        base, rows_n, boots = data["baseline"], data["validation_rows"], data["n_resamples"]
+
+    def ci(d: dict[str, float]) -> str:
+        sign = "ok" if d["low"] > 0 or d["high"] < 0 else "no"
+        return f'<span class="{sign}">{vn(d["diff"], 4)} [{vn(d["low"], 4)}; {vn(d["high"], 4)}]</span>'  # noqa: E501
+
+    rows = [
+        [_run_label(artifacts, run), ci(c["pr_auc_diff"]), ci(c["pr_auc_diff_clustered"]),
+         ci(c["recall_at_fpr_diff_clustered"])]
+        for run, c in candidates.items()
+    ]  # fmt: skip
+    table = _table(
+        ["Biến thể", "Chênh PR-AUC (theo dòng)", "Chênh PR-AUC (theo cụm card1)",
+         "Chênh recall @ FPR 5% (theo cụm)"], rows, numeric_from=1)  # fmt: skip
+    return (
+        f'<p class="meta">So với <code>{escape(base)}</code> trên cùng {vn(rows_n, 0)} dòng validation, '  # noqa: E501
+        f"bootstrap {boots} lần. Xanh: khoảng tin cậy loại trừ 0. Lấy mẫu theo dòng cho khoảng quá hẹp vì "  # noqa: E501
+        "giao dịch của một thẻ tương quan; dùng cột theo cụm. Chưa hiệu chỉnh nhiều lần so sánh.</p>"  # noqa: E501
+        f"{table}"
+    )
 
 
 # ---------- page ----------
 
 CSS = """
-:root{--bg:#f9f9f7;--surface:#ffffff;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--line:#e1e0d9}
+:root{--bg:#f9f9f7;--surface:#ffffff;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--line:#e1e0d9;
+--ok:#1a7f37;--accent:#2a78d6}
+@media (prefers-color-scheme: dark){:root{--bg:#121212;--surface:#1c1c1c;--ink:#f1f0ea;
+--ink2:#b5b3aa;--muted:#8b8982;--line:#34332f;--ok:#58c27a;--accent:#6aa6f0}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
 font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:1100px;margin:0 auto;padding:24px 16px 48px}
@@ -411,6 +540,11 @@ font-variant-numeric:tabular-nums}img{max-width:100%;margin:12px 0;background:#f
 pre{background:var(--surface);border:1px solid var(--line);padding:12px;overflow-x:auto;
 font-size:12px}
 details{margin:12px 0}summary{cursor:pointer;color:var(--ink2)}
+nav{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);
+padding:8px 0;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px}
+nav a{color:var(--accent);text-decoration:none}nav a:hover{text-decoration:underline}
+h2{scroll-margin-top:48px}.ok{color:var(--ok);font-weight:600}
+img{padding:8px;border-radius:8px}code{font-size:12px}
 """
 
 
@@ -423,8 +557,11 @@ def build(artifacts: Path, git_sha: str = "") -> str:
 <body><main>
 <h1>Payment Intelligence Ecosystem</h1>
 <p class="meta">Dashboard tĩnh sinh bởi <code>make dashboard</code> từ kết quả các lần chạy{sha}. Không dùng dữ liệu thật của công ty.</p>
-<h2>Product 01 · Độ ổn định thanh toán</h2>{reliability_section(artifacts)}
-<h2>Product 02 · Rủi ro gian lận</h2>{fraud_section(artifacts)}
+<nav><a href="#p01">Product 01 · Độ ổn định</a><a href="#p02">Product 02 · Gian lận</a><a href="#diag">Chia ngẫu nhiên vs thời gian</a><a href="#paired">Kiểm định cặp</a></nav>
+<h2 id="p01">Product 01 · Độ ổn định thanh toán</h2>{reliability_section(artifacts)}
+<h2 id="p02">Product 02 · Rủi ro gian lận</h2>{fraud_section(artifacts)}
+<h2 id="diag">Vì sao chia ngẫu nhiên cho PR-AUC thấp hơn</h2>{diagnostics_section(artifacts)}
+<h2 id="paired">Biến thể đặc trưng so với mô hình gốc (kiểm định cặp)</h2>{paired_section(artifacts)}
 </main></body></html>
 """  # noqa: E501
 
