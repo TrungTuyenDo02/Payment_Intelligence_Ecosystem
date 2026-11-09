@@ -15,6 +15,8 @@ FORBIDDEN_FEATURES = frozenset({LABEL, "TransactionID", "TransactionDT"})
 # customers; card1+addr1+P_emaildomain (~90k groups) is closer to one customer.
 HISTORY_KEYS = {"card1": ("card1",), "uid": ("card1", "addr1", "P_emaildomain")}
 HISTORY_STATS = ("prev_count", "amt_vs_mean", "secs_since_prev")
+# Windowed counts stay on one scale over time; the running `prev_count` grows with the date.
+HISTORY_WINDOWS = {"count_24h": 24 * 3600, "count_7d": 7 * 24 * 3600}
 
 
 def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
@@ -36,6 +38,23 @@ def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
     return out.reindex(X.index)
 
 
+def _window_count(X: pd.DataFrame, key: tuple[str, ...], seconds: int) -> pd.Series:
+    """Earlier transactions of the same entity within `seconds` before this one (no labels).
+
+    Rows are ordered by entity then time (ties keep file order), so a same-second transaction
+    counts the one listed before it but never the one after, as in `_history`.
+    """
+    gid = X.groupby(list(key), dropna=False, sort=False).ngroup().to_numpy(dtype="int64")
+    t = X["TransactionDT"].to_numpy(dtype="int64")
+    order = np.lexsort((t, gid))  # stable: gid first, then time
+    scale = 1 << 40  # larger than any TransactionDT, so gid * scale + t sorts by (gid, t)
+    combined = gid[order] * scale + t[order]
+    lower = np.searchsorted(combined, combined - seconds, side="left")
+    counts = np.empty(len(X), dtype="int64")
+    counts[order] = np.arange(len(X)) - lower
+    return pd.Series(counts, index=X.index)
+
+
 DERIVED_FEATURES = {
     "log_amount": (("TransactionAmt",), lambda X: np.log1p(X["TransactionAmt"].clip(lower=0))),
     "hour_of_day": (("TransactionDT",), lambda X: (X["TransactionDT"] // 3600) % 24),
@@ -46,6 +65,14 @@ DERIVED_FEATURES = {
         )
         for k, key in HISTORY_KEYS.items()
         for stat in HISTORY_STATS
+    },
+    **{
+        f"{k}_{name}": (
+            (*key, "TransactionDT"),
+            lambda X, key=key, seconds=seconds: _window_count(X, key, seconds),
+        )
+        for k, key in HISTORY_KEYS.items()
+        for name, seconds in HISTORY_WINDOWS.items()
     },
 }
 

@@ -163,3 +163,20 @@ def test_card_history_uses_only_earlier_transactions():
     later.loc[7, "TransactionAmt"] = 9999.0
     g = build_features(later, spec)
     pd.testing.assert_frame_equal(f.drop(index=7), g.drop(index=7))
+
+
+def test_windowed_counts_look_back_only_and_stay_on_one_scale():
+    # Card 1 at t = 0, 3600, 90000, 90000 (a tie), 700000; 24h = 86400 s, 7d = 604800 s.
+    X = pd.DataFrame(
+        {"card1": [1, 1, 1, 1, 1, 2], "TransactionDT": [0, 3600, 90000, 90000, 650000, 5]},
+    )
+    spec = FeatureSpec(numeric=(), categorical=(), derived=("card1_count_24h", "card1_count_7d"))
+    f = build_features(X, spec)
+    # t=90000: the first row (0) is 90000 s ago, outside 24h; 3600 is inside. The tie counts
+    # the earlier-listed row only. t=650000: only the two rows at 90000 are within 7 days.
+    assert f["card1_count_24h"].tolist() == [0, 1, 1, 2, 0, 0]
+    assert f["card1_count_7d"].tolist() == [0, 1, 2, 3, 2, 0]
+    later = X.copy()
+    later.loc[4, "TransactionDT"] = 800000  # moving the latest row must not change earlier rows
+    g = build_features(later, spec)
+    pd.testing.assert_frame_equal(f.drop(index=4), g.drop(index=4))

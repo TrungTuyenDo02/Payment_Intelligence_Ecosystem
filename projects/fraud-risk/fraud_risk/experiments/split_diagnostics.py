@@ -38,6 +38,7 @@ from fraud_risk.scripts.run_baseline import KNOWN_ERRORS, load_checked_data
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_CONFIG = REPO_ROOT / "projects" / "fraud-risk" / "configs" / "leakage.yaml"
 WEEK_SECONDS = 7 * 24 * 3600
+EARLY_WEEKS = 4  # weeks 0-3: low fraud rate (1.9-2.8%); chosen after looking at the weekly table
 
 
 def reweighted_pr_auc(y: pd.Series, scores: np.ndarray, prevalence: float) -> float:
@@ -45,6 +46,25 @@ def reweighted_pr_auc(y: pd.Series, scores: np.ndarray, prevalence: float) -> fl
     p = float(y.mean())
     weight = (prevalence / (1 - prevalence)) * ((1 - p) / p)
     return float(average_precision_score(y, scores, sample_weight=np.where(y == 1, weight, 1.0)))
+
+
+def paired_bootstrap_diff(
+    y: pd.Series, scores_a: np.ndarray, scores_b: np.ndarray, *, n_resamples: int, seed: int
+) -> dict[str, float]:
+    """PR-AUC(a) - PR-AUC(b) on the same rows, with a 95% percentile interval (seeded)."""
+    rng = np.random.default_rng(seed)
+    yv = y.to_numpy()
+    diffs = []
+    for _ in range(n_resamples):
+        idx = rng.integers(0, len(yv), len(yv))
+        if yv[idx].sum() == 0:
+            continue
+        diffs.append(
+            average_precision_score(yv[idx], scores_a[idx])
+            - average_precision_score(yv[idx], scores_b[idx])
+        )
+    low, high = np.percentile(diffs, [2.5, 97.5])
+    return {"diff": float(np.mean(diffs)), "low": float(low), "high": float(high)}
 
 
 def _score(
@@ -114,6 +134,20 @@ def run_diagnostics(
             out.append(entry)
         return out
 
+    # Does the early, low-fraud period explain the gap? Same models, same rows, minus weeks 0-3.
+    late = rand.valid[(time.loc[rand.valid] // WEEK_SECONDS) >= EARLY_WEEKS]
+    random_valid_late = {
+        f"train_{name}": _score(y.loc[late], model.score(features.loc[late]), fpr, common)
+        for name, model in models.items()
+    }
+    paired = paired_bootstrap_diff(
+        y.loc[window],
+        models["random"].score(features.loc[window]),
+        models["time"].score(features.loc[window]),
+        n_resamples=cfg.metrics.bootstrap_resamples,
+        seed=cfg.seed,
+    )
+
     overlap = {
         name: entity_overlap(X, y, Split(name, train, valid_idx, pd.Index([]), {}), [["card1"]])[0][
             "share_seen_in_train"
@@ -124,7 +158,16 @@ def run_diagnostics(
         "common_prevalence": common,
         "pre_test_rows": int(len(pre)),
         "matrix": matrix,
-        "same_rows_in_time_valid_period": {"rows": int(len(window)), "scores": same_rows},
+        "same_rows_in_time_valid_period": {
+            "rows": int(len(window)),
+            "scores": same_rows,
+            "pr_auc_diff_random_minus_time_train": paired,
+        },
+        "random_valid_without_early_weeks": {
+            "early_weeks": EARLY_WEEKS,
+            "rows": int(len(late)),
+            "scores": random_valid_late,
+        },
         "weekly_time_valid": weekly(models["time"], frozen.valid),
         "weekly_random_valid": weekly(models["random"], rand.valid),
         "card1_seen_share": overlap,
