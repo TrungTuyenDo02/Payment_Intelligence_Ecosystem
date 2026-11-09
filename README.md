@@ -150,7 +150,7 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | [Đặc tả](docs/architecture/stage-e-spec.md) · [Báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting |
 | [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md) · [Dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo thực tập |
-| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0007) |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0008) |
 
 ## Giấy phép
 

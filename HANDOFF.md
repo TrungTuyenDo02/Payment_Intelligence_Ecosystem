@@ -170,4 +170,4 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
 | [Đặc tả](docs/architecture/stage-e-spec.md) và [báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ, Gradient Boosting |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md), [dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo |
-| [ADR 0001–0007](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh |
+| [ADR 0001–0008](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh, đặc trưng lịch sử thực thể chỉ nhìn quá khứ |
