@@ -217,7 +217,7 @@ Luật & Test & 0,078 [0,074; 0,082] & 3,44\% & 0,22 \\ \bottomrule
 
 Logistic Regression vượt baseline luật với khoảng tin cậy không chồng nhau, và trên test đạt khoảng 4,8 lần mức ngẫu nhiên. Kết quả giảm từ validation sang test, kể cả ở chỉ số không phụ thuộc tỷ lệ lớp (recall tại FPR 5\%: 0,33 xuống 0,28), cho thấy mức giảm không chỉ do tỷ lệ gian lận thấp hơn mà phù hợp với trôi khái niệm \cite{gama}. Giá trị 0 của baseline luật trên validation là do điểm luật chỉ nhận vài mức rời rạc: mức chặt nhất báo nhầm 5,1\% giao dịch hợp lệ, vượt ràng buộc 5\%. Có hai lần chạy test (\code{run-515a1190a0a4}, trước khi thêm chỉ số FPR, và \code{run-d6faa4699008}); mọi chỉ số chung trùng khớp, nên lần thứ hai không được dùng để chọn lại mô hình.
 
-\paragraph{Gradient Boosting} Lần chạy \code{run-f8807cb6f780} chọn $\nu=0{,}1$, 400 cây, 15 lá (PR-AUC validation 0,497 [0,483; 0,514]); cấu hình được chốt trước khi mở tập test một lần. Trên test, PR-AUC đạt \textbf{0,408} [0,390; 0,424], gấp khoảng 2,5 lần Logistic Regression với khoảng tin cậy không giao nhau; recall tại FPR 5\% là 0,51 (Logistic Regression 0,28). Mức giảm từ validation sang test (0,089) tương đương của Logistic Regression (0,080). Tổ hợp tốt nhất nằm ở cạnh lưới (số cây lớn nhất), nên chưa biết tăng thêm có tốt hơn không.
+\paragraph{Gradient Boosting} Lần chạy \code{run-f8807cb6f780} chọn $\nu=0{,}1$, 400 cây, 15 lá (PR-AUC validation 0,497 [0,483; 0,514]); cấu hình được chốt trước khi mở tập test một lần. Trên test, PR-AUC đạt \textbf{0,408} [0,390; 0,424], gấp khoảng 2,5 lần Logistic Regression với khoảng tin cậy không giao nhau; recall tại FPR 5\% là 0,51 (Logistic Regression 0,28). Mức giảm từ validation sang test (0,089) tương đương của Logistic Regression (0,080). Lưới mở rộng đến 1.200 cây không cho kết quả tốt hơn. Trên validation, đặc trưng lịch sử thực thể tự dựng không cải thiện đo được: bỏ các cột đếm \code{C1}--\code{C14} làm PR-AUC rơi từ 0,497 xuống 0,158, cho thấy chúng đã chứa phần lớn thông tin theo thực thể; khoá có \code{D1n} cho +0,0114 khi lấy mẫu theo dòng nhưng [$-$0,0026; +0,0249] khi lấy mẫu theo cụm \code{card1}.
 
 \paragraph{Thí nghiệm rò rỉ} Bảng~\ref{tab:leak} báo cáo lần chạy \code{leak-827d929eaa73}, chỉ trên validation.
 
@@ -235,7 +235,7 @@ Biến thể & PR-AUC [95\% CI] & Chênh \\ \midrule
 \end{tabular}
 \end{table}
 
-Rò nhãn qua mã hoá theo nhãn (d) là biến thể duy nhất làm điểm tăng rõ. Biến thể (b) và (e) đổi PR-AUC không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy. Ngược kỳ vọng, chia ngẫu nhiên (a) cho điểm \emph{thấp hơn}; tỷ lệ gian lận thấp hơn của validation ngẫu nhiên (3,55\% so với 3,90\%) chỉ giải thích khoảng một phần ba mức giảm, phần còn lại chưa được giải thích. 98,7\% dòng validation có \code{card1} đã gặp trong train (85,9\% với \code{card1}+\code{addr1}+\code{P\_emaildomain}).
+Rò nhãn qua mã hoá theo nhãn (d) là biến thể duy nhất làm điểm tăng rõ. Biến thể (b) và (e) đổi PR-AUC không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy. Ngược kỳ vọng, chia ngẫu nhiên (a) cho điểm \emph{thấp hơn}. Chẩn đoán (chỉ train và validation) cho thấy hai validation là hai tập dòng khác nhau: đổi cách huấn luyện chỉ đổi PR-AUC 0,001--0,012, còn đổi tập đánh giá đổi khoảng 0,07; tỷ lệ gian lận giải thích khoảng 0,012, và các tuần đầu có tỷ lệ gian lận thấp (1,9--2,8\%) giải thích khoảng một nửa mức chênh (phân tích sau khi xem dữ liệu theo tuần); khoảng 0,03 còn lại chưa giải thích. Recall tại FPR 5\% gần như không đổi, nên không có bằng chứng mô hình kém đi. 98,7\% dòng validation có \code{card1} đã gặp trong train (85,9\% với \code{card1}+\code{addr1}+\code{P\_emaildomain}).
 
 \subsection{Giám sát độ ổn định thanh toán}\label{sec:res-rel}
 Ngưỡng chọn trên bộ tuning là 7 cho D-A và 8 cho D-B (gộp $k=2$ khung, tức 30 phút). Cấu hình được commit lúc 14:27:02 UTC, trước lần chạy duy nhất trên bộ report lúc 14:27:31 UTC.
@@ -290,7 +290,7 @@ Theo giao thức, ngưỡng không được chỉnh lại sau khi xem kết qu�
 % ===================================================================== 7
 \section{Hướng phát triển}
 \begin{enumerate}
-  \item Giải thích vì sao chia ngẫu nhiên làm PR-AUC giảm; mở rộng lưới Gradient Boosting với cấu hình và tập test mới.
+  \item Kiểm chứng phần còn lại của mức chênh khi chia ngẫu nhiên, và kiểm tra khoá có \code{D1n} trên giai đoạn dữ liệu mới với cấu hình và tập test mới.
   \item Ngưỡng riêng cho từng loại KPI, đánh giá trên một bộ report mới.
   \item Detector có mùa vụ \cite{fpp} hoặc tích luỹ (CUSUM) cho sự cố yếu nhưng kéo dài.
   \item API chấm điểm chỉ hỗ trợ quyết định, không tự động chặn giao dịch.

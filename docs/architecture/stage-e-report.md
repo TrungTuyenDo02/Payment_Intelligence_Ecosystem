@@ -37,10 +37,27 @@ Thực thể lặp lại: 98,7% dòng validation có `card1` đã gặp trong tr
 
 - Rò nhãn rõ nhất là mã hoá `card1` bằng nhãn validation: PR-AUC tăng 0,063, và chỉ số này gần như không đổi khi dùng nhãn train đúng cách (+0,007).
 - Fit tiền xử lý trên mọi dòng và khoảng trống 7–14 ngày chỉ đổi PR-AUC không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy (khoảng 0,02). Với cấu hình baseline này, các biến thể đó **không tạo khác biệt đo được**.
-- **Kết quả ngược kỳ vọng:** chia ngẫu nhiên cho PR-AUC *thấp hơn* 0,068, trong khi rò rỉ thời gian thường làm điểm cao lên. Điều chưa giải thích được hết:
-  - Tỷ lệ gian lận của validation bị chia ngẫu nhiên là 3,55% so với 3,90% của validation theo thời gian. PR-AUC phụ thuộc tỷ lệ gian lận; nếu chỉ nhân theo tỷ lệ này, 0,245 chỉ xuống khoảng 0,223. Phần này giải thích khoảng một phần ba mức giảm. **Khoảng 0,046 còn lại chưa có lời giải thích.**
-  - Tỷ lệ gian lận không đứng yên theo thời gian: theo tuần dao động từ 1,85% đến 5,06% (train 3,38%, validation 3,90%). Điều này cho thấy dữ liệu thay đổi theo thời gian, nhưng validation **không nổi bật như một đợt bùng phát**: các tuần 4–10 của train cũng cao (3,8–4,6%). Vì vậy giả thuyết "giai đoạn bùng phát" chỉ được hỗ trợ yếu.
-  - Cơ chế của mô hình tuyến tính (gian lận dồn theo đợt khiến dễ phân tách hơn) là **giả thuyết, chưa kiểm tra**.
+- **Kết quả ngược kỳ vọng:** chia ngẫu nhiên cho PR-AUC *thấp hơn* 0,068, trong khi rò rỉ thời gian thường làm điểm cao lên. Mục 2b phân tích nguyên nhân: phần lớn mức chênh đến từ việc hai validation **không phải cùng một tập dòng**, chứ không phải từ chất lượng mô hình.
+
+### 2b. Vì sao chia ngẫu nhiên cho PR-AUC thấp hơn (chẩn đoán, 2026-11-09)
+
+Lần chạy `diag-827d929eaa73` (`fraud_risk.experiments.split_diagnostics`), **chỉ dùng train và validation** của cách chia đã chốt (472.432 dòng); không dòng test nào được chấm hay đọc nhãn (test tự động đảo nhãn test và kiểm tra kết quả không đổi). Chia ngẫu nhiên ở đây xáo trộn *trong* 80% đầu, nên số liệu hơi khác `leak-827d929eaa73` (0,179 so với 0,177). Mô hình là Logistic Regression của Stage B.
+
+**Ma trận 2×2**, PR-AUC (recall tại FPR 5%):
+
+| Huấn luyện trên | Validation theo thời gian | Validation ngẫu nhiên |
+| --- | --- | --- |
+| Train theo thời gian | 0,245 (0,325) | 0,179 (0,311) |
+| Train ngẫu nhiên | 0,257 (0,345) | 0,180 (0,329) |
+
+- **Tập đánh giá quyết định, mô hình gần như không.** Đổi cách huấn luyện đổi PR-AUC 0,001–0,012; đổi tập đánh giá đổi khoảng 0,07.
+- **Tỷ lệ gian lận** (3,54% so với 3,90%): quy về cùng tỷ lệ bằng trọng số chỉ nâng 0,179 lên 0,191, tức khoảng **0,012**, ít hơn ước lượng 0,022 trước đây.
+- **Giai đoạn đầu:** validation ngẫu nhiên trải trên cả 6 tháng, gồm tuần 0–3 (khoảng 31.000 dòng) có tỷ lệ gian lận chỉ 1,9–2,8% và PR-AUC theo tuần thấp (tuần 1–2 khoảng 0,10). Bỏ tuần 0–3 thì PR-AUC của validation ngẫu nhiên tăng từ 0,179 lên 0,212 (mô hình train theo thời gian), tức giải thích khoảng một nửa mức chênh 0,066. Hai phần này (tỷ lệ gian lận và giai đoạn đầu) chồng nhau nên không cộng được. Việc chọn "tuần 0–3" được quyết định **sau khi đã xem bảng theo tuần**, nên đây là phân tích sau, không phải giả thuyết đặt trước.
+- **Trên cùng 29.223 dòng** (validation ngẫu nhiên nằm trong giai đoạn của validation theo thời gian) mô hình train ngẫu nhiên đạt 0,245 và mô hình train theo thời gian đạt 0,234. Chênh +0,0117, khoảng tin cậy 95% [0,0087; 0,0145] (bootstrap cặp theo dòng, nên khoảng này hẹp hơn thực tế): lợi thế nhỏ của việc train có các giao dịch lân cận về thời gian.
+- **Thực thể lặp lại không phải nguyên nhân:** tỷ lệ `card1` đã gặp trong train là 99,1% (ngẫu nhiên) và 98,7% (theo thời gian).
+- **Chưa giải thích:** sau khi bỏ tuần 0–3, vẫn còn khoảng 0,03 giữa 0,245 và 0,212. Vài tuần trong khoảng 6–13 cũng có PR-AUC thấp, nhưng chưa kiểm tra riêng. Khoảng tin cậy cho điểm "bỏ tuần 0–3" chưa được tính.
+
+**Kết luận.** Nhận định cũ "chia ngẫu nhiên làm điểm thấp hơn" dễ gây hiểu nhầm: hai cách chia dùng hai tập đánh giá khác nhau, và PR-AUC gộp nhiều tuần có tỷ lệ gian lận khác nhau thấp hơn trung bình từng tuần. Recall tại FPR 5%, chỉ số không phụ thuộc tỷ lệ gian lận, gần như không đổi (0,31–0,34), nên không có bằng chứng chia ngẫu nhiên làm *mô hình* kém đi. Điều này không có nghĩa chia ngẫu nhiên là chấp nhận được: nó vẫn trộn tương lai vào train, như lợi thế +0,0117 trên cùng dòng cho thấy.
 
 ## 3. Gradient Boosting trên IEEE-CIS
 
@@ -52,7 +69,7 @@ Lần chạy `run-f8807cb6f780` (validation). Lưới 8 tổ hợp, chọn theo 
 | Logistic Regression (Stage B) | 0,245 | 0,165 | 0,28 | `run-d6faa4699008` |
 | Gradient Boosting | 0,497 [0,483; 0,514] | **0,408** [0,390; 0,424] | **0,51** | `run-f8807cb6f780` |
 
-Trên validation, Gradient Boosting có recall 0,588 tại FPR 5% và 0,480 khi giữ precision 0,50. PR-AUC trên train là 0,584, cao hơn validation 0,497, nên mô hình khớp train tốt hơn. **Hạn chế:** tổ hợp tốt nhất nằm ở cạnh lưới (`max_iter = 400` là giá trị lớn nhất), nên chưa biết tăng thêm có tốt hơn không. Kết quả validation còn có thể hơi lạc quan vì đã chọn tổ hợp trên chính tập này; chỉ số test mới là con số để báo cáo.
+Trên validation, Gradient Boosting có recall 0,588 tại FPR 5% và 0,480 khi giữ precision 0,50. PR-AUC trên train là 0,584, cao hơn validation 0,497, nên mô hình khớp train tốt hơn. **Hạn chế (đã kiểm tra ở mục 3b):** tổ hợp tốt nhất nằm ở cạnh lưới (`max_iter = 400`); lưới rộng đến 1.200 vòng không cho kết quả tốt hơn. Kết quả validation còn có thể hơi lạc quan vì đã chọn tổ hợp trên chính tập này; chỉ số test mới là con số để báo cáo.
 
 **Kết quả trên test** (118.108 dòng, tỷ lệ gian lận 3,44%; ngưỡng 0,853 chọn trên validation, config `frozen`, commit `89a8ed5`, chạy một lần không `--force`):
 
@@ -61,22 +78,42 @@ Trên validation, Gradient Boosting có recall 0,588 tại FPR 5% và 0,480 khi 
 - Recall tại FPR 5%: 0,514 (Logistic Regression 0,28). Giữ precision 0,50 thì recall là 0,379.
 - **Hạn chế:** sự sụt giảm từ validation sang test cho thấy chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian (mục 2). Chưa có giải thích nguyên nhân cụ thể, và mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
 
-## 3b. Thí nghiệm bổ sung: đặc trưng lịch sử thực thể (2026-11-08, chỉ validation)
+## 3b. Thí nghiệm bổ sung: đặc trưng lịch sử thực thể (2026-11-08 và 2026-11-09, chỉ validation)
 
-Câu hỏi: thêm hành vi quá khứ của cùng thực thể có giúp Gradient Boosting không? Ba đặc trưng, chỉ dùng các giao dịch **trước đó**, không dùng nhãn (`_history` trong `baseline_features.py`, có test "đổi giao dịch sau không đổi đặc trưng của giao dịch trước"): số giao dịch trước, số tiền chia trung bình số tiền trước, số giây từ giao dịch trước. Cùng dữ liệu, cách chia, lưới và mô hình với `gbm.yaml`.
+Câu hỏi: thêm hành vi quá khứ của cùng thực thể có giúp Gradient Boosting không? Các đặc trưng chỉ dùng giao dịch **trước đó**, không dùng nhãn (`_history`, `_window_count` trong `baseline_features.py`, có test "đổi giao dịch sau không đổi đặc trưng của giao dịch trước"): số giao dịch trước, số tiền chia trung bình số tiền trước, số giây từ giao dịch trước, và số giao dịch trong 24 giờ và 7 ngày trước. Cùng dữ liệu, cách chia, lưới và mô hình với `gbm.yaml`. Tất cả config ở trạng thái `draft`; **không** chạy trên test.
 
 | Config | Khoá thực thể | PR-AUC train | PR-AUC validation [95% CI] | Recall @ FPR 5% | Lần chạy |
 | --- | --- | --- | --- | --- | --- |
-| `gbm.yaml` (gốc) | — | 0,584 | 0,497 [0,483; 0,514] | 0,59 | `run-f8807cb6f780` |
-| `gbm-history-card1.yaml` | `card1` (13.553 giá trị) | 0,689 | 0,497 [0,484; 0,513] | 0,59 | `run-0865527c0943` |
-| `gbm-history-uid.yaml` | `card1+addr1+P_emaildomain` (90.375 nhóm) | 0,596 | 0,499 [0,484; 0,517] | 0,60 | `run-d15b7985126a` |
+| `gbm.yaml` (gốc) | — | 0,584 | 0,497 [0,483; 0,514] | 0,588 | `run-f8807cb6f780` |
+| `gbm-history-card1` (đếm tích luỹ) | `card1` | 0,689 | 0,497 [0,484; 0,513] | 0,59 | `run-0865527c0943` |
+| `gbm-history-uid` (đếm tích luỹ) | `card1+addr1+P_emaildomain` | 0,596 | 0,499 [0,484; 0,517] | 0,60 | `run-d15b7985126a` |
+| `gbm-history-window-card1` (24h, 7d) | `card1` | 0,690 | 0,5005 [0,487; 0,516] | 0,593 | `run-8f6422d09ac8` |
+| `gbm-history-window-uid` (24h, 7d) | `card1+addr1+P_emaildomain` | 0,594 | 0,4895 [0,476; 0,507] | 0,588 | `run-b7f7e893f155` |
+| `gbm-window-uidd` (24h, 7d) | uid + `D1n` | 0,600 | 0,5085 [0,493; 0,523] | 0,613 | `run-f42906337c71` |
+| `gbm-wide-grid` (`max_iter` đến 1.200) | — | 0,584 | 0,497 [0,483; 0,514] | 0,588 | `run-14499cc27f0a` |
 
-**Đọc kết quả.**
+**Kiểm tra các giả thuyết.**
 
-- **Không cải thiện đo được** trên validation: chênh không quá 0,002, nằm trong khoảng tin cậy.
-- Với `card1`, PR-AUC train tăng mạnh (0,584 → 0,689) mà validation đứng yên: mô hình học thuộc train hơn, không tổng quát hơn. `card1` có khoảng 44 giao dịch mỗi giá trị, nên nó không phải "một khách hàng".
-- Giả thuyết "đặc trưng mới trùng thông tin với `C1–C14`" đã được kiểm tra và **bác bỏ**: tương quan Spearman chỉ 0,01–0,15. Nguyên nhân chưa giải thích.
-- Hai config này `draft`, **không** đăng ký cho tập test; không chạy `gbm-final` với chúng.
+1. *Đặc trưng đếm tích luỹ không dừng theo thời gian.* **Đúng.** Số giữa của `card1_prev_count` là 186 ở train và 629 ở validation; 4,2% dòng validation vượt mọi giá trị trong train. Tỷ lệ gian lận của giao dịch đầu tiên của một `card1` là 2,2% (train) và 5,3% (validation). Nhưng thay bằng đếm theo cửa sổ 24 giờ và 7 ngày (ổn định hơn) vẫn **không cải thiện** (+0,004 cho `card1`, −0,008 cho `uid`), nên đây không phải nguyên nhân chính.
+2. *Các cột `C1–C14` đã chứa thông tin theo thực thể.* **Được ủng hộ mạnh.** Bỏ `C1–C14` thì PR-AUC validation rơi từ 0,497 xuống **0,158** [0,149; 0,169] (`run-2d45949ed489`). Khi không có chúng, đặc trưng lịch sử của đề tài giúp một chút: 0,177 [0,167; 0,187] với `card1` (`run-c5e7a212d3b8`) và 0,174 [0,165; 0,185] với `uid` (`run-8ecd86529b93`), tăng khoảng 0,016–0,019, nhưng còn rất thấp so với 0,497. Kết luận: `C1–C14` mang gần như toàn bộ tín hiệu theo thực thể, mạnh hơn nhiều so với lịch sử mà đề tài tự dựng từ dữ liệu có sẵn. Phép đo Spearman 0,01–0,15 trước đây không phát hiện được điều này vì nó chỉ đo quan hệ đơn điệu từng cặp. Việc `C1–C14` đếm gì lấy từ thảo luận công khai của cuộc thi, **chưa xác minh với tài liệu gốc**.
+3. *Tổ hợp tốt nhất nằm ở cạnh lưới.* **Bác bỏ.** Với `max_iter` 400, 800, 1.200, tổ hợp tốt nhất vẫn là `learning_rate 0,1`, `max_iter 400`, `max_leaf_nodes 15` (0,497); `learning_rate 0,05` với 1.200 vòng cho 0,4969.
+4. *Khoá `card1+addr1+P_emaildomain` vẫn trộn nhiều khách hàng.* **Một phần.** Thêm `D1n` (ngày giao dịch trừ `D1`, ngày thẻ bắt đầu dùng; hằng số với một thẻ) cho kết quả tốt nhất: 0,5085.
+
+**Kiểm định cặp** (`paired_comparison`: fit lại mô hình đã chọn của từng lần chạy trên train, số validation fit lại khớp số đã ghi; bootstrap 500 lần, seed 42, trên cùng 118.108 dòng validation; chênh = biến thể trừ gốc):
+
+| Biến thể | Chênh PR-AUC, lấy mẫu theo dòng | Chênh PR-AUC, lấy mẫu theo cụm `card1` | Chênh recall @ FPR 5%, theo cụm |
+| --- | --- | --- | --- |
+| `gbm-window-uidd` | +0,0114 [+0,0054; +0,0168] | +0,0120 [−0,0026; +0,0249] | +0,0218 [+0,0033; +0,0424] |
+| `gbm-history-window-card1` | +0,0035 [−0,0016; +0,0085] | +0,0036 [−0,0086; +0,0162] | +0,0025 [−0,0125; +0,0175] |
+| `gbm-history-window-uid` | −0,0074 [−0,0118; −0,0030] | −0,0074 [−0,0191; +0,0035] | −0,0006 [−0,0169; +0,0150] |
+
+- Lấy mẫu theo dòng cho khoảng tin cậy quá hẹp vì các giao dịch của cùng một thẻ tương quan với nhau. Lấy mẫu theo cụm `card1` rộng gấp khoảng hai lần và là con số nên dùng.
+- Theo cụm, **chỉ chênh recall của `uidd` loại trừ 0** (cận dưới +0,0033, sát 0); chênh PR-AUC của `uidd` **không** đủ ý nghĩa ([−0,0026; +0,0249]). Hai biến thể còn lại không khác gốc.
+- So sánh 3 ứng viên với một mốc gốc, chưa hiệu chỉnh nhiều lần so sánh; `uidd` là tốt nhất trong các biến thể đã thử nên có nguy cơ chọn lọc có lợi. Cả hai mô hình đều chọn siêu tham số trên chính validation này.
+
+**Kết luận.** Đặc trưng lịch sử thực thể tự dựng **không cải thiện đo được** Gradient Boosting, vì `C1–C14` đã chứa phần lớn thông tin này. Khoá có `D1n` cho gợi ý cải thiện nhỏ (recall +0,02 tại FPR 5%) ở ranh giới ý nghĩa thống kê, chưa đủ để đổi cấu hình đã đóng băng. Muốn xác nhận cần bộ dữ liệu hoặc giai đoạn mới; mở tập test cho các config này cần quyết định của chủ dự án.
+
+**Tài liệu liên quan** (đã có trong danh mục tham khảo của bài báo): Saito và Rehmsmeier về tính phụ thuộc tỷ lệ lớp dương của PR-AUC; Gama về trôi khái niệm; Kapoor và Narayanan về rò rỉ; Jesus và cộng sự về recall tại FPR cố định. **Chưa xác minh, chưa đưa vào danh mục:** bài "Enhancing Credit Card Fraud Detection under Severe Class Imbalance using Cost-Sensitive Learning and Threshold Optimization" (EAI ISMLA) nói kiểm định theo thời gian cho PR-AUC thấp hơn kiểm định ngẫu nhiên trên bộ dữ liệu 2013; mới đọc được tóm tắt, chưa biết tác giả, năm, DOI. Các bài viết giải pháp hạng đầu của cuộc thi (UID từ `card1`, `addr1`, `D1n`) là nguồn thứ cấp, một trang trả về lỗi 403 khi tôi truy cập.
 
 ## 4. Việc chủ dự án cần làm (trên máy có dataset)
 

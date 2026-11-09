@@ -93,7 +93,7 @@
 \end{itemize}
 Điểm nhấn của đề tài là \textbf{đánh giá trung thực}: dữ liệu chia theo thời gian, mọi bước học chỉ dùng tập huấn luyện, tập kiểm tra chỉ được mở \emph{một lần} cho mỗi cấu hình đã chốt, và mọi lần chạy đều tái lập được.
 
-Kết quả chính: Logistic Regression đạt PR-AUC 0,165 trên tập test (gấp khoảng 4,8 lần đoán ngẫu nhiên; baseline luật 0,078). Bộ phát hiện bất thường có tính đến số lượng giao dịch bắt được 2/4 sự cố trên bộ đánh giá độc lập, không báo nhầm lần nào trong 7 ngày; bộ cơ sở đơn giản bắt 0/4 và báo nhầm 14 lần. Gradient Boosting đạt PR-AUC test 0,408, gấp khoảng 2,5 lần Logistic Regression, recall 0,51 tại FPR 5\%. Thí nghiệm rò rỉ cho thấy mã hoá theo nhãn có dùng nhãn validation làm PR-AUC tăng 0,063; tiền xử lý trên mọi dòng và khoảng trống thời gian không tạo khác biệt đo được; riêng chia ngẫu nhiên lại cho kết quả \emph{thấp hơn}, chưa giải thích hết.
+Kết quả chính: Logistic Regression đạt PR-AUC 0,165 trên tập test (gấp khoảng 4,8 lần đoán ngẫu nhiên; baseline luật 0,078). Bộ phát hiện bất thường có tính đến số lượng giao dịch bắt được 2/4 sự cố trên bộ đánh giá độc lập, không báo nhầm lần nào trong 7 ngày; bộ cơ sở đơn giản bắt 0/4 và báo nhầm 14 lần. Gradient Boosting đạt PR-AUC test 0,408, gấp khoảng 2,5 lần Logistic Regression, recall 0,51 tại FPR 5\%. Thí nghiệm rò rỉ cho thấy mã hoá theo nhãn có dùng nhãn validation làm PR-AUC tăng 0,063; tiền xử lý trên mọi dòng và khoảng trống thời gian không tạo khác biệt đo được; riêng chia ngẫu nhiên cho PR-AUC thấp hơn vì hai validation là hai tập dòng khác nhau (mục 4.3), không phải vì mô hình kém đi; đặc trưng lịch sử thực thể tự dựng không cải thiện đo được vì các cột \code{C1}--\code{C14} đã chứa phần lớn thông tin đó.
 
 \vspace{0.5em}
 \begin{keypoint}
@@ -372,7 +372,15 @@ Khoảng trống 14 ngày & 0,241 [0,231; 0,253] & $-$0,004 & 0,32 \\ \bottomrul
 Thực thể lặp lại: 98,7\% dòng validation có \code{card1} đã gặp trong train; với \code{card1}+\code{addr1}+\code{P\_emaildomain} là 85,9\%.
 
 \begin{keypoint}
-\textbf{Đọc kết quả.} (1) Rò nhãn rõ nhất là mã hoá \code{card1} bằng nhãn validation: PR-AUC tăng 0,063, trong khi bản dùng nhãn train đúng cách chỉ tăng 0,007. (2) Tiền xử lý trên mọi dòng và khoảng trống 7--14 ngày đổi PR-AUC không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy (khoảng 0,02): với baseline này chúng không tạo khác biệt đo được. (3) \textbf{Ngược kỳ vọng}, chia ngẫu nhiên cho PR-AUC \emph{thấp hơn} 0,068. Tỷ lệ gian lận của validation ngẫu nhiên thấp hơn (3,55\% so với 3,90\%) chỉ giải thích khoảng một phần ba mức giảm; khoảng 0,046 còn lại \emph{chưa có lời giải thích}. Giả thuyết ``validation rơi vào giai đoạn gian lận bùng phát'' chỉ được hỗ trợ yếu, vì các tuần 4--10 của train cũng có tỷ lệ cao (3,8--4,6\%).
+\textbf{Đọc kết quả.} (1) Rò nhãn rõ nhất là mã hoá \code{card1} bằng nhãn validation: PR-AUC tăng 0,063, trong khi bản dùng nhãn train đúng cách chỉ tăng 0,007. (2) Tiền xử lý trên mọi dòng và khoảng trống 7--14 ngày đổi PR-AUC không quá 0,004, nhỏ hơn độ rộng khoảng tin cậy (khoảng 0,02): với baseline này chúng không tạo khác biệt đo được. (3) \textbf{Ngược kỳ vọng}, chia ngẫu nhiên cho PR-AUC \emph{thấp hơn} 0,068. Chẩn đoán bên dưới cho thấy nguyên nhân chủ yếu nằm ở tập đánh giá, không ở mô hình.
+\end{keypoint}
+
+\begin{keypoint}
+\textbf{Chẩn đoán chia ngẫu nhiên} (lần chạy \code{diag-827d929eaa73}, chỉ train và validation, không đụng test). (1) Ma trận 2$\times$2: đổi cách huấn luyện chỉ đổi PR-AUC 0,001--0,012, đổi tập đánh giá đổi khoảng 0,07; các validation là hai tập dòng khác nhau. (2) Tỷ lệ gian lận chỉ giải thích khoảng 0,012. (3) Validation ngẫu nhiên có tuần 0--3 (khoảng 31.000 dòng) với tỷ lệ gian lận 1,9--2,8\% và PR-AUC thấp; bỏ các tuần này thì PR-AUC tăng từ 0,179 lên 0,212, giải thích khoảng một nửa mức chênh. Việc chọn tuần 0--3 được quyết định \emph{sau} khi xem bảng theo tuần. (4) Còn khoảng 0,03 chưa giải thích. (5) Recall tại FPR 5\% gần như không đổi (0,31--0,34): không có bằng chứng chia ngẫu nhiên làm \emph{mô hình} kém đi. Trên cùng 29.223 dòng, mô hình huấn luyện ngẫu nhiên hơn +0,0117 [0,0087; 0,0145] (khoảng này hẹp hơn thực tế vì lấy mẫu theo dòng).
+\end{keypoint}
+
+\begin{keypoint}
+\textbf{Đặc trưng lịch sử thực thể} (chỉ validation, mọi config ở trạng thái nháp). (1) Đếm tích luỹ không dừng theo thời gian (số giữa \code{card1} 186 ở train, 629 ở validation), nhưng đếm theo cửa sổ 24 giờ và 7 ngày cũng không giúp. (2) Bỏ \code{C1}--\code{C14} thì PR-AUC validation rơi từ 0,497 xuống 0,158: các cột này mang gần như toàn bộ tín hiệu theo thực thể, mạnh hơn lịch sử tự dựng (thêm lịch sử chỉ nâng lên 0,174--0,177). Việc các cột này đếm gì lấy từ thảo luận công khai, chưa xác minh. (3) Lưới \code{max\_iter} đến 1.200 không tốt hơn 400. (4) Khoá có \code{D1n} cho +0,0114 PR-AUC khi lấy mẫu theo dòng, nhưng [$-$0,0026; +0,0249] khi lấy mẫu theo cụm \code{card1}, chỉ recall tại FPR 5\% (+0,0218 [+0,0033; +0,0424]) loại trừ 0; chưa hiệu chỉnh nhiều lần so sánh. Kết luận: không cải thiện đo được.
 \end{keypoint}
 
 \subsection{Gradient Boosting (Stage E)}
@@ -392,7 +400,7 @@ Gradient Boosting & 0,497 [0,483; 0,514] & \textbf{0,408} [0,390; 0,424] & \text
 \end{table}
 
 \begin{keypoint}
-\textbf{Đọc kết quả.} (1) Trên test, Gradient Boosting cao gấp khoảng 2,5 lần Logistic Regression (0,408 so với 0,165); khoảng tin cậy không giao nhau. (2) Tại ngưỡng đã chọn: precision 0,516, recall 0,371, F1 0,432, FPR 1,24\%. (3) PR-AUC giảm 0,089 từ validation sang test (Logistic Regression giảm 0,080): chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian. (4) Tổ hợp tốt nhất nằm ở cạnh lưới (\code{max\_iter} = 400 là giá trị lớn nhất), nên chưa biết tăng thêm có tốt hơn không; mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
+\textbf{Đọc kết quả.} (1) Trên test, Gradient Boosting cao gấp khoảng 2,5 lần Logistic Regression (0,408 so với 0,165); khoảng tin cậy không giao nhau. (2) Tại ngưỡng đã chọn: precision 0,516, recall 0,371, F1 0,432, FPR 1,24\%. (3) PR-AUC giảm 0,089 từ validation sang test (Logistic Regression giảm 0,080): chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian. (4) Lưới rộng đến 1.200 vòng không cho kết quả tốt hơn (mục 4.3); mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
 \end{keypoint}
 
 % ================================================================ 5
@@ -476,13 +484,13 @@ Provider lỗi x1,5, 2 giờ & \code{prov\_002} & 2,2 / 2,6 & Trượt & Trượ
   \item \textbf{Giả định nhị thức của D-B} coi các attempt độc lập; retry của cùng payment không hoàn toàn độc lập.
   \item \textbf{Tái lập dữ liệu giả lập phụ thuộc phiên bản numpy}: \code{uv.lock} chọn numpy khác nhau cho Python 3.11 và 3.13; nên dùng cùng phiên bản khi muốn khớp từng byte. Mã lần chạy không chứa phiên bản thư viện: chạy lại thí nghiệm rò rỉ trên máy khác (Python 3.12) ra cùng mã \code{leak-827d929eaa73} nhưng lệch $\pm$0,001 ở 3 dòng; Gradient Boosting và hai baseline khớp hoàn toàn.
   \item \textbf{Hạ tầng}: PostgreSQL mới được kiểm chứng trên một bản cài tạm; đường \code{make up} trên WSL chưa thử.
-  \item \textbf{Stage E}: mức giảm PR-AUC khi chia ngẫu nhiên chỉ giải thích được một phần; Gradient Boosting chọn ở cạnh lưới và chỉ dùng 20 đặc trưng (mục 4.3, 4.4).
+  \item \textbf{Stage E}: còn khoảng 0,03 mức giảm PR-AUC khi chia ngẫu nhiên chưa giải thích, và cải thiện nhỏ của khoá có \code{D1n} chưa đủ ý nghĩa khi lấy mẫu theo cụm \code{card1}; mô hình chỉ dùng 20 đặc trưng (mục 4.3, 4.4).
 \end{itemize}
 
 % ================================================================ 8
 \section{Hướng phát triển}
 \begin{enumerate}
-  \item \textbf{Giải thích kết quả chia ngẫu nhiên} của thí nghiệm rò rỉ, và mở rộng lưới Gradient Boosting (cần cấu hình mới và tập test mới).
+  \item \textbf{Kiểm chứng} phần còn lại của mức chênh khi chia ngẫu nhiên, và kiểm tra khoá có \code{D1n} trên giai đoạn dữ liệu mới (cần cấu hình mới và tập test mới).
   \item \textbf{API chấm điểm} (đã cắt khỏi 6 tuần): nhận một giao dịch, trả điểm rủi ro và lý do; chỉ hỗ trợ quyết định, không tự động chặn.
   \item \textbf{Ngưỡng riêng cho từng loại KPI}: chuỗi tỷ trọng ít nhiễu hơn chuỗi lỗi, nên một ngưỡng chung bỏ sót mất lưu lượng. Cần một bộ report mới để đánh giá trung thực.
   \item \textbf{Detector có mùa vụ}: so với cùng giờ các ngày trước (phân rã chuỗi thời gian \cite{fpp}), hoặc phương pháp dò thay đổi tích luỹ (CUSUM) để bắt sự cố yếu nhưng kéo dài.
