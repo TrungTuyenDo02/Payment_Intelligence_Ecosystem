@@ -91,6 +91,8 @@ Câu hỏi: thêm hành vi quá khứ của cùng thực thể có giúp Gradien
 | `gbm-history-window-uid` (24h, 7d) | `card1+addr1+P_emaildomain` | 0,594 | 0,4895 [0,476; 0,507] | 0,588 | `run-b7f7e893f155` |
 | `gbm-window-uidd` (24h, 7d) | uid + `D1n` | 0,600 | 0,5085 [0,493; 0,523] | 0,613 | `run-f42906337c71` |
 | `gbm-wide-grid` (`max_iter` đến 1.200) | — | 0,584 | 0,497 [0,483; 0,514] | 0,588 | `run-14499cc27f0a` |
+| `gbm-agg-uid` (24h, 7d + tổng hợp) | `card1+addr1+P_emaildomain` | 0,609 | 0,4968 [0,483; 0,513] | 0,593 | `run-18a73d0c29f4` |
+| `gbm-agg-uidd` (24h, 7d + tổng hợp) | uid + `D1n` | 0,607 | 0,4984 [0,483; 0,514] | 0,596 | `run-77d836c1ea94` |
 
 **Kiểm tra các giả thuyết.**
 
@@ -99,6 +101,8 @@ Câu hỏi: thêm hành vi quá khứ của cùng thực thể có giúp Gradien
 3. *Tổ hợp tốt nhất nằm ở cạnh lưới.* **Bác bỏ.** Với `max_iter` 400, 800, 1.200, tổ hợp tốt nhất vẫn là `learning_rate 0,1`, `max_iter 400`, `max_leaf_nodes 15` (0,497); `learning_rate 0,05` với 1.200 vòng cho 0,4969.
 4. *Khoá `card1+addr1+P_emaildomain` vẫn trộn nhiều khách hàng.* **Một phần.** Thêm `D1n` (ngày giao dịch trừ `D1`, ngày thẻ bắt đầu dùng; hằng số với một thẻ) cho kết quả tốt nhất: 0,5085.
 
+5. *Thống kê tổng hợp theo thực thể như giải pháp công khai của cuộc thi.* **Không giúp.** Áp ý tưởng (độ lệch chuẩn và z-score của số tiền, số giá trị `ProductCD` và `C13` khác nhau trong một thực thể) nhưng chỉ dùng các giao dịch **trước đó** của thực thể (`_aggregate`; có test tính tay và test "đổi giao dịch sau không đổi đặc trưng của giao dịch trước"). Theo các bài viết thứ cấp tôi đọc được (chưa xác minh với bản gốc), các giải pháp công khai gộp trên toàn bộ dữ liệu; nếu đúng vậy, cách đó gồm cả giao dịch tương lai và validation, vi phạm quy tắc fit trên train và không có trong hệ thống thật, nên **không** được dùng ở đây. Kết quả: 0,4968 (`uid`) và 0,4984 (`uidd`); kiểm định cặp theo cụm `card1` so với gốc cho chênh −0,0002 [−0,0094; +0,0093] và +0,0022 [−0,0117; +0,0173]. Thêm các thống kê này vào `uidd` còn làm điểm thấp hơn bản `uidd` không có chúng (0,5085). Nguyên nhân chưa kiểm tra; có thể thông tin quá khứ ngắn không đủ để thống kê ổn định, và nếu cách gộp trên toàn bộ dữ liệu có lợi thế thì một phần có thể đến từ việc nhìn thấy tương lai; cả hai đều là giả thuyết.
+
 **Kiểm định cặp** (`paired_comparison`: fit lại mô hình đã chọn của từng lần chạy trên train, số validation fit lại khớp số đã ghi; bootstrap 500 lần, seed 42, trên cùng 118.108 dòng validation; chênh = biến thể trừ gốc):
 
 | Biến thể | Chênh PR-AUC, lấy mẫu theo dòng | Chênh PR-AUC, lấy mẫu theo cụm `card1` | Chênh recall @ FPR 5%, theo cụm |
@@ -106,6 +110,8 @@ Câu hỏi: thêm hành vi quá khứ của cùng thực thể có giúp Gradien
 | `gbm-window-uidd` | +0,0114 [+0,0054; +0,0168] | +0,0120 [−0,0026; +0,0249] | +0,0218 [+0,0033; +0,0424] |
 | `gbm-history-window-card1` | +0,0035 [−0,0016; +0,0085] | +0,0036 [−0,0086; +0,0162] | +0,0025 [−0,0125; +0,0175] |
 | `gbm-history-window-uid` | −0,0074 [−0,0118; −0,0030] | −0,0074 [−0,0191; +0,0035] | −0,0006 [−0,0169; +0,0150] |
+| `gbm-agg-uid` | — | −0,0002 [−0,0094; +0,0093] | +0,0041 [−0,0118; +0,0223] |
+| `gbm-agg-uidd` | — | +0,0022 [−0,0117; +0,0173] | +0,0069 [−0,0074; +0,0235] |
 
 - Lấy mẫu theo dòng cho khoảng tin cậy quá hẹp vì các giao dịch của cùng một thẻ tương quan với nhau. Lấy mẫu theo cụm `card1` rộng gấp khoảng hai lần và là con số nên dùng.
 - Theo cụm, **chỉ chênh recall của `uidd` loại trừ 0** (cận dưới +0,0033, sát 0); chênh PR-AUC của `uidd` **không** đủ ý nghĩa ([−0,0026; +0,0249]). Hai biến thể còn lại không khác gốc.

@@ -201,3 +201,30 @@ def test_d1n_splits_one_uid_into_customers_and_ignores_the_future():
         1,
         0,
     ]  # rows 0 and 2 share D1n = 6; NaN is a group
+
+
+def test_causal_aggregates_match_hand_computation_and_ignore_the_future():
+    # One card; amounts 10, 20, 40 at t = 0, 10, 20; ProductCD W, W, C; C13 1, 2, 2.
+    X = pd.DataFrame(
+        {
+            "card1": [1, 1, 1, 2],
+            "TransactionAmt": [10.0, 20.0, 40.0, 5.0],
+            "TransactionDT": [0, 10, 20, 15],
+            "ProductCD": ["W", "W", "C", "W"],
+            "C13": [1.0, 2.0, 2.0, 1.0],
+        }
+    )
+    names = ("card1_amt_std", "card1_amt_z", "card1_n_products", "card1_n_c13")
+    f = build_features(X, FeatureSpec(numeric=(), categorical=(), derived=names))
+    # Row 2 sees amounts 10 and 20: std = sqrt(50) (sample std), z = (40 - 15) / sqrt(50).
+    assert np.isnan(f.loc[[0, 1, 3], ["card1_amt_std", "card1_amt_z"]].to_numpy()).all()
+    assert f.loc[2, "card1_amt_std"] == pytest.approx(np.sqrt(50))
+    assert f.loc[2, "card1_amt_z"] == pytest.approx(25 / np.sqrt(50))
+    # Distinct values among EARLIER rows; the first row of an entity has no history (NaN).
+    assert np.isnan(f.loc[0, "card1_n_products"]) and np.isnan(f.loc[3, "card1_n_c13"])
+    assert f["card1_n_products"].tolist()[1:3] == [1.0, 1.0]  # W; then W, W
+    assert f["card1_n_c13"].tolist()[1:3] == [1.0, 2.0]  # {1}; then {1, 2}
+    later = X.copy()
+    later.loc[2, ["TransactionAmt", "ProductCD", "C13"]] = [999.0, "H", 77.0]
+    g = build_features(later, FeatureSpec(numeric=(), categorical=(), derived=names))
+    pd.testing.assert_frame_equal(f.drop(index=2), g.drop(index=2))
