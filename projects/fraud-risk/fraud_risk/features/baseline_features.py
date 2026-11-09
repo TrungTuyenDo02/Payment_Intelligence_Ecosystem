@@ -13,10 +13,28 @@ FORBIDDEN_FEATURES = frozenset({LABEL, "TransactionID", "TransactionDT"})
 
 # Entity keys for history features. card1 alone has ~13.6k values for 590k rows, so it mixes many
 # customers; card1+addr1+P_emaildomain (~90k groups) is closer to one customer.
-HISTORY_KEYS = {"card1": ("card1",), "uid": ("card1", "addr1", "P_emaildomain")}
+# "uidd" adds D1n = day of the transaction minus D1 (days since the card's first use, a common
+# public heuristic): it stays constant for one card, so it separates customers sharing a uid.
+HISTORY_KEYS = {
+    "card1": ("card1",),
+    "uid": ("card1", "addr1", "P_emaildomain"),
+    "uidd": ("card1", "addr1", "P_emaildomain", "D1n"),
+}
 HISTORY_STATS = ("prev_count", "amt_vs_mean", "secs_since_prev")
 # Windowed counts stay on one scale over time; the running `prev_count` grows with the date.
 HISTORY_WINDOWS = {"count_24h": 24 * 3600, "count_7d": 7 * 24 * 3600}
+
+
+def _entity_frame(X: pd.DataFrame, key: tuple[str, ...]) -> pd.DataFrame:
+    """X plus the derived key column `D1n` when the key needs it (no label involved)."""
+    if "D1n" in key:
+        X = X.assign(D1n=X["TransactionDT"] // 86400 - X["D1"])
+    return X
+
+
+def _source_columns(key: tuple[str, ...]) -> tuple[str, ...]:
+    """Raw input columns a key is built from."""
+    return tuple(c for k in key for c in (("D1", "TransactionDT") if k == "D1n" else (k,)))
 
 
 def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
@@ -24,6 +42,7 @@ def _history(X: pd.DataFrame, key: tuple[str, ...], stat: str) -> pd.Series:
     knows. Rows are taken in time order; ties keep file order, so a same-second transaction sees
     the one listed before it but never the one after.
     """
+    X = _entity_frame(X, key)
     s = X.sort_values("TransactionDT", kind="stable")
     g = s.groupby(list(key), dropna=False, sort=False)
     if stat == "prev_count":
@@ -44,6 +63,7 @@ def _window_count(X: pd.DataFrame, key: tuple[str, ...], seconds: int) -> pd.Ser
     Rows are ordered by entity then time (ties keep file order), so a same-second transaction
     counts the one listed before it but never the one after, as in `_history`.
     """
+    X = _entity_frame(X, key)
     gid = X.groupby(list(key), dropna=False, sort=False).ngroup().to_numpy(dtype="int64")
     t = X["TransactionDT"].to_numpy(dtype="int64")
     order = np.lexsort((t, gid))  # stable: gid first, then time
@@ -60,7 +80,7 @@ DERIVED_FEATURES = {
     "hour_of_day": (("TransactionDT",), lambda X: (X["TransactionDT"] // 3600) % 24),
     **{
         f"{k}_{stat}": (
-            (*key, "TransactionAmt", "TransactionDT"),
+            (*_source_columns(key), "TransactionAmt", "TransactionDT"),
             lambda X, key=key, stat=stat: _history(X, key, stat),
         )
         for k, key in HISTORY_KEYS.items()
@@ -68,7 +88,7 @@ DERIVED_FEATURES = {
     },
     **{
         f"{k}_{name}": (
-            (*key, "TransactionDT"),
+            (*_source_columns(key), "TransactionDT"),
             lambda X, key=key, seconds=seconds: _window_count(X, key, seconds),
         )
         for k, key in HISTORY_KEYS.items()
