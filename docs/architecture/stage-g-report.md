@@ -143,3 +143,61 @@ Ngưỡng chọn trước cho FPR thực tế từ 3,9% đến 5,6%, tức là c
 - V3 chỉ có 15 ngày, nên bootstrap theo ngày có ít khối. Khoảng theo `card1` rộng hơn, nhưng `card1` không phải định danh khách hàng chắc chắn.
 - Giả định nhãn đến ngay (D3) và validation đã dùng nhiều lần: kết quả có thể lạc quan.
 - Chính sách không xét năng lực duyệt thật (số người, giờ làm việc), trừ các ngân sách top-N.
+
+## G05 — Độ ổn định theo thời gian và nhóm (`stab-36887d48b356`)
+
+Lệnh: `make stability`. Config: [`stability.yaml`](../../projects/fraud-risk/configs/stability.yaml) (`draft`). Mô hình: GBM cố định. Không dùng tuần nào của tập test. Tuần validation tính từ giao dịch đầu tiên của validation nên không trùng ranh giới ngày; ví dụ W0 là ngày 101–108. Tuần train là dữ liệu mô hình đã học (trong mẫu), chỉ để mô tả.
+
+![Tỷ lệ gian lận, PR-AUC, recall @ FPR 5% và PSI theo tuần](../assets/results/stage-g-stability.png)
+
+**Theo tuần validation**
+
+| Tuần | Khối | Dòng | Gian lận | Tỷ lệ | PR-AUC | Recall @ FPR 5% | PSI `TransactionAmt` | PSI `C1` | PSI `C13` | PSI `hour_of_day` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| W0 | V1 | 20.747 | 798 | 3,85% | 0,563 | 0,650 | 0,015 | 0,006 | 0,013 | 0,007 |
+| W1 | V1/V2 | 20.957 | 897 | 4,28% | 0,486 | 0,566 | 0,014 | 0,006 | 0,014 | 0,007 |
+| W2 | V2 | 22.137 | 1.051 | 4,75% | 0,525 | 0,598 | 0,016 | 0,002 | 0,008 | 0,012 |
+| W3 | V2/V3 | 22.351 | 699 | 3,13% | 0,561 | 0,631 | 0,014 | 0,018 | 0,049 | 0,015 |
+| W4 | V3 | 18.743 | 757 | 4,04% | 0,427 | 0,542 | 0,016 | 0,010 | 0,035 | 0,011 |
+| W5 | V3 | 13.173 | 409 | 3,10% | 0,354 | 0,531 | 0,017 | 0,018 | 0,047 | 0,017 |
+
+Tuần train: tỷ lệ gian lận 2,07%–4,42%; PR-AUC trong mẫu 0,395–0,674. PSI cao nhất là `C13` ở tuần train T3 (0,134), giai đoạn 4 tuần đầu có tỷ lệ gian lận thấp (2,1%–2,9%).
+
+**Theo nhóm trên validation** (toàn bộ validation: PR-AUC 0,497, recall @ FPR 5% là 0,588)
+
+| Cột | Giá trị | Dòng | Gian lận | Tỷ lệ | PR-AUC | Recall @ FPR 5% |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ProductCD` | C | 15.329 | 1.979 | 12,91% | 0,715 | 0,699 |
+| `ProductCD` | H | 3.079 | 244 | 7,92% | 0,631 | 0,627 |
+| `ProductCD` | R | 4.021 | 260 | 6,47% | 0,748 | 0,731 |
+| `ProductCD` | S | 1.813 | 124 | 6,84% | 0,548 | 0,516 |
+| `ProductCD` | W | 93.866 | 2.004 | 2,13% | 0,172 | 0,390 |
+| `card6` | credit | 25.914 | 2.174 | 8,39% | 0,619 | 0,609 |
+| `card6` | debit | 92.180 | 2.437 | 2,64% | 0,380 | 0,512 |
+| `card6` | thiếu / charge card / debit or credit | 4 / 3 / 7 | 0 | — | — | — (**cỡ mẫu nhỏ, không kết luận**) |
+
+Tỷ lệ thiếu: chỉ `card4` và `card6` có giá trị thiếu trong dữ liệu phát triển. Tuần train T12 thiếu 3,6%; mọi tuần khác dưới 0,05%.
+
+**Kết luận** (trong dữ liệu phát triển, thăm dò):
+
+1. **Hiệu năng thay đổi nhiều theo tuần dù mô hình không đổi.** PR-AUC theo tuần validation dao động 0,354–0,563, recall @ FPR 5% dao động 0,531–0,650, và hai tuần cuối (V3) thấp nhất. Một con số PR-AUC gộp cho cả giai đoạn (0,497) che mất độ dao động này.
+2. **PSI của bốn đầu vào đã chọn không giải thích được sự sụt giảm.** Mọi PSI validation đều dưới 0,05, thấp hơn ngưỡng quen thuộc 0,1, trong khi PR-AUC giảm. Theo dõi PSI của vài cột đầu vào vì vậy không thay được việc đo hiệu năng khi có nhãn. Có thể trôi nằm ở quan hệ giữa đặc trưng và nhãn, hoặc ở các cột không đo (trong 20 đặc trưng, PSI chỉ tính cho 4).
+3. **Ngay cả trong mẫu, PR-AUC hai tuần train cuối cũng thấp** (0,519 và 0,442, so với 0,60–0,67 ở giữa train). Tức là giai đoạn cuối train và đầu validation khó hơn ngay cả với dữ liệu mô hình đã học; sụt giảm không chỉ do "dữ liệu mới".
+4. **Theo nhóm:** `ProductCD = W` chiếm 79% giao dịch validation và 43% gian lận, nhưng có recall @ FPR 5% thấp nhất (0,390, so với 0,63–0,73 ở C, H, R). Không so PR-AUC giữa các nhóm, vì PR-AUC phụ thuộc tỷ lệ gian lận (2,1% ở W so với 12,9% ở C); recall @ FPR 5% so được hơn. Ba giá trị `card6` hiếm (14 dòng, 0 gian lận) không đủ để kết luận gì.
+
+**Tự kiểm tra**
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Không chạm test | Test tự động: đổi nhãn, số tiền, `C1`, `C13`, `ProductCD` của mọi dòng test không đổi kết quả. Tổng dòng theo tuần bằng đúng số dòng train và validation |
+| Đảo nhãn | Hoán vị nhãn validation: PR-AUC 0,0393, bằng tỷ lệ gian lận 0,0390 |
+| Tính độc lập | Test: PSI so với tính tay trên một phân phối biết trước; PSI = 0 khi hai phân phối giống nhau |
+| Cỡ mẫu nhỏ | Test: mọi nhóm dưới 30 gian lận được đánh dấu |
+| Tái lập | Chạy `make stability` hai lần: cùng `stab-36887d48b356`, `results.json` trùng từng byte |
+
+**Hạn chế (kết quả này không chứng minh):**
+
+- Không chứng minh nguyên nhân của sự sụt giảm theo tuần; bảng chỉ cho thấy nó có, và PSI của 4 cột không đi kèm nó.
+- Tuần có 400–1.050 gian lận nên PR-AUC từng tuần có sai số đáng kể; chưa có khoảng tin cậy theo tuần (không nằm trong danh sách đăng ký trước).
+- Tuần train là trong mẫu, nên không so trực tiếp với tuần validation được.
+- Nhóm chỉ xét theo hai cột; các nhóm giao nhau (ví dụ W × debit) chưa xét.

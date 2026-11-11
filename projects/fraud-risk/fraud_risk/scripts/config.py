@@ -201,3 +201,17 @@ class PolicyConfig(DecisionBase):
     """G04 (configs/policy.yaml)."""
 
     policy: PolicySection
+
+
+class StabilitySection(_Strict):
+    psi_columns: list[str]  # feature columns (after build_features) compared with train
+    psi_bins: int = Field(default=10, ge=2)  # quantile bins of the TRAIN values
+    groups: list[str]  # raw columns to slice validation by
+    min_frauds: int = Field(default=30, ge=1)  # below this a group is "small sample"
+    fpr_target: float = Field(default=0.05, gt=0, lt=1)
+
+
+class StabilityConfig(DecisionBase):
+    """G05 (configs/stability.yaml)."""
+
+    stability: StabilitySection
