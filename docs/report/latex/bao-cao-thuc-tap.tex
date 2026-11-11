@@ -93,7 +93,7 @@
 \end{itemize}
 Điểm nhấn của đề tài là \textbf{đánh giá trung thực}: dữ liệu chia theo thời gian, mọi bước học chỉ dùng tập huấn luyện, tập kiểm tra chỉ được mở \emph{một lần} cho mỗi cấu hình đã chốt, và mọi lần chạy đều tái lập được.
 
-Kết quả chính: Logistic Regression đạt PR-AUC 0,165 trên tập test (gấp khoảng 4,8 lần đoán ngẫu nhiên; baseline luật 0,078). Bộ phát hiện bất thường có tính đến số lượng giao dịch bắt được 2/4 sự cố trên bộ đánh giá độc lập, không báo nhầm lần nào trong 7 ngày; bộ cơ sở đơn giản bắt 0/4 và báo nhầm 14 lần. Gradient Boosting đạt PR-AUC test 0,408, gấp khoảng 2,5 lần Logistic Regression, recall 0,51 tại FPR 5\%. Thí nghiệm rò rỉ cho thấy mã hoá theo nhãn có dùng nhãn validation làm PR-AUC tăng 0,063; tiền xử lý trên mọi dòng và khoảng trống thời gian không tạo khác biệt đo được; riêng chia ngẫu nhiên cho PR-AUC thấp hơn vì hai validation là hai tập dòng khác nhau (mục 4.3), không phải vì mô hình kém đi; đặc trưng lịch sử thực thể tự dựng không cải thiện đo được vì các cột \code{C1}--\code{C14} đã chứa phần lớn thông tin đó.
+Kết quả chính: Logistic Regression đạt PR-AUC 0,165 trên tập test (gấp khoảng 4,8 lần đoán ngẫu nhiên; baseline luật 0,078). Bộ phát hiện bất thường có tính đến số lượng giao dịch bắt được 2/4 sự cố trên bộ đánh giá độc lập, không báo nhầm lần nào trong 7 ngày; bộ cơ sở đơn giản bắt 0/4 và báo nhầm 14 lần. Gradient Boosting đạt PR-AUC test 0,408, gấp khoảng 2,5 lần Logistic Regression, recall 0,51 tại FPR 5\% (ngưỡng chọn bằng nhãn test, chỉ đo chất lượng xếp hạng); với ngưỡng 0,853 chốt trước trên validation, recall test là 0,371 tại FPR 1,24\%. Thí nghiệm rò rỉ cho thấy mã hoá theo nhãn có dùng nhãn validation làm PR-AUC tăng 0,063; tiền xử lý trên mọi dòng và khoảng trống thời gian không tạo khác biệt đo được; riêng chia ngẫu nhiên cho PR-AUC thấp hơn vì hai validation là hai tập dòng khác nhau (mục 4.3), không phải vì mô hình kém đi; đặc trưng lịch sử thực thể tự dựng không cải thiện đo được vì các cột \code{C1}--\code{C14} đã chứa phần lớn thông tin đó.
 
 \vspace{0.5em}
 \begin{keypoint}
@@ -165,7 +165,7 @@ F_1=\frac{2\,PR}{P+R}.
 \begin{explain}{Recall tại FPR cố định}
 Precision phụ thuộc vào tỷ lệ gian lận: cùng một mô hình, tập nào nhiều gian lận hơn thì precision cao hơn. Vì validation (3,90\%) và test (3,44\%) có tỷ lệ khác nhau, so precision giữa hai tập dễ hiểu nhầm.
 
-FPR chỉ tính trên giao dịch hợp lệ nên \emph{không} phụ thuộc tỷ lệ gian lận. Chỉ số ``recall tại FPR 5\%'' trả lời câu hỏi vận hành: \emph{nếu chỉ chấp nhận làm phiền 5\% khách hàng hợp lệ, ta bắt được bao nhiêu phần trăm gian lận?} Cách tính: quét các ngưỡng từ cao xuống thấp, giữ các ngưỡng có FPR $\le 5\%$, lấy recall lớn nhất. Chỉ số này được khuyến nghị cho dữ liệu gian lận có thay đổi theo thời gian \cite{jesus}. Mô hình ngẫu nhiên đạt đúng 0,05.
+FPR chỉ tính trên giao dịch hợp lệ nên \emph{không} phụ thuộc tỷ lệ gian lận. Chỉ số ``recall tại FPR 5\%'' trả lời câu hỏi vận hành: \emph{nếu chỉ chấp nhận làm phiền 5\% khách hàng hợp lệ, ta bắt được bao nhiêu phần trăm gian lận?} Cách tính: quét các ngưỡng từ cao xuống thấp, giữ các ngưỡng có FPR $\le 5\%$, lấy recall lớn nhất. Chỉ số này được khuyến nghị cho dữ liệu gian lận có thay đổi theo thời gian \cite{jesus}. Mô hình ngẫu nhiên đạt đúng 0,05. \emph{Lưu ý:} ngưỡng được chọn bằng nhãn của chính tập đang đánh giá, điều không làm được khi vận hành. Vì vậy chỉ số này đo \emph{chất lượng xếp hạng}; hiệu quả triển khai phải đo bằng một ngưỡng chốt trước rồi áp lên dữ liệu mới.
 \end{explain}
 
 \begin{explain}{Khoảng tin cậy bootstrap cho PR-AUC}
@@ -407,18 +407,27 @@ Cùng đặc trưng, cùng cách chia, cùng quy trình chọn ngưỡng với L
 Tổ hợp được chọn: \code{learning\_rate} 0,1, \code{max\_iter} 400, \code{max\_leaf\_nodes} 15; ngưỡng 0,853 chọn trên validation (tối đa F1).
 
 \begin{table}[H]\centering
-\caption{Gradient Boosting \code{run-f8807cb6f780}, cấu hình \code{frozen} (commit \code{89a8ed5}), test mở một lần. Hai baseline lấy từ \code{run-d6faa4699008}.}
+\caption{Chất lượng xếp hạng. Gradient Boosting \code{run-f8807cb6f780}, cấu hình \code{frozen} (commit \code{89a8ed5}), test mở một lần; hai baseline lấy từ \code{run-d6faa4699008}. Recall tại FPR 5\% chọn ngưỡng bằng nhãn của chính tập test, nên chỉ đo thứ tự điểm, không phải hiệu quả của một ngưỡng triển khai.}
 \begin{tabular}{@{}lccc@{}}
 \toprule
 Mô hình & PR-AUC validation & PR-AUC test & Recall @ FPR 5\% (test) \\ \midrule
 Luật & 0,089 & 0,078 & 0,22 \\
 Logistic Regression & 0,245 & 0,165 [0,155; 0,176] & 0,28 \\
-Gradient Boosting & 0,497 [0,483; 0,514] & \textbf{0,408} [0,390; 0,424] & \textbf{0,51} \\ \bottomrule
+Gradient Boosting & 0,497 [0,483; 0,514] & \textbf{0,408} [0,390; 0,424] & 0,51 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]\centering
+\caption{Hiệu quả của ngưỡng đã chốt trước: ngưỡng 0,853 chọn trên validation (tối đa F1) trước khi mở test, áp nguyên lên test (\code{run-f8807cb6f780}).}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Mô hình & Ngưỡng & Precision (test) & Recall (test) & FPR (test) \\ \midrule
+Gradient Boosting & 0,853 & 0,516 & 0,371 & 1,24\% \\ \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{keypoint}
-\textbf{Đọc kết quả.} (1) Trên test, Gradient Boosting cao gấp khoảng 2,5 lần Logistic Regression (0,408 so với 0,165); khoảng tin cậy không giao nhau. (2) Tại ngưỡng đã chọn: precision 0,516, recall 0,371, F1 0,432, FPR 1,24\%. (3) PR-AUC giảm 0,089 từ validation sang test (Logistic Regression giảm 0,080): chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian. (4) Lưới rộng đến 1.200 vòng không cho kết quả tốt hơn (mục 4.3); mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
+\textbf{Đọc kết quả.} (1) Trên test, Gradient Boosting cao gấp khoảng 2,5 lần Logistic Regression (0,408 so với 0,165); khoảng tin cậy không giao nhau. (2) Tại ngưỡng đã chọn trước: precision 0,516, recall 0,371, F1 0,432, FPR 1,24\%. Hai bảng ở hai điểm vận hành khác nhau (FPR 5\% và 1,24\%), nên không đọc là ``recall tụt từ 51\% xuống 37\%''; bảng thứ hai gần với cách dùng thật hơn. (3) PR-AUC giảm 0,089 từ validation sang test (Logistic Regression giảm 0,080): chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian. (4) Lưới rộng đến 1.200 vòng không cho kết quả tốt hơn (mục 4.3); mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
 \end{keypoint}
 
 \subsection{Hai câu hỏi mở sau Stage E (chỉ validation)}

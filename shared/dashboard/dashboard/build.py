@@ -338,6 +338,28 @@ def markdown_tables(text: str) -> str:
     return "".join(parts)
 
 
+def threshold_table(artifacts: Path) -> str:
+    """Test metrics at the threshold chosen on validation BEFORE the test was opened.
+
+    Validation rows are left out: there the threshold was chosen on the same labels (in-sample).
+    """
+    rows = []
+    for label, metrics, _ in fraud_runs(artifacts):
+        for model, parts in metrics["models"].items():
+            at = parts.get("test", {}).get("at_threshold")
+            if at:
+                rows.append([
+                    escape(MODEL_VN.get(model, model)), vn(at["threshold"]),
+                    vn(at["precision"]), vn(at["recall"]), pct(at["false_positive_rate"], 2),
+                    f"<code>{escape(label)}</code>",
+                ])  # fmt: skip
+    if not rows:
+        return '<p class="empty">Chưa có lần đánh giá test trên máy này.</p>'
+    header = ["Mô hình", "Ngưỡng (chọn trên validation)", "Precision (test)", "Recall (test)",
+              "FPR (test)", "Lần chạy"]  # fmt: skip
+    return _table(header, sorted(rows), numeric_from=1)
+
+
 def fraud_section(artifacts: Path) -> str:
     rows = []
     for label, metrics, folder in fraud_runs(artifacts):
@@ -368,7 +390,7 @@ def fraud_section(artifacts: Path) -> str:
                 "Tập",
                 "PR-AUC [95% CI]",
                 "Tỷ lệ gian lận",
-                "Recall @ FPR 5%",
+                "Recall @ FPR 5% (ngưỡng chọn bằng nhãn của chính tập)",
                 "Lần chạy",
             ],
             rows,
@@ -390,7 +412,13 @@ def fraud_section(artifacts: Path) -> str:
 <p class="meta">Dataset công khai IEEE-CIS, chia theo thời gian 60/20/20. Tập test chỉ mở một lần cho mỗi config đã chốt.
 Điểm rủi ro chỉ hỗ trợ quyết định, không tự động chặn giao dịch.</p>
 {fraud_tiles(artifacts)}
-<h3>So sánh mô hình</h3>{table}
+<h3>Chất lượng xếp hạng</h3>
+<p class="meta">PR-AUC và recall tại FPR 5% không gắn với một ngưỡng triển khai: recall tại FPR 5% chọn ngưỡng
+bằng nhãn của chính tập đang đánh giá, nên chỉ đo thứ tự điểm.</p>{table}
+<h3>Ngưỡng đã chốt trước</h3>
+<p class="meta">Ngưỡng chọn trên validation (tối đa F1) trước khi mở test, rồi áp nguyên lên test. Bảng này và bảng
+trên ở hai điểm vận hành khác nhau (FPR khác nhau), nên không đọc là recall "tụt" giữa hai bảng.</p>
+{threshold_table(artifacts)}
 <h3>Thí nghiệm rò rỉ dữ liệu (chỉ validation)</h3>{leak_html}"""  # noqa: E501
 
 
