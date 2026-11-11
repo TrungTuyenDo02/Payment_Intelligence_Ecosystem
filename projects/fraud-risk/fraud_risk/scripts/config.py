@@ -123,3 +123,54 @@ def load_gbm_config(path: Path) -> tuple[GbmConfig, dict[str, Any], str]:
 
 def load_leakage_config(path: Path) -> tuple[LeakageConfig, dict[str, Any], str]:
     return _load(path, LeakageConfig)
+
+
+# --- Stage G (stage-g-spec.md, ADR 0009): decisions on development data only -----------------
+
+
+class FixedModelsSection(_Strict):
+    """Stage G models are fixed (no grid search); GBM = the point chosen in run-f8807cb6f780."""
+
+    gbm: dict[Literal["learning_rate", "max_iter", "max_leaf_nodes"], float | int]
+    logistic: LogisticConfig | None = None  # only G03 compares calibration of both models
+
+
+class ReproductionCheck(_Strict):
+    """Validation PR-AUC the fixed models must reproduce, else the run stops (spec section 2)."""
+
+    gbm_valid_pr_auc: float | None = None
+    logistic_valid_pr_auc: float | None = None
+    valid_max_time: int | None = None  # last validation TransactionDT; test starts after it
+    tolerance: float = Field(default=0.002, gt=0)
+
+
+class BlocksConfig(_Strict):
+    """Validation blocks as inclusive day ranges (TransactionDT // 86400)."""
+
+    V1: tuple[int, int]  # calibrate
+    V2: tuple[int, int]  # select
+    V3: tuple[int, int]  # evaluate
+
+
+class DecisionBase(_Strict):
+    status: Literal["draft", "frozen"]
+    stage: Literal["exploratory"]  # every Stage G result is exploratory (validation reused)
+    seed: int
+    data: DataConfig
+    split: SplitConfig
+    features: FeaturesConfig
+    models: FixedModelsSection
+    blocks: BlocksConfig
+    check: ReproductionCheck = ReproductionCheck()
+
+
+class CalibrationSection(_Strict):
+    methods: list[Literal["raw", "prior_shift", "platt"]]
+    bins: int = Field(default=10, ge=2)
+    select_by: Literal["log_loss", "brier"] = "log_loss"
+
+
+class CalibrationConfig(DecisionBase):
+    """G03 (configs/calibration.yaml)."""
+
+    calibration: CalibrationSection

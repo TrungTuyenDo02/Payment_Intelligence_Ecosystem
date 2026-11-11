@@ -22,10 +22,10 @@ endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
 
-.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard
+.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration
 
 help:
-	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard"
+	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration"
 
 setup:
 ifeq ($(UV),)
@@ -80,6 +80,10 @@ gbm:
 
 gbm-final:
 	$(RUN) python -m fraud_risk.scripts.run_gbm --config $(GBM_CONFIG) --stage final $(if $(FORCE),--force,)
+
+# Stage G (stage-g-spec.md, ADR 0009): development data only (train + validation), exploratory.
+calibration:
+	$(RUN) python -m fraud_risk.experiments.calibration
 
 # Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
 SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)
