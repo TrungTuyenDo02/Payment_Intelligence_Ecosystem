@@ -1,7 +1,39 @@
-# Bàn giao công việc — 2026-11-09
+# Bàn giao công việc — 2026-11-11
 
 > Dành cho người tiếp tục dự án từ ngày 2026-11-05. Đọc file này trước, sau đó đọc [`README.md`](README.md) và [tổng quan đề tài](docs/product/project-overview.md).
 > Chủ dự án: Đỗ Trung Tuyến (@TrungTuyenDo02).
+
+## 00. Cập nhật 2026-11-11: Stage G (đọc trước)
+
+Stage G: từ xếp hạng đến quyết định, **chỉ trên train + validation (thăm dò)**. Hướng dẫn thường trực cho agent nằm trong `CLAUDE.md` (bị git-ignore, chỉ có trên máy này). Tập test không được mở; không config `frozen` nào bị sửa.
+
+### Đã làm (mỗi task một nhánh, xếp chồng: g01 → g02 → … → g07; **chưa push**)
+
+| Task | Nhánh, commit | Kiểm chứng |
+| --- | --- | --- |
+| G00 mốc | — | `make lint` pass; `make test` 381 pass, 8 skip (7 test DB vì máy không có Docker, 1 hook); checksum manifest khớp |
+| G01 đặc tả + ADR 0009 | `stage-g/g01-protocol` (`e2f962b`) | Chủ dự án duyệt D1–D8, ADR 0009 Accepted (chat 2026-11-11) |
+| G02 tách hai bảng metric | `stage-g/g02-metric-presentation` (`dba37f6`) | README (thêm bảng "không phải production"), báo cáo Stage E, LaTeX + 2 PDF (23 và 10 trang, đã xem trang có bảng mới), dàn ý, dashboard (+2 test). Không chạy `make dashboard` vì lệnh đó đọc `artifacts/runs/*/test/` |
+| G03 hiệu chỉnh | `stage-g/g03-calibration` (`50d01de`) | `make calibration` → `cal-04b3ad5944ce`; 13 test |
+| G04 chính sách | `stage-g/g04-policy` (`fb53035`) | `make policy` → `pol-af5df43efe54`; 10 test |
+| G05 độ ổn định | `stage-g/g05-stability` (`ed54347`) | `make stability` → `stab-36887d48b356`; 8 test |
+| G06 báo cáo | `stage-g/g06-report` (`82705cb`) | [`stage-g-report.md`](docs/architecture/stage-g-report.md): mọi số kèm mã lần chạy và commit |
+| G07 ⏸ | `stage-g/g07-packaging` | Chỉ có bản nháp [ADR 0010](docs/decisions/0010-experiment-and-execution-ids.md) (Proposed); **chưa code, chờ duyệt** |
+
+`make test` sau G05: **414 pass, 8 skip**. Mỗi lệnh Stage G chạy ít nhất ba lần, `results.json` trùng từng byte. Tự kiểm tra (đảo nhãn, đổi dòng test, phá hoại có chủ đích, tính lại bằng vòng lặp thuần) ghi trong báo cáo Stage G.
+
+### Kết quả chính (thăm dò, dữ liệu phát triển)
+
+- Điểm gốc của GBM gấp khoảng 7 lần tỷ lệ gian lận thật; dịch tiên nghiệm hoặc Platt sửa được phần lớn.
+- Luật chi phí theo số tiền, dùng xác suất đã hiệu chỉnh, có chi phí thấp nhất ở 27/27 tổ hợp chi phí giả định (phân tích độ nhạy, không phải ROI).
+- PR-AUC theo tuần validation dao động 0,35–0,56; PSI của 4 đầu vào không giải thích được.
+
+### Việc tiếp theo
+
+1. **Chủ dự án duyệt ADR 0010** (4 câu hỏi ở cuối ADR), rồi mới code G07.
+2. Quyết định cách push: một PR cho cả chồng nhánh (`stage-g/g06-report` hoặc `g07` vào `main`), hay từng PR theo thứ tự.
+3. G08 cần `execution_id` của G07; G09 và G10 ⏸ làm sau.
+4. Lệch tài liệu đã thấy (để G09): HANDOFF ghi PDF báo cáo 19–20 trang, thực tế 23 trang.
 
 ## 0. Cập nhật 2026-11-09 (đọc trước)
 
