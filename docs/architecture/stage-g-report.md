@@ -64,3 +64,82 @@ Ngoài lề: PR-AUC của GBM thay đổi đáng kể giữa các khối (V1 0,5
 - Bộ hiệu chỉnh fit trên V1 rồi áp ngay lên V2/V3, tức là giả định nhãn V1 có ngay. Thực tế chargeback đến muộn (D3, hạn chế lạc quan).
 - Chênh lệch giữa Platt và dịch tiên nghiệm nhỏ hơn mức dao động giữa các cửa sổ, và chưa có khoảng tin cậy cho phần chênh này (không nằm trong danh sách đăng ký trước).
 - Isotonic không được thử (D5).
+
+## G04 — So sánh chính sách (`pol-af5df43efe54`)
+
+Lệnh: `make policy`. Config: [`policy.yaml`](../../projects/fraud-risk/configs/policy.yaml) (`draft`). Mô hình: GBM cố định. Mọi lựa chọn (ngưỡng, phương pháp hiệu chỉnh) ra trên V1/V2 trước, rồi mới áp lên V3. Bảng đầy đủ 27 tổ hợp chi phí × 9 chính sách nằm trong `artifacts/experiments/pol-af5df43efe54/summary.md`.
+
+**Đây là phân tích độ nhạy, không phải ROI.** Chi phí là giả định, tính theo đơn vị tương đối của `TransactionAmt`: bỏ sót một gian lận mất `loss_rate × số tiền`; mỗi cảnh báo tốn `c_review`; mỗi cảnh báo nhầm tốn thêm `c_friction`. Ký hiệu `L0.75/R5/F1` nghĩa là `loss_rate` 0,75, `c_review` 5, `c_friction` 1.
+
+**Chín chính sách**
+
+| Chính sách | Chọn trên | Quyết định |
+| --- | --- | --- |
+| Không cảnh báo | — | Mốc tham chiếu: bỏ sót mọi gian lận |
+| max F1 (mốc) | V2 | Điểm ≥ 0,8527 (cùng quy tắc Stage E, chọn lại trên V2) |
+| Ngưỡng chi phí V2 | V2 | Một ngưỡng điểm cho tổng chi phí trên V2 nhỏ nhất, riêng cho từng tổ hợp |
+| Luật chi phí, điểm gốc | — | Cảnh báo nếu `s × loss_rate × số tiền > c_review + (1 − s) × c_friction`, đọc điểm gốc `s` như xác suất |
+| Luật chi phí, đã hiệu chỉnh | V1 + V2 | Cùng luật, dùng xác suất đã hiệu chỉnh (Platt, chọn như G03) |
+| top 0,5% / 1% / 2% / 5% | — | Mỗi ngày đưa N% giao dịch có điểm cao nhất đi duyệt |
+
+**Phép thử chuyển ngưỡng.** Ngưỡng cho FPR 5% chọn trên V2 rồi áp lên V3:
+
+| Chọn → áp | Ngưỡng | FPR thực tế | Recall thực tế | Recall @ FPR 5% chọn bằng nhãn của chính tập |
+| --- | --- | --- | --- | --- |
+| V2 → V3 | 0,6726 | 4,27% | 0,513 | 0,539 |
+| R1: W1 → W2 | 0,6689 | **5,63%** | 0,607 | 0,598 |
+| R2: W2 → W3 | 0,6900 | 3,88% | 0,598 | 0,631 |
+| R3: W3 → W4 | 0,6557 | 4,84% | 0,531 | 0,542 |
+| R4: W4 → W5 | 0,6508 | 4,61% | 0,523 | 0,531 |
+
+Ngưỡng chọn trước cho FPR thực tế từ 3,9% đến 5,6%, tức là có lúc vượt mục tiêu 5%. Recall thấp hơn con số chọn ngưỡng bằng nhãn của chính tập ở 4/5 trường hợp, chênh tới 0,033. Con số "recall @ FPR 5%" trong các bảng chất lượng xếp hạng vì vậy là mức tham chiếu lạc quan (xem G02).
+
+**V3, các chính sách không phụ thuộc chi phí** (38.256 giao dịch, 1.347 gian lận, tổng tiền gian lận 221.292):
+
+| Chính sách | Cảnh báo | Gian lận bắt | Báo nhầm | Recall | Tiền gian lận bắt | Tỷ lệ tiền bắt | FPR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| max F1 (mốc) | 871 | 488 | 383 | 0,362 | 71.591 | 0,324 | 1,04% |
+| top 0,5% | 200 | 154 | 46 | 0,114 | 7.918 | 0,036 | 0,12% |
+| top 1% | 392 | 278 | 114 | 0,206 | 30.361 | 0,137 | 0,31% |
+| top 2% | 772 | 437 | 335 | 0,324 | 64.215 | 0,290 | 0,91% |
+| top 5% | 1.921 | 645 | 1.276 | 0,479 | 110.132 | 0,498 | 3,46% |
+
+**V3 tại tổ hợp giữa lưới `L0.75/R5/F1`.** Khoảng tin cậy 95% bootstrap theo ngày; cột cuối theo cụm `card1`.
+
+| Chính sách | Cảnh báo | Gian lận bắt | Tiền bắt | Tổng chi phí [CI ngày] | Chênh so với max F1 [CI ngày] | CI chênh (`card1`) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Không cảnh báo | 0 | 0 | 0 | 165.969 [135.050; 197.754] | +48.955 [34.262; 65.239] | [23.948; 85.783] |
+| max F1 (mốc) | 871 | 488 | 71.591 | 117.013 [95.977; 138.289] | 0 | — |
+| top 2% | 772 | 437 | 64.215 | 122.003 [99.362; 144.425] | +4.989 [84; 10.679] | [872; 10.048] |
+| top 5% | 1.921 | 645 | 110.132 | 94.251 [76.500; 112.299] | −22.763 [−31.353; −14.682] | [−36.954; −11.483] |
+| Ngưỡng chi phí V2 | 3.598 | 798 | 142.147 | 80.148 [64.551; 97.009] | −36.865 [−46.669; −27.340] | [−58.612; −19.323] |
+| Luật chi phí, điểm gốc | 24.814 | 1.227 | 217.256 | 150.684 [129.743; 167.324] | +33.670 [14.835; 53.013] | [7.338; 59.182] |
+| **Luật chi phí, đã hiệu chỉnh** | 4.325 | 762 | 173.245 | **61.223** [52.621; 69.471] | **−55.790** [−72.113; −39.916] | [−80.188; −35.149] |
+
+**Kết luận** (trong dữ liệu phát triển, dưới các giả định chi phí ở trên, thăm dò):
+
+1. **Luật chi phí dùng xác suất đã hiệu chỉnh có tổng chi phí thấp nhất ở cả 27/27 tổ hợp chi phí trên V3, và ở cả 4 cửa sổ cuốn chiếu.** Khoảng tin cậy của phần chênh so với max F1 nằm hoàn toàn dưới 0, cả khi lấy mẫu theo ngày lẫn theo cụm `card1`. Ở tổ hợp giữa lưới, nó bắt ít giao dịch gian lận hơn ngưỡng chi phí V2 (762 so với 798) nhưng bắt được nhiều **tiền** hơn (173 nghìn so với 142 nghìn), vì luật xét số tiền của từng giao dịch: nó ưu tiên giao dịch lớn, còn một ngưỡng điểm thì không.
+2. **Hiệu chỉnh là điều kiện cần cho luật này.** Cùng công thức nhưng đọc điểm gốc như xác suất thì cảnh báo quá nhiều (24.814 so với 4.325 ở tổ hợp giữa), và đắt hơn cả max F1 ở tổ hợp này. Điểm gốc bị thổi lên khoảng 7 lần (G03), nên luật tưởng gian lận phổ biến hơn thực tế. Ngược lại, hiệu chỉnh **không** đổi chính sách dùng một ngưỡng điểm: ngưỡng chi phí chọn trên điểm đã hiệu chỉnh cho đúng cùng cảnh báo trên V3 ở mọi tổ hợp (đã kiểm tra).
+3. **Ngưỡng max F1 không gắn với chi phí.** Nó luôn cảnh báo 871 giao dịch, bất kể cảnh báo rẻ hay đắt. Ngưỡng chi phí chọn trên V2 rẻ hơn max F1 ở tổ hợp giữa, nhưng số cảnh báo thay đổi rất mạnh theo giả định (từ 782 ở `L0.5/R25/F10` đến 28.792 ở `L1/R1/F0`).
+4. **Ngân sách top-N** dễ vận hành (số cảnh báo mỗi ngày cố định), nhưng chỉ tốt khi N khớp với giả định chi phí: top 5% rẻ hơn max F1 ở tổ hợp giữa, top 2% hơi đắt hơn. Không có N nào tốt nhất ở mọi tổ hợp.
+5. Ở tổ hợp góc `L1/R1/F0` (duyệt rẻ, mất trọn số tiền, không tính phiền khách), ba chính sách theo chi phí cảnh báo 43–96% giao dịch V3 (16.416 / 28.792 / 36.765). Khi duyệt gần như miễn phí thì cứ duyệt hết; góc lưới này ít thực tế.
+
+**Tự kiểm tra**
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Không chạm test | Test tự động: đảo nhãn và đổi số tiền của mọi dòng test không đổi kết quả |
+| Đảo nhãn | Hoán vị nhãn V3 (`L0.75/R5/F1`, ngưỡng chi phí V2): recall 0,084, xấp xỉ tỷ lệ cảnh báo 0,094, tức là không hơn chọn ngẫu nhiên |
+| Nhìn tương lai | Test: đảo nhãn V3 không đổi ngưỡng hay phương pháp hiệu chỉnh đã chọn; đổi điểm của các ngày sau không đổi cảnh báo top-N của ngày trước |
+| Phá hoại có chủ đích | Tạm bỏ kiểm tra vai trò khối ở bước chọn ngưỡng: test "chọn trên V3" thất bại. Đã khôi phục |
+| Tính độc lập | Chi phí trên 1.000 dòng đầu V3 tính bằng vòng lặp thuần: max F1 1.506,925250, luật đã hiệu chỉnh 1.248,550250, trùng code chính. Thêm test tự động: ngưỡng chi phí bằng kết quả vét cạn mọi điểm cắt |
+| Tái lập | Chạy `make policy` hai lần: cùng `pol-af5df43efe54`, `results.json` trùng từng byte |
+
+**Hạn chế (kết quả này không chứng minh):**
+
+- Không chứng minh chính sách nào sẽ tiết kiệm được bao nhiêu khi vận hành. Chi phí là giả định, không có dữ liệu chi phí thật, `TransactionAmt` không rõ đơn vị tiền tệ.
+- Luật chi phí cần nhãn và số tiền đáng tin. Nếu mất mát thật không tỷ lệ với số tiền (ví dụ có bảo hiểm, có thu hồi), lợi thế "ưu tiên giao dịch lớn" có thể mất.
+- Khoảng tin cậy chỉ có cho phần chênh so với max F1 (đã đăng ký trước). Phần chênh giữa luật đã hiệu chỉnh và ngưỡng chi phí V2 (khoảng −18,9 nghìn ở tổ hợp giữa) chưa có khoảng tin cậy riêng.
+- V3 chỉ có 15 ngày, nên bootstrap theo ngày có ít khối. Khoảng theo `card1` rộng hơn, nhưng `card1` không phải định danh khách hàng chắc chắn.
+- Giả định nhãn đến ngay (D3) và validation đã dùng nhiều lần: kết quả có thể lạc quan.
+- Chính sách không xét năng lực duyệt thật (số người, giờ làm việc), trừ các ngân sách top-N.

@@ -174,3 +174,30 @@ class CalibrationConfig(DecisionBase):
     """G03 (configs/calibration.yaml)."""
 
     calibration: CalibrationSection
+
+
+class CostGrid(_Strict):
+    """Assumed costs in units of TransactionAmt (sensitivity analysis, not ROI)."""
+
+    loss_rate: list[float]  # share of a missed fraud's amount that is lost
+    c_review: list[float]  # cost of reviewing one alert
+    c_friction: list[float]  # extra cost of one false alert (customer friction)
+
+
+class BootstrapSection(_Strict):
+    resamples: int = Field(default=1000, ge=10)
+    seed: int = 42
+
+
+class PolicySection(_Strict):
+    calibration: CalibrationSection
+    cost: CostGrid
+    budgets_pct: list[float]  # top-N per day, N as % of the day's transactions
+    fpr_target: float = Field(default=0.05, gt=0, lt=1)  # threshold transfer test
+    bootstrap: BootstrapSection = BootstrapSection()
+
+
+class PolicyConfig(DecisionBase):
+    """G04 (configs/policy.yaml)."""
+
+    policy: PolicySection

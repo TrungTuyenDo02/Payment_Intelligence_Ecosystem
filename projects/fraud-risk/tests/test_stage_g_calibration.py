@@ -10,24 +10,12 @@ import pandas as pd
 import pytest
 import yaml
 from fraud_risk.adapters.ieee_cis import load_ieee_cis
-from fraud_risk.evaluation.split import DAY_SECONDS, time_split
+from fraud_risk.evaluation.split import time_split
 from fraud_risk.experiments import calibration as cal
 from fraud_risk.experiments import decision_data as dd
 from fraud_risk.scripts.config import CalibrationConfig
 
 CONFIGS = Path(__file__).resolve().parents[1] / "configs"
-
-
-def synthetic_raw(time: pd.Series, base: str = "calibration.yaml") -> dict[str, Any]:
-    """The real Stage G config with blocks re-cut for the synthetic validation days."""
-    raw = yaml.safe_load((CONFIGS / base).read_text("utf-8"))
-    split = time_split(time, raw["split"]["train_frac"], raw["split"]["valid_frac"])
-    days = sorted(int(d) for d in (time.loc[split.valid] // DAY_SECONDS).unique())
-    a, b = days[len(days) // 3], days[2 * len(days) // 3]
-    raw["blocks"] = {"V1": [days[0], a - 1], "V2": [a, b - 1], "V3": [b, days[-1]]}
-    raw["check"] = {}  # synthetic data: no Stage E numbers to reproduce
-    raw["models"]["gbm"] = {"learning_rate": 0.1, "max_iter": 30, "max_leaf_nodes": 7}
-    return raw
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +24,12 @@ def data(ieee_dir_module: Path) -> Any:
 
 
 @pytest.fixture(scope="module")
-def cfg(data: Any) -> CalibrationConfig:
+def synthetic_raw(stage_g_raw: Any) -> Any:
+    return lambda time: stage_g_raw(time, "calibration.yaml")
+
+
+@pytest.fixture(scope="module")
+def cfg(data: Any, synthetic_raw: Any) -> CalibrationConfig:
     return CalibrationConfig.model_validate(synthetic_raw(data.time))
 
 
@@ -130,21 +123,23 @@ def test_permuted_v3_labels_fall_to_chance(dev: dd.DevData, cfg: CalibrationConf
     assert abs(checks["permuted_v3_pr_auc"] - checks["v3_prevalence"]) < 0.05
 
 
-def test_reproduction_check_stops_a_different_model(data: Any) -> None:
+def test_reproduction_check_stops_a_different_model(data: Any, synthetic_raw: Any) -> None:
     raw = synthetic_raw(data.time)
     raw["check"] = {"gbm_valid_pr_auc": 0.999}
     with pytest.raises(dd.ReproductionError):
         dd.prepare(data.X, data.y, data.time, CalibrationConfig.model_validate(raw))
 
 
-def test_blocks_must_cover_validation(data: Any) -> None:
+def test_blocks_must_cover_validation(data: Any, synthetic_raw: Any) -> None:
     raw = synthetic_raw(data.time)
     raw["blocks"]["V3"][1] -= 1
     with pytest.raises(ValueError, match="cover"):
         dd.prepare(data.X, data.y, data.time, CalibrationConfig.model_validate(raw))
 
 
-def test_runner_is_reproducible(ieee_dir_module: Path, data: Any, tmp_path: Path) -> None:
+def test_runner_is_reproducible(
+    ieee_dir_module: Path, data: Any, tmp_path: Path, synthetic_raw: Any
+) -> None:
     config = tmp_path / "cal.yaml"
     config.write_text(yaml.safe_dump(synthetic_raw(data.time)), encoding="utf-8")
     manifest = ieee_dir_module.parent / "manifests" / "ieee-cis.yaml"
