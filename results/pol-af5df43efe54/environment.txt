@@ -1,0 +1,9 @@
+python 3.12.10
+platform Windows-11-10.0.26200-SP0
+pandas 3.1.0
+numpy 2.5.4
+scikit-learn 1.9.1
+pyarrow 26.0.0
+pyyaml 6.0.3
+pydantic 2.14.2
+jsonschema 4.26.0

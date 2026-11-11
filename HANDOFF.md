@@ -18,9 +18,9 @@ Stage G: từ xếp hạng đến quyết định, **chỉ trên train + validat
 | G04 chính sách | `stage-g/g04-policy` (`fb53035`) | `make policy` → `pol-af5df43efe54`; 10 test |
 | G05 độ ổn định | `stage-g/g05-stability` (`ed54347`) | `make stability` → `stab-36887d48b356`; 8 test |
 | G06 báo cáo | `stage-g/g06-report` (`82705cb`) | [`stage-g-report.md`](docs/architecture/stage-g-report.md): mọi số kèm mã lần chạy và commit |
-| G07 ⏸ | `stage-g/g07-packaging` | Chỉ có bản nháp [ADR 0010](docs/decisions/0010-experiment-and-execution-ids.md) (Proposed); **chưa code, chờ duyệt** |
+| G07 đóng gói | `stage-g/g07-packaging` | [ADR 0010](docs/decisions/0010-experiment-and-execution-ids.md) Accepted (chat 2026-11-11). `execution_id` cho mọi runner (cả `detect-report`); test hồi quy: `gbm.yaml`/`baseline.yaml` vẫn ra `f8807cb6f780…`/`d6faa4699008…`; CI có PostgreSQL + `REQUIRE_DB=1` và job kiểm tra sổ; `make bundle`, `make verify-demo`; gói `results/` cho cal/pol/stab. **CI chưa chạy** (chưa push) |
 
-`make test` sau G05: **414 pass, 8 skip**. Mỗi lệnh Stage G chạy ít nhất ba lần, `results.json` trùng từng byte. Tự kiểm tra (đảo nhãn, đổi dòng test, phá hoại có chủ đích, tính lại bằng vòng lặp thuần) ghi trong báo cáo Stage G.
+`make test` sau G05: 414 pass, 8 skip; sau G07: **429 pass, 8 skip** (vẫn 7 test DB bỏ qua trên máy này; với `REQUIRE_DB=1` chúng báo lỗi, như CI sẽ làm). Mỗi lệnh Stage G chạy ít nhất ba lần, `results.json` trùng từng byte. Tự kiểm tra (đảo nhãn, đổi dòng test, phá hoại có chủ đích, tính lại bằng vòng lặp thuần) ghi trong báo cáo Stage G.
 
 ### Kết quả chính (thăm dò, dữ liệu phát triển)
 
@@ -30,10 +30,11 @@ Stage G: từ xếp hạng đến quyết định, **chỉ trên train + validat
 
 ### Việc tiếp theo
 
-1. **Chủ dự án duyệt ADR 0010** (4 câu hỏi ở cuối ADR), rồi mới code G07.
-2. Quyết định cách push: một PR cho cả chồng nhánh (`stage-g/g06-report` hoặc `g07` vào `main`), hay từng PR theo thứ tự.
-3. G08 cần `execution_id` của G07; G09 và G10 ⏸ làm sau.
-4. Lệch tài liệu đã thấy (để G09): HANDOFF ghi PDF báo cáo 19–20 trang, thực tế 23 trang.
+1. **Push và mở PR**: chủ dự án chọn một PR cho mỗi task, xếp chồng (G01 → `main`, G02 → G01, …, G07 → G06), merge từ dưới lên, sau mỗi lần merge đổi đích của PR kế tiếp sang `main`. Cần `gh auth login` để mở PR bằng CLI.
+2. G07 chỉ xong khi CI xanh với test DB chạy thật (job `lint and test` có PostgreSQL) và job `registries` pass.
+3. Máy này thiếu lần chạy detector của Product 01 (`make verify-demo` báo thiếu `detections/det-*`).
+4. Kế tiếp: G08 (chấm điểm theo lô, dùng `execution_id`); G09; G10 ⏸.
+5. Lệch tài liệu đã thấy (để G09): HANDOFF ghi PDF báo cáo 19–20 trang, thực tế 23 trang.
 
 ## 0. Cập nhật 2026-11-09 (đọc trước)
 

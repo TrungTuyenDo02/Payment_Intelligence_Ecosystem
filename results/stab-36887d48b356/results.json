@@ -1,0 +1,655 @@
+{
+  "groups": [
+    {
+      "column": "ProductCD",
+      "frauds": 1979,
+      "pr_auc": 0.7146264599770249,
+      "prevalence": 0.12910170265509818,
+      "recall_at_fpr": 0.6988377968671046,
+      "rows": 15329,
+      "small_sample": false,
+      "value": "C"
+    },
+    {
+      "column": "ProductCD",
+      "frauds": 244,
+      "pr_auc": 0.6309628408926949,
+      "prevalence": 0.07924650860669048,
+      "recall_at_fpr": 0.6270491803278688,
+      "rows": 3079,
+      "small_sample": false,
+      "value": "H"
+    },
+    {
+      "column": "ProductCD",
+      "frauds": 260,
+      "pr_auc": 0.7484303803175483,
+      "prevalence": 0.06466053220591893,
+      "recall_at_fpr": 0.7307692307692307,
+      "rows": 4021,
+      "small_sample": false,
+      "value": "R"
+    },
+    {
+      "column": "ProductCD",
+      "frauds": 124,
+      "pr_auc": 0.5481119102938271,
+      "prevalence": 0.06839492553778267,
+      "recall_at_fpr": 0.5161290322580645,
+      "rows": 1813,
+      "small_sample": false,
+      "value": "S"
+    },
+    {
+      "column": "ProductCD",
+      "frauds": 2004,
+      "pr_auc": 0.17151552134260883,
+      "prevalence": 0.021349583448746084,
+      "recall_at_fpr": 0.3902195608782435,
+      "rows": 93866,
+      "small_sample": false,
+      "value": "W"
+    },
+    {
+      "column": "card6",
+      "frauds": 0,
+      "pr_auc": null,
+      "prevalence": 0.0,
+      "recall_at_fpr": null,
+      "rows": 4,
+      "small_sample": true,
+      "value": "(thi\u1ebfu)"
+    },
+    {
+      "column": "card6",
+      "frauds": 0,
+      "pr_auc": null,
+      "prevalence": 0.0,
+      "recall_at_fpr": null,
+      "rows": 3,
+      "small_sample": true,
+      "value": "charge card"
+    },
+    {
+      "column": "card6",
+      "frauds": 2174,
+      "pr_auc": 0.6185171380855885,
+      "prevalence": 0.08389287643744694,
+      "recall_at_fpr": 0.608555657773689,
+      "rows": 25914,
+      "small_sample": false,
+      "value": "credit"
+    },
+    {
+      "column": "card6",
+      "frauds": 2437,
+      "pr_auc": 0.3799930856827242,
+      "prevalence": 0.026437405077023215,
+      "recall_at_fpr": 0.512105047189167,
+      "rows": 92180,
+      "small_sample": false,
+      "value": "debit"
+    },
+    {
+      "column": "card6",
+      "frauds": 0,
+      "pr_auc": null,
+      "prevalence": 0.0,
+      "recall_at_fpr": null,
+      "rows": 7,
+      "small_sample": true,
+      "value": "debit or credit"
+    }
+  ],
+  "note": "Exploratory (th\u0103m d\u00f2): development data only. Train weeks are in-sample for the model (description only). Validation was used before, so it may be optimistic.",
+  "psi_edges": {
+    "C1": [
+      1.0,
+      2.0,
+      3.0,
+      6.0
+    ],
+    "C13": [
+      1.0,
+      2.0,
+      4.0,
+      8.0,
+      15.0,
+      35.0
+    ],
+    "TransactionAmt": [
+      25.95,
+      35.95,
+      49.0,
+      57.95,
+      70.0,
+      100.0,
+      117.0,
+      160.5,
+      279.95
+    ],
+    "hour_of_day": [
+      1.0,
+      3.0,
+      12.0,
+      15.0,
+      16.0,
+      18.0,
+      19.0,
+      21.0,
+      22.0
+    ]
+  },
+  "run_hash": "36887d48b35643a87dac7e11487f7b9c7837ddf19778f546fb19a80ef3270298",
+  "run_id": "stab-36887d48b356",
+  "self_checks": {
+    "permuted_valid_pr_auc": 0.039252670663830404,
+    "valid_prevalence": 0.03904053916754157
+  },
+  "valid": {
+    "frauds": 4611,
+    "pr_auc": 0.49703448857478155,
+    "prevalence": 0.03904053916754157,
+    "recall_at_fpr": 0.5881587508132726,
+    "rows": 118108
+  },
+  "weekly": [
+    {
+      "blocks": [],
+      "first_day": 1,
+      "frauds": 804,
+      "in_sample": true,
+      "last_day": 7,
+      "missing": {
+        "card4": 0.00010871140745035512,
+        "card6": 3.623713581678504e-05
+      },
+      "part": "train",
+      "pr_auc": 0.5490278123142768,
+      "prevalence": 0.029134657196695172,
+      "psi": {
+        "C1": 0.0005029181545332668,
+        "C13": 0.0035121152814418634,
+        "TransactionAmt": 0.0251797783665428,
+        "hour_of_day": 0.0006187491115023294
+      },
+      "recall_at_fpr": 0.6666666666666666,
+      "rows": 27596,
+      "week": 0
+    },
+    {
+      "blocks": [],
+      "first_day": 8,
+      "frauds": 717,
+      "in_sample": true,
+      "last_day": 14,
+      "missing": {
+        "card4": 0.0001053999929733338,
+        "card6": 7.026666198222253e-05
+      },
+      "part": "train",
+      "pr_auc": 0.39502369280332555,
+      "prevalence": 0.02519059832062678,
+      "psi": {
+        "C1": 0.019440223658158597,
+        "C13": 0.027650448779520966,
+        "TransactionAmt": 0.024834867777567503,
+        "hour_of_day": 0.0009829521114308813
+      },
+      "recall_at_fpr": 0.6206415620641562,
+      "rows": 28463,
+      "week": 1
+    },
+    {
+      "blocks": [],
+      "first_day": 15,
+      "frauds": 869,
+      "in_sample": true,
+      "last_day": 21,
+      "missing": {
+        "card4": 0.0,
+        "card6": 0.0
+      },
+      "part": "train",
+      "pr_auc": 0.5934358297586444,
+      "prevalence": 0.02434105487241254,
+      "psi": {
+        "C1": 0.03937879303369144,
+        "C13": 0.07437609710114132,
+        "TransactionAmt": 0.052088323242182634,
+        "hour_of_day": 0.0015278490937502174
+      },
+      "recall_at_fpr": 0.7192174913693901,
+      "rows": 35701,
+      "week": 2
+    },
+    {
+      "blocks": [],
+      "first_day": 22,
+      "frauds": 724,
+      "in_sample": true,
+      "last_day": 28,
+      "missing": {
+        "card4": 5.72967398155045e-05,
+        "card6": 8.594510972325674e-05
+      },
+      "part": "train",
+      "pr_auc": 0.4719059087593898,
+      "prevalence": 0.02074141981321263,
+      "psi": {
+        "C1": 0.06279788190767531,
+        "C13": 0.13447801272514118,
+        "TransactionAmt": 0.0798687393232699,
+        "hour_of_day": 0.005156597867046699
+      },
+      "recall_at_fpr": 0.6298342541436464,
+      "rows": 34906,
+      "week": 3
+    },
+    {
+      "blocks": [],
+      "first_day": 29,
+      "frauds": 889,
+      "in_sample": true,
+      "last_day": 35,
+      "missing": {
+        "card4": 0.0,
+        "card6": 4.075145686458291e-05
+      },
+      "part": "train",
+      "pr_auc": 0.6405523355015568,
+      "prevalence": 0.036228045152614206,
+      "psi": {
+        "C1": 0.0035859416972252884,
+        "C13": 0.005854608401346363,
+        "TransactionAmt": 0.00740503575366132,
+        "hour_of_day": 0.0024875912227977485
+      },
+      "recall_at_fpr": 0.7322834645669292,
+      "rows": 24539,
+      "week": 4
+    },
+    {
+      "blocks": [],
+      "first_day": 36,
+      "frauds": 803,
+      "in_sample": true,
+      "last_day": 42,
+      "missing": {
+        "card4": 0.0,
+        "card6": 0.0
+      },
+      "part": "train",
+      "pr_auc": 0.6191014701669537,
+      "prevalence": 0.038386156126009846,
+      "psi": {
+        "C1": 0.00408210478053438,
+        "C13": 0.011574212843655183,
+        "TransactionAmt": 0.013846712163862988,
+        "hour_of_day": 0.0017614785306993553
+      },
+      "recall_at_fpr": 0.6924034869240349,
+      "rows": 20919,
+      "week": 5
+    },
+    {
+      "blocks": [],
+      "first_day": 43,
+      "frauds": 823,
+      "in_sample": true,
+      "last_day": 49,
+      "missing": {
+        "card4": 0.0,
+        "card6": 0.0
+      },
+      "part": "train",
+      "pr_auc": 0.5980159703118704,
+      "prevalence": 0.04002139661544447,
+      "psi": {
+        "C1": 0.006294395973516662,
+        "C13": 0.014557071169130718,
+        "TransactionAmt": 0.014343693605147942,
+        "hour_of_day": 0.0024491428570551704
+      },
+      "recall_at_fpr": 0.6707168894289186,
+      "rows": 20564,
+      "week": 6
+    },
+    {
+      "blocks": [],
+      "first_day": 50,
+      "frauds": 862,
+      "in_sample": true,
+      "last_day": 56,
+      "missing": {
+        "card4": 5.060472648145337e-05,
+        "card6": 0.0
+      },
+      "part": "train",
+      "pr_auc": 0.6360905041536298,
+      "prevalence": 0.043621274227012806,
+      "psi": {
+        "C1": 0.00720626365817112,
+        "C13": 0.020371878481393504,
+        "TransactionAmt": 0.017278396052205162,
+        "hour_of_day": 0.0026977177662798027
+      },
+      "recall_at_fpr": 0.6890951276102089,
+      "rows": 19761,
+      "week": 7
+    },
+    {
+      "blocks": [],
+      "first_day": 57,
+      "frauds": 927,
+      "in_sample": true,
+      "last_day": 63,
+      "missing": {
+        "card4": 0.0,
+        "card6": 0.0
+      },
+      "part": "train",
+      "pr_auc": 0.6404757024416217,
+      "prevalence": 0.04325307950727884,
+      "psi": {
+        "C1": 0.007001594706208526,
+        "C13": 0.015556501145292563,
+        "TransactionAmt": 0.018172194961228696,
+        "hour_of_day": 0.0003761870903677853
+      },
+      "recall_at_fpr": 0.7130528586839266,
+      "rows": 21432,
+      "week": 8
+    },
+    {
+      "blocks": [],
+      "first_day": 64,
+      "frauds": 996,
+      "in_sample": true,
+      "last_day": 70,
+      "missing": {
+        "card4": 8.875477056891808e-05,
+        "card6": 4.437738528445904e-05
+      },
+      "part": "train",
+      "pr_auc": 0.6744131412622123,
+      "prevalence": 0.0441998757433212,
+      "psi": {
+        "C1": 0.013296238411799041,
+        "C13": 0.023814682795477455,
+        "TransactionAmt": 0.015990489602631875,
+        "hour_of_day": 0.0006362434960131868
+      },
+      "recall_at_fpr": 0.7680722891566265,
+      "rows": 22534,
+      "week": 9
+    },
+    {
+      "blocks": [],
+      "first_day": 71,
+      "frauds": 880,
+      "in_sample": true,
+      "last_day": 77,
+      "missing": {
+        "card4": 0.0,
+        "card6": 0.0
+      },
+      "part": "train",
+      "pr_auc": 0.6537308659865789,
+      "prevalence": 0.04199875912757123,
+      "psi": {
+        "C1": 0.0038327252442465105,
+        "C13": 0.009630388752347846,
+        "TransactionAmt": 0.011745545813509442,
+        "hour_of_day": 0.0010137795337487464
+      },
+      "recall_at_fpr": 0.740909090909091,
+      "rows": 20953,
+      "week": 10
+    },
+    {
+      "blocks": [],
+      "first_day": 78,
+      "frauds": 676,
+      "in_sample": true,
+      "last_day": 84,
+      "missing": {
+        "card4": 4.956629491945477e-05,
+        "card6": 4.956629491945477e-05
+      },
+      "part": "train",
+      "pr_auc": 0.6550400620335305,
+      "prevalence": 0.033506815365551425,
+      "psi": {
+        "C1": 0.009480640978022039,
+        "C13": 0.017149440295583726,
+        "TransactionAmt": 0.01691514328642787,
+        "hour_of_day": 0.0012474143154065774
+      },
+      "recall_at_fpr": 0.7218934911242604,
+      "rows": 20175,
+      "week": 11
+    },
+    {
+      "blocks": [],
+      "first_day": 85,
+      "frauds": 912,
+      "in_sample": true,
+      "last_day": 91,
+      "missing": {
+        "card4": 0.03630923138761109,
+        "card6": 0.03630923138761109
+      },
+      "part": "train",
+      "pr_auc": 0.6168716198079499,
+      "prevalence": 0.0407306507078737,
+      "psi": {
+        "C1": 0.009764740800679043,
+        "C13": 0.01768825540231837,
+        "TransactionAmt": 0.028525629465370968,
+        "hour_of_day": 0.004617994056909151
+      },
+      "recall_at_fpr": 0.6622807017543859,
+      "rows": 22391,
+      "week": 12
+    },
+    {
+      "blocks": [],
+      "first_day": 92,
+      "frauds": 884,
+      "in_sample": true,
+      "last_day": 98,
+      "missing": {
+        "card4": 0.0,
+        "card6": 0.0
+      },
+      "part": "train",
+      "pr_auc": 0.5186782265893725,
+      "prevalence": 0.03222866309380583,
+      "psi": {
+        "C1": 0.0004296536833007629,
+        "C13": 0.001927786656413467,
+        "TransactionAmt": 0.026499293622632657,
+        "hour_of_day": 0.00264710253304
+      },
+      "recall_at_fpr": 0.6346153846153846,
+      "rows": 27429,
+      "week": 13
+    },
+    {
+      "blocks": [],
+      "first_day": 99,
+      "frauds": 222,
+      "in_sample": true,
+      "last_day": 101,
+      "missing": {
+        "card4": 0.0002873150409423933,
+        "card6": 0.0002873150409423933
+      },
+      "part": "train",
+      "pr_auc": 0.44191284931332653,
+      "prevalence": 0.03189196954460566,
+      "psi": {
+        "C1": 0.0010155864921460643,
+        "C13": 0.007757342349899318,
+        "TransactionAmt": 0.024126877939618083,
+        "hour_of_day": 0.024883398437904904
+      },
+      "recall_at_fpr": 0.5855855855855856,
+      "rows": 6961,
+      "week": 14
+    },
+    {
+      "blocks": [
+        "V1"
+      ],
+      "first_day": 101,
+      "frauds": 798,
+      "in_sample": false,
+      "last_day": 108,
+      "missing": {
+        "card4": 4.8199739721405505e-05,
+        "card6": 0.0
+      },
+      "part": "valid",
+      "pr_auc": 0.5629238204463758,
+      "prevalence": 0.038463392297681594,
+      "psi": {
+        "C1": 0.005806699803877489,
+        "C13": 0.01334229653378435,
+        "TransactionAmt": 0.014610738885507573,
+        "hour_of_day": 0.007183978991434826
+      },
+      "recall_at_fpr": 0.650375939849624,
+      "rows": 20747,
+      "week": 0
+    },
+    {
+      "blocks": [
+        "V1",
+        "V2"
+      ],
+      "first_day": 108,
+      "frauds": 897,
+      "in_sample": false,
+      "last_day": 115,
+      "missing": {
+        "card4": 0.0,
+        "card6": 4.771675335210192e-05
+      },
+      "part": "valid",
+      "pr_auc": 0.4860644088331985,
+      "prevalence": 0.042801927756835424,
+      "psi": {
+        "C1": 0.0063245426710708,
+        "C13": 0.01358086757970773,
+        "TransactionAmt": 0.013986888489962941,
+        "hour_of_day": 0.007079528964734741
+      },
+      "recall_at_fpr": 0.5663322185061316,
+      "rows": 20957,
+      "week": 1
+    },
+    {
+      "blocks": [
+        "V2"
+      ],
+      "first_day": 115,
+      "frauds": 1051,
+      "in_sample": false,
+      "last_day": 122,
+      "missing": {
+        "card4": 4.517323937299544e-05,
+        "card6": 4.517323937299544e-05
+      },
+      "part": "valid",
+      "pr_auc": 0.5249893852465625,
+      "prevalence": 0.04747707458101821,
+      "psi": {
+        "C1": 0.001984669057050659,
+        "C13": 0.007801557542115546,
+        "TransactionAmt": 0.01601128602099848,
+        "hour_of_day": 0.012258471717045092
+      },
+      "recall_at_fpr": 0.5975261655566128,
+      "rows": 22137,
+      "week": 2
+    },
+    {
+      "blocks": [
+        "V2",
+        "V3"
+      ],
+      "first_day": 122,
+      "frauds": 699,
+      "in_sample": false,
+      "last_day": 129,
+      "missing": {
+        "card4": 8.948145496845778e-05,
+        "card6": 8.948145496845778e-05
+      },
+      "part": "valid",
+      "pr_auc": 0.5613791687420558,
+      "prevalence": 0.031273768511475994,
+      "psi": {
+        "C1": 0.017741000707335898,
+        "C13": 0.049182524648508565,
+        "TransactionAmt": 0.013924915072485456,
+        "hour_of_day": 0.014624525464198757
+      },
+      "recall_at_fpr": 0.630901287553648,
+      "rows": 22351,
+      "week": 3
+    },
+    {
+      "blocks": [
+        "V3"
+      ],
+      "first_day": 129,
+      "frauds": 757,
+      "in_sample": false,
+      "last_day": 136,
+      "missing": {
+        "card4": 0.00010670650376140426,
+        "card6": 0.0
+      },
+      "part": "valid",
+      "pr_auc": 0.42739800640871,
+      "prevalence": 0.04038841167369151,
+      "psi": {
+        "C1": 0.009900756309409097,
+        "C13": 0.034849319572089046,
+        "TransactionAmt": 0.01640198614803894,
+        "hour_of_day": 0.010615836591398507
+      },
+      "recall_at_fpr": 0.5416116248348745,
+      "rows": 18743,
+      "week": 4
+    },
+    {
+      "blocks": [
+        "V3"
+      ],
+      "first_day": 136,
+      "frauds": 409,
+      "in_sample": false,
+      "last_day": 141,
+      "missing": {
+        "card4": 0.0,
+        "card6": 0.0
+      },
+      "part": "valid",
+      "pr_auc": 0.35382531918920035,
+      "prevalence": 0.031048356486753206,
+      "psi": {
+        "C1": 0.018140297727270476,
+        "C13": 0.046809452142368944,
+        "TransactionAmt": 0.016514749683541708,
+        "hour_of_day": 0.017299922553333253
+      },
+      "recall_at_fpr": 0.530562347188264,
+      "rows": 13173,
+      "week": 5
+    }
+  ]
+}

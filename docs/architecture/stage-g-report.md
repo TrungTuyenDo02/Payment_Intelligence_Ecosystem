@@ -15,6 +15,8 @@
 
 Kết quả nằm trong `artifacts/experiments/<mã>/` (`results.json`, `summary.md`, hình, `config.yaml`, `environment.txt`, `git_sha.txt`). Thư mục `artifacts/` không nằm trong git; chạy lại bằng `make calibration`, `make policy`, `make stability` (cần dataset IEEE-CIS, khoảng 30–50 giây mỗi lệnh). Mỗi lệnh đã chạy ba lần (hai lần trước commit, một lần sau commit) và cho `results.json` trùng từng byte.
 
+Từ G07 (ADR 0010), bản chép các file tóm tắt nằm trong git ở [`results/<mã>/`](../../results/README.md), kèm `executions/exec-….json` của hai lần chạy lại sau khi thêm `execution_id`: một ở commit có thay đổi chưa commit (ghi `-dirty`), một ở commit sạch `b729ed7`. Hai bản ghi có cùng SHA-256 của `results.json`. Gói không chứa hình, dự đoán theo dòng hay dữ liệu.
+
 ### Kết quả này không chứng minh
 
 1. **Không chứng minh hiệu quả khi vận hành.** Mọi số liệu ở trên là dữ liệu lịch sử của validation, không phải số đo trên hệ thống thật hay trên dữ liệu mới.
