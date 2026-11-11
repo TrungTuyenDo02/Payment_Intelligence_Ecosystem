@@ -30,7 +30,14 @@ from sklearn.metrics import average_precision_score
 from fraud_risk.baselines.logistic import LogisticBaseline
 from fraud_risk.evaluation.entity_overlap import entity_overlap
 from fraud_risk.evaluation.metrics import pr_auc, recall_at_fpr
-from fraud_risk.evaluation.run_log import compute_run_hash, git_sha, run_id_from_hash, write_json
+from fraud_risk.evaluation.run_log import (
+    compute_run_hash,
+    git_sha,
+    run_id_from_hash,
+    utc_now,
+    write_execution,
+    write_json,
+)
 from fraud_risk.evaluation.split import Split, random_split, time_split
 from fraud_risk.features.baseline_features import FeatureSpec, build_features
 from fraud_risk.scripts.config import LeakageConfig, load_leakage_config
@@ -200,6 +207,7 @@ def run(
     artifacts_dir: Path = Path("artifacts"),
 ) -> Path:  # fmt: skip
     """Load and check the data, run the diagnostics, write the experiment folder."""
+    started = utc_now()
     cfg, raw, _ = load_leakage_config(config_path)
     data, manifest = load_checked_data(cfg.data, data_dir, manifest_path, artifacts_dir)
     result = run_diagnostics(data.X, data.y, data.time, cfg)
@@ -209,6 +217,7 @@ def run(
     out.mkdir(parents=True, exist_ok=True)
     write_json(out / "results.json", {"run_id": run_id, "run_hash": run_hash, **result})
     (out / "git_sha.txt").write_text(git_sha(REPO_ROOT) + "\n", encoding="utf-8")
+    write_execution(out, run_id, started, REPO_ROOT)
     return out
 
 

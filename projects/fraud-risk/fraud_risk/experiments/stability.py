@@ -31,7 +31,12 @@ import pandas as pd  # noqa: E402
 from dataset_management.manifest import DatasetFileNotFoundError  # noqa: E402
 
 from fraud_risk.evaluation.metrics import pr_auc, recall_at_fpr  # noqa: E402
-from fraud_risk.evaluation.run_log import run_id_from_hash, write_json  # noqa: E402
+from fraud_risk.evaluation.run_log import (  # noqa: E402
+    run_id_from_hash,
+    utc_now,
+    write_execution,
+    write_json,
+)
 from fraud_risk.experiments.calibration import (  # noqa: E402
     REPO_ROOT,
     experiment_hash,
@@ -225,6 +230,7 @@ def run(
     artifacts_dir: Path = Path("artifacts"),
 ) -> Path:  # fmt: skip
     """Load and check the data, run G05, write `artifacts/experiments/stab-<hash>/`."""
+    started = utc_now()
     cfg, raw, text = load_stability_config(config_path)
     data, manifest = load_checked_data(cfg.data, data_dir, manifest_path, artifacts_dir)
     dev = prepare(data.X, data.y, data.time, cfg)
@@ -236,6 +242,7 @@ def run(
     write_json(out / "results.json", {"run_id": run_id, "run_hash": run_hash, **res})
     (out / "summary.md").write_text(summary_markdown(run_id, res), encoding="utf-8")
     stability_figure(res, out / "stability.png")
+    write_execution(out, run_id, started, REPO_ROOT)
     return out
 
 

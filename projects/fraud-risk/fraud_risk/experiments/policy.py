@@ -37,7 +37,7 @@ import pandas as pd
 from dataset_management.manifest import DatasetFileNotFoundError
 
 from fraud_risk.evaluation.metrics import recall_at_fpr, select_threshold, threshold_metrics
-from fraud_risk.evaluation.run_log import run_id_from_hash, write_json
+from fraud_risk.evaluation.run_log import run_id_from_hash, utc_now, write_execution, write_json
 from fraud_risk.experiments.calibration import (
     REPO_ROOT,
     calibration_metrics,
@@ -425,6 +425,7 @@ def run(
     artifacts_dir: Path = Path("artifacts"),
 ) -> Path:  # fmt: skip
     """Load and check the data, run G04, write `artifacts/experiments/pol-<hash>/`."""
+    started = utc_now()
     cfg, raw, text = load_policy_config(config_path)
     data, manifest = load_checked_data(cfg.data, data_dir, manifest_path, artifacts_dir)
     dev = prepare(data.X, data.y, data.time, cfg)
@@ -435,6 +436,7 @@ def run(
     write_common(out, text)
     write_json(out / "results.json", {"run_id": run_id, "run_hash": run_hash, **res})
     (out / "summary.md").write_text(summary_markdown(run_id, res), encoding="utf-8")
+    write_execution(out, run_id, started, REPO_ROOT)
     return out
 
 

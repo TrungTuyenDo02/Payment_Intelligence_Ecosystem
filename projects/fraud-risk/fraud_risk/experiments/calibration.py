@@ -40,6 +40,8 @@ from fraud_risk.evaluation.run_log import (  # noqa: E402
     environment_text,
     git_sha,
     run_id_from_hash,
+    utc_now,
+    write_execution,
     write_json,
 )
 from fraud_risk.experiments.decision_data import (  # noqa: E402
@@ -344,6 +346,7 @@ def run(
     artifacts_dir: Path = Path("artifacts"),
 ) -> Path:  # fmt: skip
     """Load and check the data, run G03, write `artifacts/experiments/cal-<hash>/`."""
+    started = utc_now()
     cfg, raw, text = load_calibration_config(config_path)
     data, manifest = load_checked_data(cfg.data, data_dir, manifest_path, artifacts_dir)
     dev = prepare(data.X, data.y, data.time, cfg)
@@ -355,6 +358,7 @@ def run(
     write_json(out / "results.json", {"run_id": run_id, "run_hash": run_hash, **res})
     (out / "summary.md").write_text(summary_markdown(run_id, res), encoding="utf-8")
     reliability_figure(res, out / "reliability.png")
+    write_execution(out, run_id, started, REPO_ROOT)
     return out
 
 

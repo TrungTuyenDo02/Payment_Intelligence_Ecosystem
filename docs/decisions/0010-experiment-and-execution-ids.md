@@ -1,6 +1,6 @@
 # ADR 0010 — Tách mã cấu hình và mã lần chạy; CI bảo vệ sổ test-một-lần
 
-- **Trạng thái:** Proposed (bản nháp G07, chờ chủ dự án duyệt; chưa có code)
+- **Trạng thái:** Accepted (chủ dự án duyệt trong chat ngày 2026-11-11; xem mục "Quyết định của chủ dự án")
 - **Phạm vi:** `fraud_risk/evaluation/run_log.py`, các runner (`run_baseline`, `run_gbm`, `leakage`, `split_diagnostics`, Stage G), `detect-report` của Product 01, `.github/workflows/ci.yml`, `Makefile`
 
 ## Bối cảnh
@@ -18,7 +18,7 @@
 | B. Đổi công thức hash (thêm phiên bản thư viện) | Một mã duy nhất | Mọi mã cũ đổi, sổ mất tác dụng; vi phạm quy tắc 3 |
 | C. Không làm | Không tốn công | Giữ nguyên bốn vấn đề ở trên |
 
-## Đề xuất (chọn A)
+## Quyết định (phương án A)
 
 **1. Hai mã**
 
@@ -34,7 +34,7 @@
 
 **3. CI bảo vệ hai sổ**
 
-- Script `scripts/check_registries.py` (chỉ dùng thư viện chuẩn) so mỗi sổ ở PR với bản ở nhánh đích (`git show origin/main:<sổ>`). Script báo lỗi nếu: (a) một dòng cũ bị xoá hoặc bị sửa (so theo `hash`); (b) có dòng mới mang `"forced": true`; (c) file không phải JSON hợp lệ. Checkout cần `fetch-depth: 0`.
+- Script `scripts/check_registries.py` (chỉ dùng thư viện chuẩn) so mỗi sổ ở PR với bản ở nhánh đích của PR (`git show origin/<nhánh đích>:<sổ>`; push vào `main` thì so với commit trước). Script báo lỗi nếu: (a) một dòng cũ bị xoá hoặc bị sửa (so theo `hash`); (b) có dòng mới mang `"forced": true`; (c) file không phải JSON hợp lệ. Checkout cần `fetch-depth: 0`.
 - Ngoại lệ (nếu chủ dự án cố ý `--force`): chủ dự án ghi lý do trong PR và tạm bỏ qua bước này. Đề xuất **không** tự động hoá ngoại lệ.
 
 **4. Gói kết quả nhỏ có thể commit**
@@ -52,9 +52,9 @@
 - Mọi mã lần chạy đã công bố giữ nguyên.
 - CI chậm hơn một chút (khởi động PostgreSQL).
 
-## Câu hỏi cho chủ dự án
+## Quyết định của chủ dự án (2026-11-11)
 
-1. Chọn A?
-2. Thư mục gói kết quả: `results/` ở gốc repo, hay `docs/results/`?
-3. Bước kiểm tra sổ: áp cho mọi PR (đề xuất), hay chỉ PR vào `main`?
-4. Có muốn gói luôn kết quả test (do chủ dự án chạy `make bundle` trên máy có `artifacts/runs/*/test/`) không?
+1. **Chọn A.** Giữ nguyên công thức hiện tại làm `experiment_id`; thêm `execution_id` cho từng lần chạy. `execution_id` chỉ dùng để truy vết, không bao giờ là khoá test-một-lần.
+2. **Gói kết quả đặt ở `results/` tại gốc repo**, tách khỏi `docs/` (tài liệu). Chỉ chứa config, metric, split, summary, môi trường, commit và thông tin lần chạy; không chứa dataset, Parquet, mô hình hay dự đoán từng dòng.
+3. **Kiểm tra sổ chạy trên mọi PR**, không chỉ PR vào `main`: các nhánh Stage G xếp chồng, nên một nhánh trung gian có thể xoá dòng hoặc thêm `"forced": true` rồi đi tiếp qua các PR sau. Bản đối chiếu là nhánh đích của PR.
+4. **Agent không gói kết quả test.** Nếu cần, chủ dự án tự chạy `make bundle` trên máy có `artifacts/runs/*/test/` sau khi xem nội dung.
