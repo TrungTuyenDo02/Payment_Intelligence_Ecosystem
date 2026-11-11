@@ -8,4 +8,4 @@ Architecture notes.
 - [`stage-d-report.md`](stage-d-report.md): Stage D report (tuning and one-time report results).
 - [`stage-e-spec.md`](stage-e-spec.md), [`stage-e-report.md`](stage-e-report.md): Stage E (code done; IEEE-CIS numbers pending).
 - [`stage-f-spec.md`](stage-f-spec.md): Stage F dashboard and report outline.
-- [`stage-g-spec.md`](stage-g-spec.md): Stage G spec, from ranking to decisions (approved 2026-11-11).
+- [`stage-g-spec.md`](stage-g-spec.md), [`stage-g-report.md`](stage-g-report.md): Stage G, from ranking to decisions (spec approved 2026-11-11; exploratory results on development data).

@@ -4,6 +4,31 @@
 - **Mọi kết quả ở đây là "thăm dò"**: chỉ dùng train + validation, mà validation đã bị dùng cho lưới GBM, thí nghiệm rò rỉ và đặc trưng lịch sử. Tập test **không** được nạp ở bước nào.
 - Môi trường các lần chạy: Python 3.12.10, scikit-learn 1.9.1, pandas 3.1.0, numpy 2.5.4, Windows 11.
 
+## Tóm tắt
+
+| Phần | Câu hỏi | Quan sát (trong dữ liệu phát triển, thăm dò) | Mã lần chạy | Commit |
+| --- | --- | --- | --- | --- |
+| G02 | Đọc số Stage E thế nào? | Recall @ FPR 5% (0,51 trên test) chọn ngưỡng bằng nhãn test, nên chỉ đo chất lượng xếp hạng. Ngưỡng 0,853 chốt trước cho recall 0,371 tại FPR 1,24%: hai điểm vận hành khác nhau, không phải một mức sụt | `run-f8807cb6f780` (trích lại) | — |
+| G03 | Điểm có đọc như xác suất được không? | Không: trung bình điểm GBM gấp khoảng 7 lần tỷ lệ gian lận thật. Dịch tiên nghiệm và Platt đều sửa được phần lớn (log loss V3 0,35 → 0,11); hai cách gần như ngang nhau; cả hai đi trễ so với trôi theo tuần | `cal-04b3ad5944ce` | `50d01de` |
+| G04 | Dùng điểm ra quyết định thế nào? | Luật chi phí theo số tiền, dùng xác suất đã hiệu chỉnh, có chi phí thấp nhất ở 27/27 tổ hợp chi phí giả định và 4/4 cửa sổ cuốn chiếu; dùng điểm gốc thì luật này cảnh báo quá nhiều. Ngưỡng FPR 5% chọn trước cho FPR thực tế 3,9%–5,6% | `pol-af5df43efe54` | `fb53035` |
+| G05 | Mô hình ổn định đến đâu? | PR-AUC theo tuần validation 0,35–0,56, thấp nhất ở hai tuần cuối; PSI của 4 đầu vào đều dưới 0,05 nên không giải thích được sự sụt giảm. `ProductCD = W` (79% giao dịch) có recall @ FPR 5% thấp nhất (0,39) | `stab-36887d48b356` | `ed54347` |
+
+Kết quả nằm trong `artifacts/experiments/<mã>/` (`results.json`, `summary.md`, hình, `config.yaml`, `environment.txt`, `git_sha.txt`). Thư mục `artifacts/` không nằm trong git; chạy lại bằng `make calibration`, `make policy`, `make stability` (cần dataset IEEE-CIS, khoảng 30–50 giây mỗi lệnh). Mỗi lệnh đã chạy ba lần (hai lần trước commit, một lần sau commit) và cho `results.json` trùng từng byte.
+
+### Kết quả này không chứng minh
+
+1. **Không chứng minh hiệu quả khi vận hành.** Mọi số liệu ở trên là dữ liệu lịch sử của validation, không phải số đo trên hệ thống thật hay trên dữ liệu mới.
+2. **Không phải ước lượng không thiên lệch.** Validation đã được dùng để chọn cấu hình GBM và cho nhiều thí nghiệm trước; V3 là một phần của validation đó. Tập test không được dùng lại (ADR 0009), nên Stage G không có con số "chưa thấy" nào.
+3. **Không phải ROI.** Chi phí là giả định; kết luận G04 chỉ đúng trong vùng giả định đã quét (`loss_rate` 0,5–1; `c_review` 1–25; `c_friction` 0–10) và với giả định mất mát tỷ lệ với số tiền.
+4. **Không chứng minh nguyên nhân** của trôi theo tuần (G05) hay của việc PR-AUC khác nhau giữa các khối.
+5. Giả định nhãn đến ngay (D3) làm mọi kết quả cần nhãn mới (hiệu chỉnh, chọn ngưỡng) lạc quan hơn thực tế.
+
+### Ghi chú quy trình
+
+- Ba config được viết trước lần chạy đầu tiên và không sửa sau khi thấy số V3. Tuy nhiên chúng được **commit sau** lần chạy đầu (cùng commit với code), không phải trước như đặc tả mục 5 yêu cầu. Lần chạy sau commit cho kết quả trùng từng byte với lần đầu.
+- Thêm cờ `monotone` cho bộ hiệu chỉnh Platt (phương pháp có hệ số dốc ≤ 0 không bao giờ được chọn): phát hiện khi chạy test trên dữ liệu tổng hợp nhỏ, trước khi chạy dữ liệu thật. Trên dữ liệu thật, Platt fit trên V1 có hệ số dốc dương (GBM 1,097; LR 1,124); tham số Platt của từng cửa sổ cuốn chiếu không được lưu, chỉ lưu phương pháp được chọn.
+- Đặc tả ghi tuần validation W0–W5 tính từ giao dịch đầu tiên của validation; mã làm đúng như vậy, nên tuần không trùng ranh giới ngày và không trùng ranh giới khối (W1 và W3 nằm vắt qua hai khối).
+
 ## Khối validation (chung cho G03–G05)
 
 | Khối | Vai trò | Ngày | Dòng | Gian lận | Tỷ lệ |
