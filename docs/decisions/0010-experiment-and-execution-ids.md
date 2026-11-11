@@ -39,7 +39,7 @@
 
 **4. Gói kết quả nhỏ có thể commit**
 
-- `make bundle RUN=<thư mục>` chép vào `results/<experiment_id>/` các file nhỏ: `config.yaml`, `metrics.json` hoặc `results.json`, `split.json`, `summary.md`, `environment.txt`, `git_sha.txt`, `executions/*.json`. Không chép dataset, Parquet, mô hình hay dự đoán theo dòng. Giới hạn 1 MB mỗi gói, vượt thì báo lỗi.
+- `make bundle RUN_DIR=<thư mục>` chép vào `results/<experiment_id>/` các file nhỏ: `config.yaml`, `metrics.json` hoặc `results.json`, `split.json`, `summary.md`, `environment.txt`, `git_sha.txt`, `executions/*.json`. Không chép dataset, Parquet, mô hình hay dự đoán theo dòng. Giới hạn 1 MB mỗi gói, vượt thì báo lỗi.
 - Agent chỉ đóng gói lần chạy train/validation (`cal-…`, `pol-…`, `stab-…`, `leak-…`, phần validation của `run-…`). **Gói của phần test** (`artifacts/runs/*/test/`) do chủ dự án tự chạy, vì agent không được đọc thư mục đó.
 
 **5. `make verify-demo`**

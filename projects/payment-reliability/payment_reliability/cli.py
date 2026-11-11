@@ -84,7 +84,7 @@ def score_and_evaluate(
 def _write_run(
     out: Path, cfg: dict[str, Any], sid: str, stage: str, alerts: pd.DataFrame,
     incidents: list[dict[str, Any]], result: dict[str, Any], extra: dict[str, Any],
-) -> None:  # fmt: skip
+) -> str:  # fmt: skip
     out.mkdir(parents=True, exist_ok=True)
     (out / "config.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
     alerts.to_parquet(out / "scores.parquet", index=False)
@@ -102,6 +102,23 @@ def _write_run(
     (out / "environment.txt").write_text(
         f"python {platform.python_version()}, {libs}\n", encoding="utf-8"
     )
+    return _write_execution(out, extra["run_id"], sha)
+
+
+def _write_execution(out: Path, run_id: str, commit: str) -> str:
+    """ADR 0010: one record per execution; run_id (hash) stays the test-once key."""
+    env = (out / "environment.txt").read_text("utf-8")
+    stamp = datetime.now(UTC).replace(microsecond=0).isoformat()
+    payload = json.dumps([run_id, stamp, commit, env], separators=(",", ":"))
+    eid = "exec-" + hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+    files = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+             for p in sorted(out.iterdir()) if p.is_file()}  # fmt: skip
+    record = {"execution_id": eid, "experiment_id": run_id, "finished_at": stamp,
+              "commit": commit, "environment": env.splitlines(), "files": files}  # fmt: skip
+    (out / "executions").mkdir(exist_ok=True)
+    text = json.dumps(record, indent=2, sort_keys=True) + "\n"
+    (out / "executions" / f"{eid}.json").write_text(text, encoding="utf-8")
+    return eid
 
 
 def cmd_detect(cfg: dict[str, Any], kpi_root: Path, sim_root: Path, out_root: Path) -> Path:
@@ -185,9 +202,10 @@ def cmd_detect_report(
     if force and any(r["hash"] == h for r in runs):
         extra["warning"] = "forced re-run on the report simulation; disclose in the report"
     out = out_root / "detections" / run_id / "report"
-    _write_run(out, cfg, sid, "report", alerts, incidents, result, extra)
+    execution = _write_run(out, cfg, sid, "report", alerts, incidents, result, extra)
     stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    runs.append({"hash": h, "run_id": run_id, "simulation_id": sid, "at": stamp, "forced": force})
+    runs.append({"hash": h, "run_id": run_id, "simulation_id": sid, "at": stamp, "forced": force,
+                 "execution_id": execution})  # fmt: skip
     registry.write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8")
     return out
 

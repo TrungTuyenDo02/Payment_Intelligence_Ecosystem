@@ -280,6 +280,18 @@ def test_detect_report_runs_once_unless_forced(tmp_path: Path) -> None:
     assert len(json.loads((root / "detect_report_runs.json").read_text())) == 2
 
 
+def test_each_detection_run_records_an_execution(tmp_path: Path) -> None:
+    """ADR 0010: run_id stays the hash key; each execution adds executions/<execution_id>.json."""
+    cfg, root = _workspace(tmp_path, status="frozen")
+    out = cli.cmd_detect(cfg, root / "kpi", root / "simulations", root)
+    records = [json.loads(p.read_text()) for p in (out / "executions").glob("exec-*.json")]
+    assert len(records) == 1 and records[0]["experiment_id"] == out.name
+    assert "evaluation.json" in records[0]["files"]
+    report = cli.cmd_detect_report(cfg, root / "kpi", root / "simulations", root, force=False)
+    entry = json.loads((root / "detect_report_runs.json").read_text())[-1]
+    assert (report / "executions" / f"{entry['execution_id']}.json").is_file()
+
+
 def test_run_hash_ignores_status_only() -> None:
     cfg = yaml.safe_load(CONFIG.read_text("utf-8"))
     frozen = {**cfg, "status": "frozen"}

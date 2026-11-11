@@ -2,6 +2,7 @@
 
 import copy
 import json
+import os
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -148,6 +149,8 @@ def db() -> Iterator[psycopg.Connection]:
     try:
         conn = connect()
     except psycopg.OperationalError as err:
+        if os.environ.get("REQUIRE_DB") == "1":  # CI (ADR 0010): a missing database is a failure
+            pytest.fail(f"REQUIRE_DB=1 but PostgreSQL is not reachable: {err}")
         pytest.skip(f"PostgreSQL not reachable (start it with `make up`): {err}")
     conn.autocommit = True
     schema = f"test_{uuid.uuid4().hex[:8]}"
