@@ -1,6 +1,6 @@
 # Đặc tả Stage G — Từ xếp hạng đến quyết định (Product 02)
 
-- **Trạng thái:** **Bản nháp, chờ chủ dự án duyệt** (⏸ G01). Chưa có dòng code Stage G nào trước khi đặc tả này được duyệt.
+- **Trạng thái:** **Đã duyệt** (chủ dự án duyệt D1–D8 trong chat ngày 2026-11-11, giữ nguyên đề xuất; xem ghi chú duyệt ở mục 9).
 - **Liên quan:** [ADR 0009](../decisions/0009-decision-evaluation-protocol.md) (protocol đánh giá), [ADR 0003](../decisions/0003-label-delay-and-entity-overlap.md) (độ trễ nhãn), [ADR 0006](../decisions/0006-gradient-boosting-sklearn.md), [ADR 0008](../decisions/0008-entity-history-features.md), [báo cáo Stage E](stage-e-report.md).
 - **Mọi kết quả Stage G là "thăm dò"** (xem mục 8).
 
@@ -131,3 +131,9 @@ Kết quả gọi là **phân tích độ nhạy**, không phải ROI. Mỗi k�
 | D6 | Bootstrap 1.000 lần, theo ngày và theo `card1` | Hàng xóm theo thời gian và theo thẻ tương quan | 200 lần như `gbm.yaml` |
 | D7 | Chọn phương pháp hiệu chỉnh theo log loss trên V2 | Log loss nhạy với xác suất cực trị, đúng thứ ngưỡng chi phí cần | Brier |
 | D8 | Mã lần chạy theo mục 6, tách id để G07 | G07 cần ADR riêng | Làm G07 trước G03 |
+
+**Ghi chú duyệt (chủ dự án, 2026-11-11):** duyệt D1–D8 như đề xuất.
+
+- D3: không thêm khoảng trống, vì bỏ 7 ngày làm V2/V3 chỉ còn khoảng 6–8 ngày, khiến top-N và bootstrap kém ổn định hơn. Giả định nhãn đến ngay được ghi là hạn chế lạc quan (mục 8, hạn chế 3).
+- D4: giữ lưới chi phí. Kết quả báo là phân tích độ nhạy, không phải ROI.
+- D5: isotonic ngoài danh sách chính. Sigmoid và dịch tiên nghiệm đủ trả lời câu hỏi của G03 mà không thêm một lựa chọn dễ quá khớp.

@@ -1,6 +1,6 @@
 # ADR 0009 — Protocol đánh giá quyết định trên dữ liệu phát triển
 
-- **Trạng thái:** Proposed (chờ chủ dự án duyệt; chỉ chủ dự án đổi thành Accepted)
+- **Trạng thái:** Accepted (chủ dự án duyệt D1–D8 của đặc tả Stage G và đồng ý chuyển ADR sang Accepted trong chat ngày 2026-11-11)
 - **Phạm vi:** Stage G (G03 hiệu chỉnh, G04 chính sách, G05 độ ổn định), [đặc tả Stage G](../architecture/stage-g-spec.md)
 
 ## Bối cảnh
