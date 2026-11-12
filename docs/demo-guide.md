@@ -137,7 +137,20 @@ Cần dataset IEEE-CIS trong `datasets/raw/ieee-cis/` (không cần PostgreSQL).
 
 `score` là điểm gốc (chỉ dùng để xếp hạng; bị thổi lên khoảng 7 lần). `score_calibrated` đọc được gần như xác suất. Bộ chấm điểm từ chối file có cột `isFraud` hoặc có giao dịch thuộc giai đoạn test.
 
-## 3. Lỗi thường gặp
+## 3. Dashboard
+
+Mở `artifacts/dashboard/index.html` bằng trình duyệt (không cần mạng). Nút ◐ góc phải đổi sáng/tối. Rê chuột lên biểu đồ để xem số; vùng tô đỏ là sự cố detector báo, khung nét đứt là sự cố cài sẵn (đáp án).
+
+| Tab | Xem gì |
+| --- | --- |
+| Tổng quan | Luồng pipeline của hai sản phẩm: mỗi ô là một bước, ✓ là đã có kết quả trên máy, ○ là chưa chạy (kèm lệnh), 🔒 là tập test chỉ đánh giá một lần |
+| Product 01 | Tỷ lệ lỗi kỹ thuật theo giờ của từng provider (cùng thang), độ trễ, lưu lượng; bảng detector so với sự cố cài sẵn; số của bộ report (trích lại) |
+| Product 02 | PR-AUC từng mô hình (trích lại), ngưỡng đã chốt, lần chấm điểm gần nhất (phân bố xác suất, 10 giao dịch rủi ro nhất), hiệu chỉnh, chính sách theo chi phí giả định, độ ổn định theo tuần và nhóm |
+| Dữ liệu & chất lượng | Kiểm tra tự động (tái lập số công bố, lệch huấn luyện–chấm điểm, sổ test-một-lần), các `experiment_id`/`execution_id`, nguồn dữ liệu, hạn chế |
+
+Số test và số của bộ report lấy từ `results/published.json` (nằm trong git). Dashboard **không đọc** `artifacts/runs/*/test/` hay lần chạy của bộ report; có test tự động chặn việc này.
+
+## 4. Lỗi thường gặp
 
 | Thấy | Nghĩa | Làm gì |
 | --- | --- | --- |

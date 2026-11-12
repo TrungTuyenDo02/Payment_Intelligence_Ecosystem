@@ -117,7 +117,7 @@ Detector chính bắt được sự cố về lỗi và độ trễ trong 15–3
 
 <p align="center"><img src="docs/assets/results/stage-d-report.png" alt="KPI và điểm của hai detector quanh bốn sự cố trên bộ report" width="100%"></p>
 
-**Dashboard** (`make dashboard`): một trang HTML tĩnh cho cả hai sản phẩm, mở được không cần mạng. Ảnh dưới là phần Product 01 trên bộ report.
+**Dashboard** (`make dashboard`, cũng chạy trong `make demo`): một trang HTML tĩnh, mở được không cần mạng, gồm 4 tab: **Tổng quan** (luồng pipeline của hai sản phẩm, mỗi bước có trạng thái và số liệu), **Product 01** (tỷ lệ lỗi theo giờ từng provider, độ trễ, lưu lượng, sự cố detector báo so với sự cố cài sẵn), **Product 02** (chất lượng xếp hạng, hiệu chỉnh, chính sách, độ ổn định theo tuần, lần chấm điểm gần nhất), **Dữ liệu & chất lượng** (kiểm tra tự động, mã lần chạy, nguồn dữ liệu, hạn chế). Rê chuột lên biểu đồ để xem số. Số test và số của bộ report chỉ được trích từ [`results/published.json`](results/published.json); dashboard không đọc thư mục test. Ảnh dưới là bản Stage F (phần Product 01 trên bộ report).
 
 <p align="center"><img src="docs/assets/results/dashboard-product01.png" alt="Dashboard Product 01: ô số tổng, bảng theo provider, tỷ lệ lỗi và độ trễ theo giờ, danh sách sự cố" width="85%"></p>
 
@@ -225,7 +225,7 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md) · [Dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo thực tập |
 | [Đặc tả](docs/architecture/stage-g-spec.md) · [Báo cáo](docs/architecture/stage-g-report.md) Stage G | Từ xếp hạng đến quyết định (thăm dò): hiệu chỉnh, chính sách, độ ổn định, chấm điểm theo lô |
-| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0010) |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0011) |
 
 ## Giấy phép
 
