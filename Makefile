@@ -2,7 +2,7 @@
 # Recipes use bash. From PowerShell or cmd on Windows, /bin/bash does not exist and make would
 # fall back to cmd.exe; use the bash that comes with Git for Windows instead (found next to git).
 ifeq ($(OS)$(MSYSTEM),Windows_NT)
-  GIT_EXE := $(subst \,/,$(firstword $(shell where git 2>NUL)))
+  GIT_EXE := $(subst \,/,$(firstword $(shell where git)))
   GIT_ROOT := $(patsubst %/,%,$(dir $(patsubst %/,%,$(dir $(GIT_EXE)))))
   ifneq ($(wildcard $(GIT_ROOT)/usr/bin/bash.exe),)
     SHELL := $(GIT_ROOT)/usr/bin/bash.exe
