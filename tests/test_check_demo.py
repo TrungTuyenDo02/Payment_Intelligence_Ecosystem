@@ -54,3 +54,54 @@ def test_never_points_at_the_report_simulation() -> None:
     makefile = (ROOT / "Makefile").read_text("utf-8")
     demo = makefile.split("\ndemo:", 1)[1].split("\n\n", 1)[0]
     assert "report" not in demo and "detect-report" not in demo
+
+
+demo_spec = importlib.util.spec_from_file_location("demo", ROOT / "scripts" / "demo.py")
+assert demo_spec and demo_spec.loader
+demo = importlib.util.module_from_spec(demo_spec)
+demo_spec.loader.exec_module(demo)
+
+
+def test_demo_stops_early_with_a_how_to_when_postgres_is_missing(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(demo, "database_problem", lambda: "no db: make up")
+    ran = []
+    monkeypatch.setattr(demo.subprocess, "run", lambda *a, **k: ran.append(a))
+    assert demo.main() == 2
+    assert "make up" in capsys.readouterr().err and ran == []  # no step started
+
+
+def test_demo_runs_every_step_and_says_where_output_goes(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(demo, "database_problem", lambda: None)
+    calls = []
+
+    def fake_run(cmd: list[str], **kwargs: object) -> object:
+        calls.append(cmd)
+        out = '{"rows_read": 5, "rows_accepted": 5, "rows_duplicate": 0, "rows_rejected": 0}'
+        return type("P", (), {"returncode": 0, "stdout": out, "stderr": ""})()
+
+    monkeypatch.setattr(demo.subprocess, "run", fake_run)
+    assert demo.main() == 0
+    out = capsys.readouterr().out
+    assert len(calls) == len(demo.STEPS) and f"[{len(demo.STEPS)}/{len(demo.STEPS)}]" in out
+    assert "5 dòng mới" in out and "index.html" in out
+
+
+def test_demo_reports_the_failing_step(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(demo, "database_problem", lambda: None)
+    result = type("P", (), {"returncode": 1, "stdout": "", "stderr": "boom"})()
+    monkeypatch.setattr(demo.subprocess, "run", lambda *a, **k: result)
+    assert demo.main() == 1
+    err = capsys.readouterr().err
+    assert "THẤT BẠI" in err and "boom" in err
+
+
+def test_demo_script_never_touches_the_report_simulation() -> None:
+    text = (ROOT / "scripts" / "demo.py").read_text("utf-8")
+    assert "sim-f6e6749ff0bf" not in text and "detect-report" not in text
+    assert "report.yaml" not in text and demo.SIM == check_demo.SIMULATION

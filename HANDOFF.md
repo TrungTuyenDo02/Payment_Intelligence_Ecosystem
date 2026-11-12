@@ -9,6 +9,7 @@
 | --- | --- | --- |
 | G08 bộ chấm điểm theo lô | `stage-g/g08-batch-scoring` (`7ab81f6`) | `make score-model` → `score-19e94be9616d` (chạy hai lần, file trùng từng byte); `make score` trên 2.000 dòng V3: lệch huấn luyện–chấm điểm 0; tham số Platt trùng G03; 10 test mới; phá hoại có chủ đích (lệch `hour_of_day` 7 giờ) bị 2 test bắt |
 | `make demo` (Product 01 đầu-cuối) | `stage-g/g08b-demo` (`4beab1c`) | Chỉ dùng bộ tuning; `scripts/check_demo.py` so với số đã công bố (D-B 3/4, 0 báo nhầm/ngày; D-A 2/4, 1,0). **Chưa chạy đầu-cuối trên máy này** (không có Docker/PostgreSQL); job `demo` trong CI chạy nó trên PostgreSQL 16 |
+| `make demo` dễ hiểu hơn (sau khi chủ dự án chạy thử không thấy kết quả) | `stage-g/g08c-demo-ux` | `scripts/demo.py`: kiểm tra PostgreSQL trước và in hướng dẫn nếu thiếu (trước đây là traceback sau 12 giây); in 7 bước kèm nơi ghi kết quả; [hướng dẫn demo](docs/demo-guide.md); bỏ cảnh báo `VIRTUAL_ENV` trên Windows; `make up` báo rõ khi thiếu Docker. Máy này vẫn không có PostgreSQL nên nhánh thành công chỉ được kiểm bằng test giả lập các bước và job CI `demo` |
 | G09 đồng bộ tài liệu | `stage-g/g09-docs` | README (demo 5 phút, Stage G, ADR 0001–0010), overview, dàn ý, báo cáo thực tập có mục 4.6 Stage G (PDF **25 trang**, đã xem các trang mới), báo cáo tuần [`docs/weekly/`](docs/weekly/) |
 
 `make test` sau G08: **439 pass, 8 skip**; sau `make demo`: thêm 4 test (`tests/test_check_demo.py`).

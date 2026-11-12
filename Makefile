@@ -18,6 +18,8 @@ SEP := $(if $(filter Windows_NT,$(OS)),;,:)
 # Windows and WSL share this folder: keep the Windows uv environment apart from WSL's .venv.
 ifeq ($(OS),Windows_NT)
   export UV_PROJECT_ENVIRONMENT ?= .venv-win
+  # An editor may activate .venv (the WSL one); uv would warn on every command. Not needed here.
+  unexport VIRTUAL_ENV
 endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
@@ -49,6 +51,7 @@ test:
 	$(RUN) pytest --cov --cov-report=term-missing
 
 up:
+	@command -v docker >/dev/null 2>&1 || { echo "docker not found: install Docker Desktop and start it, then run make up again (README, section Chay demo)"; exit 1; }
 	docker compose up -d --wait postgres
 
 down:
@@ -135,19 +138,11 @@ detect-report:
 dashboard:
 	$(RUN) python -m dashboard.build
 
-# Product 01 end to end in one command, on the TUNING simulation only (demo.yaml). Needs PostgreSQL
-# (make up, or a server set in .env). The last check compares with the published tuning numbers.
-DEMO_SIM := sim-485cacc9c858
+# Product 01 end to end in one command, on the TUNING simulation only (demo.yaml). Checks
+# PostgreSQL first (make up), prints each step and where its output goes, then compares with
+# the published tuning numbers (scripts/demo.py, scripts/check_demo.py).
 demo:
-	@echo "== Product 01 demo: simulate -> ingest -> KPI -> detect -> check -> dashboard (needs PostgreSQL: make up) =="
-	$(MAKE) simulate CONFIG=shared/synthetic-generator/configs/demo.yaml
-	$(MAKE) db-init
-	$(MAKE) ingest SIM=$(DEMO_SIM)
-	$(MAKE) kpi SIM=$(DEMO_SIM)
-	$(MAKE) detect DETECTOR_CONFIG=
-	$(RUN) python scripts/check_demo.py
-	$(MAKE) dashboard
-	@echo "Dashboard: artifacts/dashboard/index.html"
+	@$(RUN) python scripts/demo.py
 
 # ADR 0010. verify-demo: fail with a clear message when the dashboard inputs are missing.
 verify-demo:

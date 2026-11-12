@@ -26,23 +26,25 @@ Không dùng dữ liệu thật của công ty. Toàn bộ chạy trên máy cá
 
 Hai sản phẩm là **hai pipeline độc lập**, chạy riêng; chúng chỉ dùng chung nền tảng (contract, quản lý run, quy tắc đánh giá), không dùng chung dữ liệu ([ADR 0002](docs/decisions/0002-product-boundaries.md)).
 
-**Product 01, không cần tải gì** (cần Docker cho PostgreSQL):
+**Product 01, không cần tải gì** (cần PostgreSQL; cách dễ nhất là Docker Desktop):
 
 ```bash
 make setup && make up && make demo
 ```
 
-Lệnh `make demo` chạy liền: sinh dữ liệu giả lập → nạp PostgreSQL (kiểm tra contract) → KPI 15 phút → hai detector → so với số đã công bố → dashboard. Kết quả mong đợi:
+`make demo` kiểm tra PostgreSQL trước, rồi chạy và giải thích 7 bước: sinh dữ liệu giả lập → tạo bảng → nạp PostgreSQL (kiểm tra contract) → KPI 15 phút → hai detector → so với số đã công bố → dashboard. Cuối cùng in:
 
 ```text
-Product 01 demo (sim-485cacc9c858, det-3ddc26cff253, bộ tuning):
-  D-B gộp cửa sổ (chính): bắt 3/4 sự cố, 0 báo nhầm/ngày (công bố: 3/4, 0)
-  D-A z-score bền vững: bắt 2/4 sự cố, 1 báo nhầm/ngày (công bố: 2/4, 1)
-  Khớp số đã công bố cho bộ tuning.
-Dashboard: artifacts/dashboard/index.html
+[6/7] So với số đã công bố cho bộ tuning
+      D-B gộp cửa sổ (chính): bắt 3/4 sự cố, 0 báo nhầm/ngày (công bố: 3/4, 0)
+      D-A z-score bền vững: bắt 2/4 sự cố, 1 báo nhầm/ngày (công bố: 2/4, 1)
+      Khớp số đã công bố cho bộ tuning.
+[7/7] Dựng dashboard HTML tĩnh cho cả hai sản phẩm
+== Xong ==
+Mở dashboard bằng trình duyệt: ...\artifacts\dashboard\index.html
 ```
 
-Demo chạy trên bộ **tuning**. Con số 2/4 của bộ report là đánh giá một lần (`det-08335c6af086`), chỉ được trích lại, không chạy lại. Kết quả không khớp thì lệnh báo `MISMATCH` và trả mã lỗi. CI chạy đúng lệnh này trên PostgreSQL thật ở mỗi pull request.
+Thiếu PostgreSQL thì lệnh dừng ngay và in cách khắc phục. Demo chạy trên bộ **tuning**; con số 2/4 của bộ report là đánh giá một lần (`det-08335c6af086`), chỉ được trích lại, không chạy lại. CI chạy đúng lệnh này trên PostgreSQL thật ở mỗi pull request. **Giải thích từng bước, file nào để mở, cách đọc kết quả: [hướng dẫn demo](docs/demo-guide.md).**
 
 **Product 02, cần dataset IEEE-CIS** (tải từ Kaggle, xem mục [Chạy thử](#chạy-thử)):
 
