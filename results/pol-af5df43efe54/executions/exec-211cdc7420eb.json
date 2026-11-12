@@ -1,0 +1,25 @@
+{
+  "commit": "b729ed75100236084a10398cb6089340b3a70548",
+  "environment": [
+    "python 3.12.10",
+    "platform Windows-11-10.0.26200-SP0",
+    "pandas 3.1.0",
+    "numpy 2.5.4",
+    "scikit-learn 1.9.1",
+    "pyarrow 26.0.0",
+    "pyyaml 6.0.3",
+    "pydantic 2.14.2",
+    "jsonschema 4.26.0"
+  ],
+  "execution_id": "exec-211cdc7420eb",
+  "experiment_id": "pol-af5df43efe54",
+  "files": {
+    "config.yaml": "2a2804ccc6dbb819dfa5e2c478ee0a94264582b566c072cf93e034735e5a3658",
+    "environment.txt": "71399c5c0f2ecc572297bd0018f671cd0a5023e497f9cec9336e8e5ff94e65c8",
+    "git_sha.txt": "f2f0637387cb2861c8312c56ba54149db1df2ddeced2f335a65498d7e828ed78",
+    "results.json": "cbe5609d61d0ffa64836d5ce07aec332979413bfa6093c914358160ef861d794",
+    "summary.md": "dffd6de534038b8ff664badcb87b15f9ce17f49ffeb093743dd8f8f55ab4ef2c"
+  },
+  "finished_at": "2026-11-11T10:13:37+00:00",
+  "started_at": "2026-11-11T10:12:44+00:00"
+}

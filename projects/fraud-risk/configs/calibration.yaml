@@ -1,0 +1,45 @@
+# Stage G / G03 calibration (stage-g-spec.md section 5.1, ADR 0009). Development data only.
+# status: draft. Only the owner may set "frozen". stage: exploratory, because validation was
+# already used for the GBM grid, the leakage experiment and the history features (spec section 8).
+status: draft
+stage: exploratory
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split: # the frozen Stage E split; test rows are dropped before anything else
+  train_frac: 0.6
+  valid_frac: 0.2
+  gap_days: 0
+
+features: # identical to configs/gbm.yaml
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day]
+
+models: # fixed, no grid search (D2)
+  gbm: # the grid point chosen in run-f8807cb6f780
+    learning_rate: 0.1
+    max_iter: 400
+    max_leaf_nodes: 15
+  logistic: # configs/baseline.yaml
+    C: 1.0
+    max_iter: 1000
+
+blocks: # inclusive days, TransactionDT // 86400 (D1)
+  V1: [101, 113] # calibrate
+  V2: [114, 126] # select
+  V3: [127, 141] # evaluate
+
+check: # stop if the fixed models are not the Stage E models
+  gbm_valid_pr_auc: 0.497
+  logistic_valid_pr_auc: 0.245
+  valid_max_time: 12192842
+  tolerance: 0.002
+
+calibration:
+  methods: [raw, prior_shift, platt] # isotonic left out (D5)
+  bins: 10 # reliability diagram, quantile bins of the predicted probability
+  select_by: log_loss # chosen on V2 (D7)

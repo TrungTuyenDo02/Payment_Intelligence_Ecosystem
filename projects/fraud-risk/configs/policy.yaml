@@ -1,0 +1,51 @@
+# Stage G / G04 decision policies (stage-g-spec.md section 5.2, ADR 0009). Development data only.
+# status: draft (only the owner may set "frozen"); stage: exploratory (validation reused).
+# Every cost is an ASSUMPTION in relative units of TransactionAmt: a sensitivity analysis, not ROI.
+status: draft
+stage: exploratory
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split:
+  train_frac: 0.6
+  valid_frac: 0.2
+  gap_days: 0
+
+features: # identical to configs/gbm.yaml
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day]
+
+models: # fixed GBM of run-f8807cb6f780 (D2); no logistic model in G04
+  gbm:
+    learning_rate: 0.1
+    max_iter: 400
+    max_leaf_nodes: 15
+
+blocks: # D1
+  V1: [101, 113] # calibrate
+  V2: [114, 126] # select
+  V3: [127, 141] # evaluate
+
+check:
+  gbm_valid_pr_auc: 0.497
+  valid_max_time: 12192842
+  tolerance: 0.002
+
+policy:
+  calibration: # same rule as G03: fit on V1, lowest log loss on V2
+    methods: [raw, prior_shift, platt]
+    bins: 10
+    select_by: log_loss
+  cost: # D4, 27 combinations; train median TransactionAmt is 70
+    loss_rate: [0.5, 0.75, 1.0]
+    c_review: [1, 5, 25]
+    c_friction: [0, 1, 10]
+  budgets_pct: [0.5, 1, 2, 5]
+  fpr_target: 0.05
+  bootstrap: # D6: by day and by card1 cluster, never by row
+    resamples: 1000
+    seed: 42

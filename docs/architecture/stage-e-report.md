@@ -63,11 +63,21 @@ Lần chạy `diag-827d929eaa73` (`fraud_risk.experiments.split_diagnostics`), *
 
 Lần chạy `run-f8807cb6f780` (validation). Lưới 8 tổ hợp, chọn theo PR-AUC validation: `learning_rate = 0,1`, `max_iter = 400`, `max_leaf_nodes = 15` (PR-AUC validation 0,497). Ngưỡng 0,853 chọn trên validation (tối đa F1). Cùng đặc trưng với baseline Logistic Regression.
 
-| Mô hình | PR-AUC validation | PR-AUC test | Recall @ FPR 5% (test) | Lần chạy |
+**Bảng A: Chất lượng xếp hạng.** Recall tại FPR 5% chọn ngưỡng bằng nhãn của chính tập test, nên đo thứ tự điểm, không đo hiệu quả của một ngưỡng triển khai.
+
+| Mô hình | PR-AUC validation | PR-AUC test | Recall @ FPR 5% (test, ngưỡng chọn bằng nhãn test) | Lần chạy |
 | --- | --- | --- | --- | --- |
 | Luật (Stage B) | 0,089 | 0,078 | 0,22 | `run-d6faa4699008` |
 | Logistic Regression (Stage B) | 0,245 | 0,165 | 0,28 | `run-d6faa4699008` |
-| Gradient Boosting | 0,497 [0,483; 0,514] | **0,408** [0,390; 0,424] | **0,51** | `run-f8807cb6f780` |
+| Gradient Boosting | 0,497 [0,483; 0,514] | **0,408** [0,390; 0,424] | 0,51 | `run-f8807cb6f780` |
+
+**Bảng B: Hiệu quả của ngưỡng đã chốt trước** (chọn trên validation, tối đa F1, áp nguyên lên test).
+
+| Mô hình | Ngưỡng | Precision (test) | Recall (test) | FPR (test) | Lần chạy |
+| --- | --- | --- | --- | --- | --- |
+| Gradient Boosting | 0,853 | 0,516 | 0,371 | 1,24% | `run-f8807cb6f780` |
+
+Hai bảng ở **hai điểm vận hành khác nhau** (FPR 5% so với 1,24%); không đọc là "recall tụt từ 51% xuống 37%". Chuyển một ngưỡng chọn trước sang dữ liệu mới được thử riêng ở Stage G (phép thử chuyển ngưỡng, chỉ trên validation).
 
 Trên validation, Gradient Boosting có recall 0,588 tại FPR 5% và 0,480 khi giữ precision 0,50. PR-AUC trên train là 0,584, cao hơn validation 0,497, nên mô hình khớp train tốt hơn. **Hạn chế (đã kiểm tra ở mục 3b):** tổ hợp tốt nhất nằm ở cạnh lưới (`max_iter = 400`); lưới rộng đến 1.200 vòng không cho kết quả tốt hơn. Kết quả validation còn có thể hơi lạc quan vì đã chọn tổ hợp trên chính tập này; chỉ số test mới là con số để báo cáo.
 
@@ -75,7 +85,7 @@ Trên validation, Gradient Boosting có recall 0,588 tại FPR 5% và 0,480 khi 
 
 - PR-AUC 0,408 [0,390; 0,424], giảm 0,089 so với validation (0,497). Logistic Regression giảm 0,080 (0,245 xuống 0,165). Gradient Boosting vẫn cao gấp khoảng 2,5 lần Logistic Regression trên test (0,408 so với 0,165), khoảng tin cậy hai mô hình không giao nhau.
 - Tại ngưỡng đã chọn: precision 0,516, recall 0,371, F1 0,432, FPR 1,24%.
-- Recall tại FPR 5%: 0,514 (Logistic Regression 0,28). Giữ precision 0,50 thì recall là 0,379.
+- Recall tại FPR 5%: 0,514 (Logistic Regression 0,28). Giữ precision 0,50 thì recall là 0,379. Hai số này chọn ngưỡng bằng nhãn test, nên chỉ đo chất lượng xếp hạng; số của ngưỡng đã chốt trước là dòng ngay trên (recall 0,371 tại FPR 1,24%).
 - **Hạn chế:** sự sụt giảm từ validation sang test cho thấy chọn tổ hợp và ngưỡng trên validation hơi lạc quan, và dữ liệu thay đổi theo thời gian (mục 2). Chưa có giải thích nguyên nhân cụ thể, và mô hình chỉ dùng 20 đặc trưng, chưa dùng bảng identity.
 
 ## 3b. Thí nghiệm bổ sung: đặc trưng lịch sử thực thể (2026-11-08 và 2026-11-09, chỉ validation)

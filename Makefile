@@ -22,10 +22,10 @@ endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
 
-.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard
+.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability bundle verify-demo
 
 help:
-	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard"
+	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability bundle verify-demo"
 
 setup:
 ifeq ($(UV),)
@@ -81,6 +81,16 @@ gbm:
 gbm-final:
 	$(RUN) python -m fraud_risk.scripts.run_gbm --config $(GBM_CONFIG) --stage final $(if $(FORCE),--force,)
 
+# Stage G (stage-g-spec.md, ADR 0009): development data only (train + validation), exploratory.
+calibration:
+	$(RUN) python -m fraud_risk.experiments.calibration
+
+policy:
+	$(RUN) python -m fraud_risk.experiments.policy
+
+stability:
+	$(RUN) python -m fraud_risk.experiments.stability
+
 # Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
 SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)
 simulate:
@@ -116,3 +126,13 @@ detect-report:
 # Stage F: static dashboard from artifacts/ (ADR 0007), written to artifacts/dashboard/index.html.
 dashboard:
 	$(RUN) python -m dashboard.build
+
+# ADR 0010. verify-demo: fail with a clear message when the dashboard inputs are missing.
+verify-demo:
+	$(RUN) python scripts/verify_demo.py
+
+# Copy the small summary files of one run to results/<run id>/ (committable, max 1 MB).
+# RUN_DIR=artifacts/experiments/<id> or artifacts/runs/<id>. test/ and report/: OWNER only (OWNER_TEST=1).
+bundle:
+	$(if $(RUN_DIR),,$(error RUN_DIR=<run folder> is required))
+	$(RUN) python scripts/bundle_results.py $(RUN_DIR) $(if $(OWNER_TEST),--owner-test,)

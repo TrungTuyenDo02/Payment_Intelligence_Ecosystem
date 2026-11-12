@@ -203,3 +203,24 @@ def test_diagnostics_and_paired_sections_render(tmp_path: Path) -> None:
     assert (
         html.count('class="ok"') == 2
     )  # row CI and recall CI exclude 0; the clustered PR-AUC CI does not
+
+
+def test_fraud_section_separates_ranking_from_the_pre_chosen_threshold(tmp_path: Path) -> None:
+    at = {"threshold": 0.853, "precision": 0.516, "recall": 0.371, "false_positive_rate": 0.0124}
+    test = {"pr_auc": 0.408, "pr_auc_ci": {"low": 0.39, "high": 0.424}, "prevalence": 0.0344,
+            "recall_at_fpr": {"recall": 0.514}, "at_threshold": at}  # fmt: skip
+    valid = {**test, "at_threshold": {**at, "recall": 0.9}}  # chosen on valid: in-sample
+    run = tmp_path / "runs" / "run-gbm" / "test"
+    run.mkdir(parents=True)
+    (run / "metrics.json").write_text(json.dumps(
+        {"run_id": "run-gbm", "stage": "final", "models": {"gbm": {"valid": valid, "test": test}}}
+    ))  # fmt: skip
+    html = build(tmp_path)
+    assert "Chất lượng xếp hạng" in html and "Ngưỡng đã chốt trước" in html
+    assert "hai điểm vận hành khác nhau" in html
+    assert "0,853" in html and "0,371" in html and "1,24%" in html
+    assert "0,900" not in html  # in-sample threshold metrics on validation are not shown
+
+
+def test_fraud_threshold_table_explains_when_no_test_run(tmp_path: Path) -> None:
+    assert "Chưa có lần đánh giá test" in build(tmp_path)

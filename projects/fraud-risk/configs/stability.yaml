@@ -1,0 +1,43 @@
+# Stage G / G05 stability over time and groups (stage-g-spec.md section 5.3, ADR 0009).
+# status: draft (only the owner may set "frozen"); stage: exploratory (validation reused).
+# Weeks of the test period are never used.
+status: draft
+stage: exploratory
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split:
+  train_frac: 0.6
+  valid_frac: 0.2
+  gap_days: 0
+
+features: # identical to configs/gbm.yaml
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day]
+
+models: # fixed GBM of run-f8807cb6f780 (D2)
+  gbm:
+    learning_rate: 0.1
+    max_iter: 400
+    max_leaf_nodes: 15
+
+blocks: # D1
+  V1: [101, 113] # calibrate
+  V2: [114, 126] # select
+  V3: [127, 141] # evaluate
+
+check:
+  gbm_valid_pr_auc: 0.497
+  valid_max_time: 12192842
+  tolerance: 0.002
+
+stability:
+  psi_columns: [TransactionAmt, C1, C13, hour_of_day]
+  psi_bins: 10 # deciles of train; ties merge bins; missing values are their own bin
+  groups: [ProductCD, card6]
+  min_frauds: 30 # groups with fewer validation frauds are flagged "small sample"
+  fpr_target: 0.05

@@ -24,6 +24,29 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.13"]
+    # Real PostgreSQL 16 so the database tests run instead of skipping (ADR 0010).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pie
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_DB: pie
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pie -d pie"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: pie
+      POSTGRES_PASSWORD: ci-only-not-a-secret
+      POSTGRES_DB: pie
+      # With REQUIRE_DB=1 a database test fails (instead of skipping) when PostgreSQL is missing.
+      REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -38,5 +61,34 @@ jobs:
       - name: Lint (ruff check and format)
         run: make lint
 
-      - name: Tests with coverage (synthetic fixtures only, no real data)
+      - name: Tests with coverage (synthetic fixtures only, no real data; DB tests on PostgreSQL)
         run: make test
+
+  # The two test-once registries may only grow, and never with "forced": true (ADR 0010).
+  # Runs on every PR (stacked branches included), compared with the PR's target branch.
+  registries:
+    name: test-once registries are append-only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compare registries with the base
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            base="origin/$BASE_REF"
+          elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            base="$BEFORE"
+          else
+            echo "no base to compare with"; exit 0
+          fi
+          python scripts/check_registries.py --base "$base"

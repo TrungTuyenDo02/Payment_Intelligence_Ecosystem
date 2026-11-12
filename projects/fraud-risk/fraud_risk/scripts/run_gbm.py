@@ -21,6 +21,8 @@ from fraud_risk.evaluation.run_log import (
     compute_run_hash,
     register_test_run,
     run_id_from_hash,
+    utc_now,
+    write_execution,
     write_run,
 )
 from fraud_risk.evaluation.split import assert_no_time_overlap, time_split
@@ -49,6 +51,7 @@ def run(
     force: bool = False,
 ) -> Path:
     """Fit the grid on train, pick on validation, write the run folder. Returns its path."""
+    started = utc_now()
     cfg, raw, text = load_gbm_config(config_path)
     if stage == "final" and cfg.status != "frozen":
         raise ConfigNotFrozenError(
@@ -127,8 +130,9 @@ def run(
         models={"gbm": {**model.describe(), "grid": grid_results, "chosen_on": "valid"}},
         repo_root=REPO_ROOT,
     )  # fmt: skip
+    execution = write_execution(run_dir, run_id, started, REPO_ROOT)
     if stage == "final":
-        register_test_run(registry, run_hash, run_id, forced=bool(warnings))
+        register_test_run(registry, run_hash, run_id, bool(warnings), execution_id=execution)
     return run_dir
 
 

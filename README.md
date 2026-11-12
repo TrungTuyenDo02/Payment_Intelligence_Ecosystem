@@ -11,6 +11,17 @@
 
 Không dùng dữ liệu thật của công ty. Toàn bộ chạy trên máy cá nhân bằng Python và Docker.
 
+## Giới hạn: đây không phải hệ thống production
+
+| Khía cạnh | Thực tế trong repo này |
+| --- | --- |
+| Mục đích | Demo 6 tuần cho báo cáo thực tập: cách đánh giá trung thực và tái lập, không phải sản phẩm triển khai |
+| Dữ liệu | Product 01 là dữ liệu **giả lập** (4 sự cố mỗi bộ); Product 02 là dataset công khai IEEE-CIS, ý nghĩa nhiều cột đã bị ẩn danh, `C1–C14` mang gần hết tín hiệu nhưng chưa xác minh nghĩa |
+| Con số đánh giá | Đo trên dữ liệu lịch sử, một lần cắt theo thời gian. Không phải cam kết hiệu quả khi vận hành; chưa có thử nghiệm A/B hay dữ liệu chi phí thật |
+| Điểm vận hành | Recall tại FPR 5% chọn ngưỡng bằng nhãn của chính tập đánh giá, nên chỉ đo chất lượng xếp hạng. Hiệu quả của một ngưỡng đã chốt trước xem ở bảng riêng (mục Stage E) |
+| Chấm điểm | Không có API chấm điểm, không theo dõi mô hình, không huấn luyện lại định kỳ, không xác thực người dùng |
+| Nhãn | Giả định nhãn gian lận có ngay; thực tế chargeback đến muộn nhiều tuần ([ADR 0003](docs/decisions/0003-label-delay-and-entity-overlap.md)) |
+
 ## Hệ thống
 
 <p align="center"><img src="docs/assets/diagrams/system-overview.svg" alt="Sơ đồ tổng thể: nền tảng dùng chung, hai sản phẩm và trạng thái từng bước" width="100%"></p>
@@ -62,10 +73,20 @@ Detector chính bắt được sự cố về lỗi và độ trễ trong 15–3
 
 **Product 02, Stage E:** cùng 20 đặc trưng và cùng cách chia ([báo cáo Stage E](docs/architecture/stage-e-report.md)).
 
-| Mô hình | PR-AUC validation | PR-AUC test | Recall @ FPR 5% (test) | Lần chạy |
+**Bảng 1: Chất lượng xếp hạng.** Không gắn với một ngưỡng triển khai: recall tại FPR 5% chọn ngưỡng bằng nhãn của chính tập test, nên là mức tham chiếu cho thứ tự điểm, không phải hiệu quả khi vận hành.
+
+| Mô hình | PR-AUC validation | PR-AUC test | Recall @ FPR 5% (test, ngưỡng chọn bằng nhãn test) | Lần chạy |
 | --- | --- | --- | --- | --- |
 | Logistic Regression | 0,245 | 0,165 | 0,28 | `run-d6faa4699008` |
-| Gradient Boosting | 0,497 | **0,408** [0,390; 0,424] | **0,51** | `run-f8807cb6f780` |
+| Gradient Boosting | 0,497 | **0,408** [0,390; 0,424] | 0,51 | `run-f8807cb6f780` |
+
+**Bảng 2: Hiệu quả của ngưỡng đã chốt trước.** Ngưỡng 0,853 chọn trên validation (tối đa F1) trước khi mở test, rồi áp nguyên lên test.
+
+| Mô hình | Ngưỡng | Precision (test) | Recall (test) | FPR (test) | Lần chạy |
+| --- | --- | --- | --- | --- | --- |
+| Gradient Boosting | 0,853 | 0,516 | 0,371 | 1,24% | `run-f8807cb6f780` |
+
+Hai bảng ở **hai điểm vận hành khác nhau** (FPR 5% so với FPR 1,24%), nên không đọc là "recall tụt từ 51% xuống 37%". Bảng 2 gần với cách dùng thật hơn, nhưng vẫn là số trên dữ liệu lịch sử, dưới giả định nhãn có ngay.
 
 - **Gradient Boosting gấp khoảng 2,5 lần Logistic Regression trên test**, khoảng tin cậy không giao nhau. Tổ hợp tốt nhất nằm ở cạnh lưới, nên chưa biết tăng số cây có tốt hơn không.
 - **Thí nghiệm rò rỉ** (chỉ trên validation, `leak-827d929eaa73`): mã hoá `card1` bằng nhãn validation làm PR-AUC tăng 0,063. Tiền xử lý trên mọi dòng và khoảng trống 7–14 ngày không tạo khác biệt đo được. Chia ngẫu nhiên lại làm PR-AUC *giảm* 0,068, mới giải thích được khoảng một phần ba.

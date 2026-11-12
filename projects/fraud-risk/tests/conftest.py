@@ -90,3 +90,27 @@ def ieee_dir_module(tmp_path_factory: pytest.TempPathFactory) -> Path:
     directory = tmp_path_factory.mktemp("ieee") / "raw" / "ieee-cis"
     write_ieee_dir(directory, *make_synthetic_ieee(n=3000, seed=3))
     return directory
+
+
+STAGE_G_CONFIGS = Path(__file__).resolve().parents[1] / "configs"
+
+
+def stage_g_synthetic_raw(time: pd.Series, base: str) -> dict:
+    """A real Stage G config with blocks re-cut for the synthetic validation days."""
+    import yaml
+    from fraud_risk.evaluation.split import DAY_SECONDS, time_split
+
+    raw = yaml.safe_load((STAGE_G_CONFIGS / base).read_text("utf-8"))
+    split = time_split(time, raw["split"]["train_frac"], raw["split"]["valid_frac"])
+    days = sorted(int(d) for d in (time.loc[split.valid] // DAY_SECONDS).unique())
+    a, b = days[len(days) // 3], days[2 * len(days) // 3]
+    raw["blocks"] = {"V1": [days[0], a - 1], "V2": [a, b - 1], "V3": [b, days[-1]]}
+    raw["check"] = {}  # synthetic data: no Stage E numbers to reproduce
+    raw["models"]["gbm"] = {"learning_rate": 0.1, "max_iter": 30, "max_leaf_nodes": 7}
+    return raw
+
+
+@pytest.fixture(scope="session")
+def stage_g_raw() -> Callable[[pd.Series, str], dict]:
+    """Factory: (time, config file name) -> synthetic Stage G config dict."""
+    return stage_g_synthetic_raw

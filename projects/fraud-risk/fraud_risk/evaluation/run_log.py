@@ -1,4 +1,12 @@
-"""Run log: deterministic run identity (AGENTS.md D6), run folders and the test-once registry."""
+"""Run log: run identity (AGENTS.md D6, ADR 0010), run folders and the test-once registry.
+
+Two ids (ADR 0010):
+- experiment_id (`compute_run_hash`): config, seed, dataset checksum and split bounds only. It
+  names the result folder and is the test-once key, so it must not depend on library versions
+  or the commit (upgrading a library would otherwise reopen the test set).
+- execution_id (`execution_id`): one per run, adds start time, commit and environment. It is
+  only for tracing a run (`executions/<execution_id>.json`) and is never used as a key.
+"""
 
 import hashlib
 import json
@@ -45,6 +53,48 @@ def compute_run_hash(
         default=str,
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def execution_id(experiment_id: str, started_at: datetime, commit: str, environment: str) -> str:
+    """`exec-` + 12 hex of SHA-256(experiment id, UTC start, commit, environment text)."""
+    payload = json.dumps(
+        [experiment_id, started_at.astimezone(UTC).isoformat(), commit, environment],
+        separators=(",", ":"),
+    )
+    return "exec-" + hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
+
+def utc_now() -> datetime:
+    """Current UTC time to the second (start of an execution)."""
+    return datetime.now(UTC).replace(microsecond=0)
+
+
+def write_execution(out: Path, experiment_id: str, started_at: datetime, repo_root: Path) -> str:
+    """Write `out/executions/<execution_id>.json` and return the execution id.
+
+    Records start/end, commit, environment and the SHA-256 of the files directly in `out`
+    (sub-folders such as `test/` are not read). Result files themselves are not changed, so
+    two executions of one experiment can be compared through these records.
+    """
+    environment, commit = environment_text(), git_sha(repo_root)
+    eid = execution_id(experiment_id, started_at, commit, environment)
+    files = {
+        p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(out.iterdir())
+        if p.is_file()
+    }
+    record = {
+        "execution_id": eid,
+        "experiment_id": experiment_id,
+        "started_at": started_at.astimezone(UTC).isoformat(),
+        "finished_at": utc_now().isoformat(),
+        "commit": commit,
+        "environment": environment.splitlines(),
+        "files": files,
+    }
+    (out / "executions").mkdir(parents=True, exist_ok=True)
+    write_json(out / "executions" / f"{eid}.json", record)
+    return eid
 
 
 def run_id_from_hash(run_hash: str) -> str:
@@ -143,16 +193,19 @@ def check_test_once(registry: Path, run_hash: str, force: bool) -> str | None:
     return None
 
 
-def register_test_run(registry: Path, run_hash: str, run_id: str, forced: bool) -> None:
-    """Append this test evaluation to the registry."""
+def register_test_run(
+    registry: Path, run_hash: str, run_id: str, forced: bool, execution_id: str | None = None
+) -> None:
+    """Append this test evaluation to the registry (older entries are never changed)."""
     entries = json.loads(registry.read_text("utf-8")) if registry.is_file() else []
-    entries.append(
-        {
-            "hash": run_hash,
-            "run_id": run_id,
-            "forced": forced,
-            "recorded_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        }
-    )
+    entry: dict[str, Any] = {
+        "hash": run_hash,
+        "run_id": run_id,
+        "forced": forced,
+        "recorded_at": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+    if execution_id is not None:
+        entry["execution_id"] = execution_id
+    entries.append(entry)
     registry.parent.mkdir(parents=True, exist_ok=True)
     write_json(registry, entries)

@@ -55,8 +55,8 @@
 ### 4.4 Gradient Boosting (Stage E) — `run-f8807cb6f780`
 
 - Chọn `learning_rate` 0,1, `max_iter` 400, `max_leaf_nodes` 15; ngưỡng 0,853. Config `frozen` ở commit `89a8ed5`, test chạy một lần.
-- PR-AUC validation 0,497 [0,483; 0,514], test **0,408** [0,390; 0,424], gấp khoảng 2,5 lần Logistic Regression; recall tại FPR 5% là 0,51.
-- Tại ngưỡng: precision 0,516, recall 0,371, F1 0,432, FPR 1,24%.
+- PR-AUC validation 0,497 [0,483; 0,514], test **0,408** [0,390; 0,424], gấp khoảng 2,5 lần Logistic Regression; recall tại FPR 5% là 0,51 (**chất lượng xếp hạng**: ngưỡng chọn bằng nhãn test).
+- **Ngưỡng đã chốt trước** (0,853, chọn trên validation): precision 0,516, recall 0,371, F1 0,432, FPR 1,24%. Hai dòng ở hai điểm vận hành khác nhau; không đọc là "tụt từ 51% xuống 37%".
 - Hạn chế: tổ hợp tốt nhất ở cạnh lưới; chỉ 20 đặc trưng, chưa dùng bảng identity.
 
 ## 5. Product 01 — Độ ổn định thanh toán
