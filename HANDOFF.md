@@ -16,7 +16,7 @@
 Việc tiếp theo:
 
 1. Push ba nhánh mới, mở PR xếp chồng: G08 → G07, `g08b-demo` → G08, G09 → `g08b-demo`. Xác nhận CI xanh: `lint and test` (PostgreSQL, `REQUIRE_DB=1`), `registries`, `demo`.
-2. **Chủ dự án quyết:** ADR 0002 đổi sang Accepted? (văn bản đã đúng với lựa chọn ngày 2026-11-03: hai sản phẩm độc lập về dữ liệu).
+2. ADR 0002 đã Accepted (chủ dự án chấp nhận trong chat 2026-11-12).
 3. Dashboard trên máy mới thiếu số test của Product 02: chép `artifacts/runs/run-f8807cb6f780/test/` từ máy chủ dự án, hoặc chủ dự án chạy `make bundle RUN_DIR=artifacts/runs/run-f8807cb6f780 OWNER_TEST=1` rồi commit. Agent không đọc thư mục test.
 4. G10 ⏸ (thử nghiệm độ bền) chỉ làm khi chủ dự án đồng ý.
 

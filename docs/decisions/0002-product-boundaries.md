@@ -1,6 +1,6 @@
 # ADR 0002 — Hai sản phẩm độc lập về dữ liệu, chỉ chung nền tảng
 
-- **Trạng thái:** Proposed. Chủ dự án đã chọn hướng "hai sản phẩm độc lập" trong chat ngày 2026-11-03; văn bản này chờ chủ dự án đọc lại và đổi thành Accepted.
+- **Trạng thái:** Accepted (chủ dự án chọn hướng "hai sản phẩm độc lập" trong chat ngày 2026-11-03 và chấp nhận văn bản này trong chat ngày 2026-11-12).
 - **Phạm vi:** Product 01 (Payment Reliability), Product 02 (Fraud & Risk), `contracts/`, Stage C–F
 
 ## Bối cảnh
@@ -32,4 +32,5 @@ Chọn **A**.
 - Báo cáo phải có một đoạn trong phần "Hạn chế": trong hệ thống thật, dữ liệu của hai sản phẩm dùng chung khoá `payment_id` từ nguồn sự kiện; demo không làm được vì không có dataset công khai phù hợp.
 - Contract `payment-event` vẫn giữ `payment_id` và `attempt_id`, để sau này có thể nối thêm dữ liệu rủi ro mà không phải đổi contract.
 - Mục "Kết nối hai sản phẩm" trong `docs/product/project-overview.md` được thay bằng mô tả theo ADR này.
+- Cách trình bày từ Stage G: **một nền tảng, hai pipeline song song**: `make demo` (Product 01) và `make score-model` / `make score` (Product 02) chạy riêng, không nối dữ liệu.
 - Nếu sau này muốn một demo tích hợp kỹ thuật (API chấm điểm nhận sự kiện giả lập), phải có ADR riêng và ghi rõ đó không phải bằng chứng hiệu năng.

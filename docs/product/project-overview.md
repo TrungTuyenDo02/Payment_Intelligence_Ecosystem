@@ -216,7 +216,7 @@ Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào
 | G07 | `experiment_id` / `execution_id`, CI có PostgreSQL, gói `results/` (ADR 0010) | Code xong; chờ CI xanh |
 | G08 | Bộ chấm điểm theo lô (`make score-model`, `make score`) | Xong (`score-19e94be9616d`) |
 | — | `make demo` cho Product 01 | Xong; kiểm chứng đầu-cuối chạy trong CI |
-| G09 | Đồng bộ tài liệu | Xong, trừ trạng thái ADR 0002 (chờ chủ dự án) |
+| G09 | Đồng bộ tài liệu | Xong; ADR 0002 Accepted (2026-11-12) |
 | G10 | Thử nghiệm độ bền | Chưa làm; cần chủ dự án đồng ý |
 
 ## 9. Quy tắc bắt buộc
