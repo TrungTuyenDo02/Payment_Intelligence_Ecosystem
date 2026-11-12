@@ -37,7 +37,7 @@ endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
 
-.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score demo bundle verify-demo
+.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score demo bundle verify-demo slides-figures slides weekly
 
 help:
 	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score demo bundle verify-demo"
@@ -150,6 +150,16 @@ detect-report:
 # Stage F: static dashboard from artifacts/ (ADR 0007), written to artifacts/dashboard/index.html.
 dashboard:
 	$(RUN) python -m dashboard.build
+
+# Slides and weekly report (XeLaTeX, MiKTeX or TeX Live). Figures read results/ and the tuning run only.
+slides-figures:
+	$(RUN) python docs/slides/make_figures.py
+
+slides: slides-figures
+	cd docs/slides && xelatex -interaction=nonstopmode -halt-on-error slides.tex >/dev/null && xelatex -interaction=nonstopmode -halt-on-error slides.tex >/dev/null && echo docs/slides/slides.pdf
+
+weekly:
+	cd docs/weekly/latex && xelatex -interaction=nonstopmode -halt-on-error $(or $(WEEK),2026-W46).tex >/dev/null && xelatex -interaction=nonstopmode -halt-on-error $(or $(WEEK),2026-W46).tex >/dev/null && cp $(or $(WEEK),2026-W46).pdf .. && echo docs/weekly/$(or $(WEEK),2026-W46).pdf
 
 # Both products end to end with progress, results and a checklist (scripts/demo.py).
 # Product 01 needs PostgreSQL (make up) and uses the TUNING simulation only; Product 02 needs the

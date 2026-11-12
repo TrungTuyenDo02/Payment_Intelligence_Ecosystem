@@ -685,14 +685,15 @@ def detector_card(ctx: Context) -> str:
         fp = vn(r["false_per_day"], 1)
         return f"<b>{r['detected']}/{n}</b><small class='cell-sub'>{fp} nhầm/ngày</small>"
 
-    summary = [[escape(DETECTOR_VN[d]), score(r, len(r["anomalies"])), score(rep.get(d))]
+    short = {"pooled": "D-B (chính)", "robust_z": "D-A (cơ sở)"}
+    summary = [[short[d], score(r, len(r["anomalies"])), score(rep.get(d))]
                for d, r in ev["detectors"].items() if d in DETECTOR_VN]  # fmt: skip
     return card(
         "Detector so với đáp án",
         table(["Sự cố cài sẵn", "D-B", "D-A"], rows)
         + "<h4>Tổng hợp</h4>"
-        + table(["Detector", "Tuning", "Report (trích lại)"], summary)
-        + f'<p class="note">Report: <code>{escape(rep.get("run_id", ""))}</code>, seed khác, '
+        + table(["Detector", "Tuning", "Report*"], summary)
+        + f'<p class="note">* Trích lại: <code>{escape(rep.get("run_id", ""))}</code>, seed khác, '
         "đánh giá một lần, không chạy lại.</p>",
         "Đáp án chỉ dùng để đánh giá. Sự cố x1,5 nằm dưới giới hạn phát hiện.",
         meta="bộ tuning",

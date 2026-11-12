@@ -1,0 +1,8 @@
+# LaTeX build outputs (slides.pdf is kept: it is the deliverable)
+*.aux
+*.log
+*.out
+*.toc
+*.nav
+*.snm
+*.vrb

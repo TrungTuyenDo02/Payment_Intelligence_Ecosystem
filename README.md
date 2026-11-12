@@ -117,9 +117,9 @@ Detector chính bắt được sự cố về lỗi và độ trễ trong 15–3
 
 <p align="center"><img src="docs/assets/results/stage-d-report.png" alt="KPI và điểm của hai detector quanh bốn sự cố trên bộ report" width="100%"></p>
 
-**Dashboard** (`make dashboard`, cũng chạy trong `make demo`): một trang HTML tĩnh, mở được không cần mạng; một trang cuộn với thanh điều hướng bên trái: **hàng số liệu chính** và **luồng pipeline** của hai sản phẩm (mỗi bước có trạng thái và số liệu), **Product 01** (tỷ lệ lỗi theo giờ từng provider, độ trễ, lưu lượng, sự cố detector báo so với sự cố cài sẵn), **Product 02** (chất lượng xếp hạng, hiệu chỉnh, chính sách, độ ổn định theo tuần, lần chấm điểm gần nhất), **Dữ liệu & chất lượng** (kiểm tra tự động, mã lần chạy, nguồn dữ liệu, hạn chế). Rê chuột lên biểu đồ để xem số. Số test và số của bộ report chỉ được trích từ [`results/published.json`](results/published.json); dashboard không đọc thư mục test. Ảnh dưới là bản Stage F (phần Product 01 trên bộ report).
+**Dashboard** (`make dashboard`, cũng chạy trong `make demo`): một trang HTML tĩnh, mở được không cần mạng; một trang cuộn với thanh điều hướng bên trái: **hàng số liệu chính** và **luồng pipeline** của hai sản phẩm (mỗi bước có trạng thái và số liệu), **Product 01** (tỷ lệ lỗi theo giờ từng provider, độ trễ, lưu lượng, sự cố detector báo so với sự cố cài sẵn), **Product 02** (chất lượng xếp hạng, hiệu chỉnh, chính sách, độ ổn định theo tuần, lần chấm điểm gần nhất), **Dữ liệu & chất lượng** (kiểm tra tự động, mã lần chạy, nguồn dữ liệu, hạn chế). Rê chuột lên biểu đồ để xem số. Số test và số của bộ report chỉ được trích từ [`results/published.json`](results/published.json); dashboard không đọc thư mục test. Ảnh dưới: phần đầu trang sau `make demo` trên máy chủ dự án (12/11/2026).
 
-<p align="center"><img src="docs/assets/results/dashboard-product01.png" alt="Dashboard Product 01: ô số tổng, bảng theo provider, tỷ lệ lỗi và độ trễ theo giờ, danh sách sự cố" width="85%"></p>
+<p align="center"><img src="docs/assets/results/dashboard.png" alt="Dashboard một trang: thanh điều hướng, 5 số liệu chính, luồng pipeline của hai sản phẩm, tỷ lệ lỗi theo giờ và bảng detector so với đáp án" width="100%"></p>
 
 **Product 02, Stage E:** cùng 20 đặc trưng và cùng cách chia ([báo cáo Stage E](docs/architecture/stage-e-report.md)).
 
@@ -215,6 +215,8 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | Tài liệu | Nội dung |
 | --- | --- |
 | [Bài báo khoa học (PDF)](docs/report/bai-bao-khoa-hoc.pdf) · [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Bài báo 10 trang; báo cáo đầy đủ có giải thích kiến thức nền |
+| [Slide trình bày (PDF)](docs/slides/slides.pdf) · [mã LaTeX](docs/slides/slides.tex) | 21 trang Beamer: hệ sinh thái, kiến trúc, pipeline, biểu đồ kết quả, hạn chế (`make slides`) |
+| [Báo cáo tuần](docs/weekly/) | Markdown và PDF LaTeX cho mentor (`make weekly`) |
 | [Hướng dẫn thao tác GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch, rủi ro, tài liệu tham khảo |
 | [Bàn giao công việc](HANDOFF.md) | Trạng thái hiện tại và việc tiếp theo |

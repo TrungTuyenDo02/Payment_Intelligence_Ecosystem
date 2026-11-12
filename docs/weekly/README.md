@@ -2,6 +2,8 @@
 
 Mỗi tuần một file `YYYY-Www.md` (tuần ISO, ví dụ `2026-W46.md`), viết cho mentor: đọc trong 3 phút, mọi con số truy được về một lần chạy hoặc một commit. Sao chép khung dưới đây cho tuần mới.
 
+Bản PDF (LaTeX) để gửi mentor: `latex/YYYY-Www.tex`, biên dịch bằng `make weekly WEEK=YYYY-Www` (XeLaTeX), PDF chép ra `docs/weekly/`. Hình lấy từ `docs/slides/figures/` (`make slides-figures`). Bản [2026-W46](2026-W46.pdf).
+
 Quy tắc:
 
 - Con số test (đã công bố) chỉ **trích lại**, kèm mã lần chạy; không chạy lại.
