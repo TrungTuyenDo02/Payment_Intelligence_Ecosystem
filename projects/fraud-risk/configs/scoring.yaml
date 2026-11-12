@@ -1,0 +1,40 @@
+# Stage G / G08 batch scorer (CLAUDE.md G08). Development data only: the scorer refuses rows of
+# the held-out test period. status: draft. Only the owner may set "frozen". stage: exploratory,
+# because the calibrator choice (platt) comes from G03, chosen on V2 of a reused validation set.
+status: draft
+stage: exploratory
+seed: 42
+
+data:
+  use_identity: false
+  manifest: datasets/manifests/ieee-cis.yaml
+
+split: # the frozen Stage E split; test rows are dropped before anything else
+  train_frac: 0.6
+  valid_frac: 0.2
+  gap_days: 0
+
+features: # identical to configs/gbm.yaml; only row-local features (no entity history)
+  numeric: [TransactionAmt, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14]
+  categorical: [ProductCD, card4, card6]
+  derived: [log_amount, hour_of_day]
+
+models: # fixed: the grid point chosen in run-f8807cb6f780
+  gbm:
+    learning_rate: 0.1
+    max_iter: 400
+    max_leaf_nodes: 15
+
+blocks: # inclusive days, TransactionDT // 86400 (as in calibration.yaml)
+  V1: [101, 113] # calibrate
+  V2: [114, 126]
+  V3: [127, 141] # demo input is taken from here
+
+check: # stop if the fixed model is not the Stage E model
+  gbm_valid_pr_auc: 0.497
+  valid_max_time: 12192842
+  tolerance: 0.002
+
+scoring:
+  calibration: platt # chosen on V2 in cal-04b3ad5944ce; fitted again on V1 here
+  sample_rows: 2000

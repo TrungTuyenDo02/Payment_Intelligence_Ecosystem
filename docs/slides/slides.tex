@@ -1,0 +1,407 @@
+% =====================================================================
+%  SLIDE TRÌNH BÀY — Payment Intelligence Ecosystem
+%  Template: Beamer + theme Metropolis (Matthias Vogelgesang, CC-BY-SA 4.0).
+%  Biên dịch: make slides   (hoặc: xelatex slides.tex, chạy 2 lần)
+%  Biểu đồ: figures/*.pdf, sinh bằng make slides-figures từ results/ và lần chạy tuning.
+%  Số test và số bộ report chỉ TRÍCH LẠI từ results/published.json (test-một-lần).
+% =====================================================================
+\documentclass[aspectratio=169,11pt]{beamer}
+\usetheme[progressbar=frametitle,numbering=fraction,block=fill,sectionpage=none]{metropolis}
+
+\usepackage{fontspec}
+\setsansfont{TeX Gyre Heros}
+\setmonofont{DejaVu Sans Mono}[Scale=0.82]
+\usepackage[vietnamese]{babel}
+\usepackage{booktabs,array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usepackage{fontawesome5}
+
+% ---------- Màu ----------
+\definecolor{navy}{HTML}{1B2A4A}
+\definecolor{s1}{HTML}{2A78D6}
+\definecolor{s2}{HTML}{EB6834}
+\definecolor{s3}{HTML}{1BAF7A}
+\definecolor{muted}{HTML}{C3C2B7}
+\definecolor{ink2}{HTML}{52514E}
+\definecolor{soft}{HTML}{EEF4FC}
+\definecolor{good}{HTML}{0CA30C}
+\definecolor{bad}{HTML}{D03B3B}
+\definecolor{page}{HTML}{FAFAF8}
+\setbeamercolor{frametitle}{bg=navy,fg=white}
+\setbeamercolor{progress bar}{fg=s1,bg=muted!40}
+\setbeamercolor{title separator}{fg=s1}
+\setbeamercolor{background canvas}{bg=page}
+\setbeamercolor{block title}{bg=soft,fg=navy}
+\setbeamercolor{block body}{bg=soft!50}
+\setbeamercolor{block title alerted}{bg=s2!15,fg=s2!80!black}
+\setbeamercolor{block body alerted}{bg=s2!6}
+\setbeamercolor{block title example}{bg=good!15,fg=good!60!black}
+\setbeamercolor{block body example}{bg=good!5}
+
+\newcommand{\num}[1]{\textbf{\color{navy}#1}}
+\newcommand{\figname}[1]{\par\vspace{1mm}{\scriptsize\color{ink2}Hình: #1}}
+
+\tikzset{
+  arr/.style={-{Stealth[length=1.8mm]},line width=0.7pt,color=ink2},
+  stage/.style={rounded corners=2pt,draw=navy,fill=navy,text=white,align=center,
+    font=\tiny\bfseries,text width=21mm,minimum height=8mm,inner sep=1pt},
+  prod/.style={rounded corners=3pt,draw=muted,fill=white,align=center,font=\tiny,
+    text width=21mm,minimum height=11mm,inner sep=1pt,text=ink2},
+  pick/.style={prod,draw=s1,fill=soft,text=navy,line width=0.9pt},
+  pstep/.style={rounded corners=2pt,draw=navy!50,fill=white,align=center,font=\tiny,
+    text width=14mm,minimum height=9mm,inner sep=1pt},
+  lane/.style={font=\scriptsize\bfseries,text=navy,align=right,text width=15mm},
+}
+
+\title{Payment Intelligence Ecosystem}
+\subtitle{Hệ thống dữ liệu thanh toán gồm nhiều sản phẩm nhỏ trên một nền tảng chung}
+\author{Đỗ Trung Tuyến}
+\institute{Báo cáo thực tập}
+\date{12/11/2026}
+
+\begin{document}
+
+\maketitle
+
+% =====================================================================
+\begin{frame}{Bài toán}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}\small
+      Một giao dịch thanh toán đi qua nhiều khâu: định tuyến, kiểm tra rủi ro, xử lý qua nhà cung cấp,
+      đối soát, giải quyết tranh chấp. Mỗi khâu cần một \textbf{sản phẩm dữ liệu} riêng.
+
+      \vspace{2mm}
+      \textbf{Mục tiêu đề tài}
+      \begin{itemize}\small
+        \item Xây một \textbf{nền tảng dữ liệu chung} để các sản phẩm nhỏ dùng lại: định dạng dữ liệu,
+              quản lý dataset, quy tắc đánh giá, cơ sở dữ liệu.
+        \item Trong 6 tuần, làm \textbf{2 sản phẩm} đầu tiên trên nền tảng đó.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \begin{block}{\faHeartbeat\ Payment Reliability}\small
+        Hệ thống thanh toán có đang chạy ổn không? Phát hiện sớm sự cố của nhà cung cấp.
+      \end{block}
+      \begin{block}{\faShield*\ Fraud \& Risk}\small
+        Giao dịch này có rủi ro gian lận không? Chấm điểm để ưu tiên kiểm tra.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{1mm}
+  \begin{exampleblock}{Tiêu chí thành công}\footnotesize
+    Đánh giá trung thực, tái lập được, giải thích được từng bước. Đây là bản demo, chưa phải hệ thống vận hành.
+  \end{exampleblock}
+\end{frame}
+
+% =====================================================================
+\begin{frame}{Sơ đồ hệ thống: mỗi khâu của giao dịch là một sản phẩm}
+  \centering
+  \begin{tikzpicture}[x=1mm,y=1mm]
+    % lifecycle stages
+    \foreach \i/\t in {0/1. Định tuyến,1/2. Kiểm tra rủi ro,2/3. Xử lý qua\\nhà cung cấp,3/4. Đối soát\\\& quyết toán,4/5. Tranh chấp\\\& hoàn tiền}
+      \node[stage] (s\i) at (\i*28,24) {\t};
+    \foreach \a/\b in {0/1,1/2,2/3,3/4} \draw[arr,navy] (s\a) -- (s\b);
+    \node[font=\scriptsize\bfseries,text=navy,anchor=south west] at (-11,29) {Vòng đời một giao dịch};
+    % products
+    \node[prod]  (p0) at (0,6)  {\textbf{Smart Routing}\\chọn nhà cung cấp};
+    \node[pick]  (p1) at (28,6) {\textbf{Fraud \& Risk}\\chấm điểm gian lận};
+    \node[pick]  (p2) at (56,6) {\textbf{Payment Reliability}\\giám sát, phát hiện sự cố};
+    \node[prod]  (p3) at (84,6) {\textbf{Reconciliation}\\khớp giao dịch, tiền về};
+    \node[prod]  (p4) at (112,6){\textbf{Dispute}\\xử lý chargeback};
+    \foreach \i in {0,...,4} \draw[arr] (s\i) -- (p\i);
+    % circles around the two products in scope
+    \draw[s2,line width=1.4pt] (28,6) ellipse (13.6mm and 9.2mm);
+    \draw[s2,line width=1.4pt] (56,6) ellipse (13.6mm and 9.2mm);
+    \foreach \x in {28,56} \node[font=\tiny\bfseries,text=s2] at (\x,-5.5) {đang làm};
+    \foreach \x in {0,84,112} \node[font=\tiny,text=ink2] at (\x,-5.5) {chưa làm};
+    % shared platform
+    \node[rounded corners=3pt,draw=navy,fill=navy!8,align=center,font=\scriptsize,
+          minimum width=136mm,minimum height=10mm] (base) at (56,-15)
+      {\textbf{Nền tảng dữ liệu chung}: định dạng sự kiện thanh toán · quản lý dataset · quy tắc
+       đánh giá · PostgreSQL};
+    \foreach \i in {0,...,4} \draw[muted,line width=0.7pt] (\i*28,-7.5) -- (\i*28,-10);
+  \end{tikzpicture}
+
+  \vspace{1mm}
+  {\scriptsize Các sản phẩm trao đổi dữ liệu qua nền tảng chung, ví dụ: kết quả tranh chấp trở thành
+  nhãn gian lận cho Fraud \& Risk; sự cố nhà cung cấp giúp Smart Routing tránh nhà cung cấp đang lỗi.}
+\end{frame}
+
+% =====================================================================
+\begin{frame}{Phạm vi: hai pipeline trên nền tảng chung}
+  \centering
+  \begin{tikzpicture}[node distance=2.6mm]
+    \node[lane] (l1) {Payment\\Reliability};
+    \node[pstep,right=of l1] (a1) {Kịch bản\\giả lập};
+    \node[pstep,right=of a1] (a2) {Sinh dữ liệu\\thanh toán};
+    \node[pstep,right=of a2] (a3) {Kiểm tra\\định dạng};
+    \node[pstep,right=of a3] (a4) {Nạp vào\\PostgreSQL};
+    \node[pstep,right=of a4] (a5) {Chỉ số\\15 phút};
+    \node[pstep,right=of a5] (a6) {Phát hiện\\sự cố};
+    \node[pstep,right=of a6] (a7) {Đánh giá\\với đáp án};
+    \foreach \x/\y in {a1/a2,a2/a3,a3/a4,a4/a5,a5/a6,a6/a7} \draw[arr] (\x)--(\y);
+
+    \node[lane,below=9mm of l1] (l2) {Fraud\\\& Risk};
+    \node[pstep,right=of l2] (b1) {Dataset\\IEEE-CIS};
+    \node[pstep,right=of b1] (b2) {Chia theo\\thời gian};
+    \node[pstep,right=of b2] (b3) {Tạo\\đặc trưng};
+    \node[pstep,right=of b3] (b4) {Huấn luyện\\mô hình};
+    \node[pstep,right=of b4] (b5) {Hiệu chỉnh\\xác suất};
+    \node[pstep,right=of b5] (b6) {Chọn chính\\sách cảnh báo};
+    \node[pstep,right=of b6] (b7) {Chấm điểm\\theo lô};
+    \foreach \x/\y in {b1/b2,b2/b3,b3/b4,b4/b5,b5/b6,b6/b7} \draw[arr] (\x)--(\y);
+
+    \node[rounded corners=3pt,draw=navy,fill=navy!8,font=\scriptsize,align=center,
+          minimum width=118mm,minimum height=7mm,below=5mm of b4] (base)
+      {\textbf{Nền tảng chung}: định dạng dữ liệu · kiểm tra checksum dataset · test chỉ mở một lần · PostgreSQL};
+    \node[rounded corners=3pt,draw=s3,fill=s3!10,font=\scriptsize,align=center,
+          minimum width=118mm,minimum height=7mm,below=2.5mm of base] (out)
+      {\textbf{Đầu ra}: lệnh \texttt{make demo} · dashboard HTML · báo cáo};
+  \end{tikzpicture}
+  \vspace{2mm}
+
+  {\scriptsize Hai pipeline \textbf{không dùng chung dữ liệu}: không có dataset công khai nào vừa có dữ liệu
+  vận hành vừa có nhãn gian lận cho cùng giao dịch.}
+\end{frame}
+
+% =====================================================================
+\begin{frame}{Nguyên tắc đánh giá}
+  \centering
+  \begin{tikzpicture}[x=1.1mm,y=1mm]
+    \fill[s1!25] (0,0) rectangle (60,9);
+    \node[font=\scriptsize] at (30,4.5) {\textbf{Huấn luyện (train) 60\%}};
+    \fill[s3!30] (60,0) rectangle (73.3,9);  \node[font=\tiny] at (66.6,4.5) {hiệu chỉnh};
+    \fill[s3!45] (73.3,0) rectangle (86.6,9); \node[font=\tiny] at (80,4.5) {chọn};
+    \fill[s3!60] (86.6,0) rectangle (100,9);  \node[font=\tiny] at (93.3,4.5) {đánh giá};
+    \fill[muted!70] (100,0) rectangle (120,9);
+    \node[font=\scriptsize] at (110,4.5) {\faLock\ \textbf{Test 20\%}};
+    \draw[white,line width=1pt] (60,0)--(60,9) (73.3,0)--(73.3,9) (86.6,0)--(86.6,9) (100,0)--(100,9);
+    \draw[ink2,-{Stealth}] (0,-3) -- (120,-3);
+    \node[font=\tiny,text=ink2,anchor=north west] at (0,-4) {thời gian};
+    \node[font=\scriptsize,text=ink2] at (80,13) {Validation 20\%};
+    \node[font=\tiny,text=ink2,anchor=north east] at (120,-4) {chỉ mở một lần};
+  \end{tikzpicture}
+
+  \vspace{3mm}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}\small
+      \begin{itemize}
+        \item Chia \textbf{theo thời gian}, không chia ngẫu nhiên: mô phỏng việc dự đoán tương lai.
+        \item Mọi lựa chọn (mô hình, ngưỡng) chỉ dùng train và validation.
+        \item Tập test chỉ chạy \textbf{một lần}; mỗi lần chạy được ghi sổ trong git, có kiểm tra tự động
+              chặn chạy lại.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Thuật ngữ}\scriptsize
+        \textbf{PR-AUC}: khả năng xếp giao dịch gian lận lên đầu (0 → 1; đoán ngẫu nhiên $\approx$ 0,035 vì
+        gian lận chỉ chiếm 3,5\%).\\[1mm]
+        \textbf{Tỷ lệ báo nhầm (FPR)}: phần giao dịch hợp lệ bị cảnh báo.\\[1mm]
+        \textbf{Hiệu chỉnh}: biến điểm số thành xác suất đọc được.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Payment Reliability}
+
+\begin{frame}{Payment Reliability: dữ liệu và tín hiệu}
+  \begin{columns}[T]
+    \begin{column}{0.7\textwidth}
+      \includegraphics[width=\textwidth]{figures/p01_failure.pdf}
+      \figname{Tỷ lệ lỗi kỹ thuật theo giờ của từng nhà cung cấp}
+    \end{column}
+    \begin{column}{0.28\textwidth}\small
+      \textbf{Dữ liệu giả lập}
+      \begin{itemize}\small
+        \item 7 ngày, 3 nhà cung cấp
+        \item \num{25.573} thanh toán, \num{30.050} lượt gửi
+        \item \num{4} sự cố cài sẵn làm đáp án
+      \end{itemize}
+      \vspace{2mm}
+      \textbf{Chỉ số toàn kỳ}
+      \begin{itemize}\small
+        \item thành công \num{76,5\%}
+        \item lỗi kỹ thuật \num{16,9\%}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+\begin{frame}{Payment Reliability: kết quả phát hiện sự cố}
+  \begin{columns}[c]
+    \begin{column}{0.47\textwidth}
+      \includegraphics[width=\textwidth]{figures/p01_detectors.pdf}
+      \figname{Số sự cố phát hiện được trên 4 sự cố cài sẵn}
+    \end{column}
+    \begin{column}{0.5\textwidth}\footnotesize
+      \begin{itemize}\footnotesize
+        \item \textbf{z-score} (đường cơ sở): so mỗi khung 15 phút với cùng giờ những ngày trước.
+        \item \textbf{Nhị thức} (chính): gộp số lỗi trong một cửa sổ, so với 24 giờ trước.
+        \item Ngưỡng chỉnh trên \textbf{bộ chỉnh ngưỡng}, rồi khoá và chạy \textbf{một lần} trên
+              \textbf{bộ kiểm tra} (dữ liệu khác, có loại sự cố mới).
+      \end{itemize}
+      \vspace{1mm}
+      \begin{tabular}{@{}lcc@{}}
+        \toprule
+        Báo nhầm / ngày & Chỉnh ngưỡng & Kiểm tra \\
+        \midrule
+        Nhị thức & 0,0 & 0,0 \\
+        z-score & 1,0 & 2,0 \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Fraud \& Risk}
+
+\begin{frame}{Fraud \& Risk: chất lượng mô hình}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \includegraphics[width=\textwidth]{figures/p02_prauc.pdf}
+      \figname{PR-AUC của ba mô hình}
+    \end{column}
+    \begin{column}{0.48\textwidth}\footnotesize
+      Dataset công khai IEEE-CIS: \num{590.540} giao dịch, \num{3,5\%} gian lận.
+
+      \vspace{1mm}
+      \begin{tabular}{@{}lcc@{}}
+        \toprule
+        Mô hình & Validation & Test \\
+        \midrule
+        Luật đơn giản & 0,089 & 0,078 \\
+        Logistic Regression & 0,245 & 0,165 \\
+        \textbf{Gradient Boosting} & \textbf{0,497} & \textbf{0,408} \\
+        \bottomrule
+      \end{tabular}
+
+      \vspace{1mm}
+      \begin{itemize}\footnotesize
+        \item Gradient Boosting cao gấp khoảng 12 lần đoán ngẫu nhiên.
+        \item Ngưỡng chốt trước khi mở test: precision \num{0,516}, recall \num{0,371}, báo nhầm \num{1,24\%}.
+        \item Chống rò rỉ: nếu dùng nhãn để mã hoá đặc trưng, PR-AUC tăng giả \num{+0,063}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+\begin{frame}{Từ điểm số đến quyết định: hiệu chỉnh xác suất}
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/p02_calibration.pdf}
+  \figname{Điểm gốc và điểm sau hiệu chỉnh trên khối đánh giá}
+
+  \vspace{3mm}
+  \begin{itemize}\small
+    \item Điểm gốc trung bình \num{26,1\%} trong khi gian lận thật \num{3,5\%}: điểm \textbf{không phải xác suất}.
+    \item Hiệu chỉnh Platt (học trên khối hiệu chỉnh) đưa về \num{3,5\%}; log loss \num{0,351 → 0,109}.
+    \item Thứ tự xếp hạng không đổi; hiệu chỉnh cần khi đặt ngưỡng theo chi phí.
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------------
+\begin{frame}{Từ điểm số đến quyết định: chọn chính sách cảnh báo}
+  \begin{columns}[c]
+    \begin{column}{0.6\textwidth}
+      \includegraphics[width=\textwidth]{figures/p02_policy.pdf}
+      \figname{Tổng chi phí giả định của 9 chính sách}
+    \end{column}
+    \begin{column}{0.38\textwidth}\small
+      Chi phí giả định:
+      \begin{itemize}\small
+        \item bỏ sót gian lận: 0,75 × số tiền
+        \item mỗi lần duyệt: 5
+        \item mỗi cảnh báo nhầm: 1
+      \end{itemize}
+      \vspace{2mm}
+      Luật chi phí dùng xác suất đã hiệu chỉnh rẻ nhất ở \num{27/27} tổ hợp chi phí thử.
+
+      \vspace{2mm}
+      {\scriptsize\color{bad}Phân tích độ nhạy, không phải ROI.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------------
+\begin{frame}{Độ ổn định theo thời gian}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \includegraphics[width=\textwidth]{figures/p02_transfer.pdf}
+      \figname{Tỷ lệ báo nhầm khi giữ ngưỡng 5\% sang giai đoạn sau}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \includegraphics[width=\textwidth]{figures/p02_stability.pdf}
+      \figname{PR-AUC và tỷ lệ gian lận theo tuần}
+    \end{column}
+  \end{columns}
+  \vspace{1mm}
+  {\footnotesize Tỷ lệ báo nhầm thực tế \num{3,9–5,6\%} so với mục tiêu 5\%; PR-AUC theo tuần
+  \num{0,35–0,56}: cần theo dõi định kỳ.}
+\end{frame}
+
+% =====================================================================
+\section{Demo}
+
+\begin{frame}{Demo: một lệnh, kết quả trên terminal và dashboard}
+  \begin{columns}[c]
+    \begin{column}{0.62\textwidth}
+      \includegraphics[width=\textwidth]{figures/dashboard_top.png}
+      \figname{Dashboard sau khi chạy demo}
+    \end{column}
+    \begin{column}{0.36\textwidth}\small
+      \begin{tabular}{@{}l@{\ \ }l@{}}
+        \texttt{make up} & khởi động PostgreSQL\\
+        \texttt{make demo} & chạy cả hai sản phẩm\\
+      \end{tabular}
+
+      \vspace{2mm}
+      Kiểm tra tự động khi demo:\\
+      \textcolor{good}{\faCheck} khớp kết quả đã công bố\\
+      \textcolor{good}{\faCheck} chấm điểm theo lô trùng lúc huấn luyện\\
+      \textcolor{good}{\faCheck} không đụng tập test
+
+      \vspace{2mm}
+      \num{463} kiểm thử tự động đạt.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section{Kết luận}
+
+\begin{frame}{Hạn chế và hướng tiếp theo}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{alertblock}{Hạn chế}\footnotesize
+        \begin{itemize}
+          \item Payment Reliability dùng dữ liệu giả lập, mỗi bộ chỉ 4 sự cố.
+          \item Fraud \& Risk: nhóm cột ẩn danh C1–C14 mang gần hết tín hiệu, chưa rõ ý nghĩa.
+          \item Validation đã dùng nhiều lần nên số trên validation có thể lạc quan.
+          \item Chi phí là giả định; nhãn gian lận thực tế đến muộn nhiều tuần.
+          \item Hai sản phẩm chưa chung dữ liệu.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Tiếp theo}\footnotesize
+        \begin{itemize}
+          \item Thử độ bền: sự cố tăng dần, dữ liệu trùng / đến muộn / hỏng, tải gấp 10 lần, nhãn sai.
+          \item Nối hai sản phẩm qua mã thanh toán chung.
+          \item Thêm sản phẩm thứ ba trên nền tảng: đối soát hoặc tranh chấp.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[standout]
+  Cảm ơn đã lắng nghe!\\[4mm]
+  {\normalsize Hỏi đáp}
+\end{frame}
+
+\end{document}

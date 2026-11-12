@@ -1,5 +1,18 @@
 # Payment Intelligence Ecosystem: developer commands (AGENTS.md section 6).
-SHELL := /bin/bash
+# Recipes use bash. From PowerShell or cmd on Windows, /bin/bash does not exist and make would
+# fall back to cmd.exe; use the bash that comes with Git for Windows instead (found next to git).
+ifeq ($(OS)$(MSYSTEM),Windows_NT)
+  GIT_EXE := $(subst \,/,$(firstword $(shell where git)))
+  GIT_ROOT := $(patsubst %/,%,$(dir $(patsubst %/,%,$(dir $(GIT_EXE)))))
+  ifneq ($(wildcard $(GIT_ROOT)/usr/bin/bash.exe),)
+    SHELL := $(GIT_ROOT)/usr/bin/bash.exe
+    export PATH := $(GIT_ROOT)/usr/bin;$(PATH)
+  else
+    $(error bash not found: install Git for Windows, or run make from Git Bash)
+  endif
+else
+  SHELL := /bin/bash
+endif
 .DEFAULT_GOAL := help
 
 UV := $(shell command -v uv 2>/dev/null)
@@ -18,14 +31,16 @@ SEP := $(if $(filter Windows_NT,$(OS)),;,:)
 # Windows and WSL share this folder: keep the Windows uv environment apart from WSL's .venv.
 ifeq ($(OS),Windows_NT)
   export UV_PROJECT_ENVIRONMENT ?= .venv-win
+  # An editor may activate .venv (the WSL one); uv would warn on every command. Not needed here.
+  unexport VIRTUAL_ENV
 endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
 
-.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability bundle verify-demo
+.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score demo bundle verify-demo slides-figures slides weekly
 
 help:
-	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability bundle verify-demo"
+	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score demo bundle verify-demo"
 
 setup:
 ifeq ($(UV),)
@@ -49,6 +64,7 @@ test:
 	$(RUN) pytest --cov --cov-report=term-missing
 
 up:
+	@command -v docker >/dev/null 2>&1 || { echo "docker not found: install Docker Desktop and start it, then run make up again (README, section Chay demo)"; exit 1; }
 	docker compose up -d --wait postgres
 
 down:
@@ -91,6 +107,14 @@ policy:
 stability:
 	$(RUN) python -m fraud_risk.experiments.stability
 
+# G08 batch scorer (development data only). score-model: fit on train, calibrate on V1, save to
+# artifacts/models/. score: INPUT=<csv> (default: the label-free V3 sample) MODEL=<model folder>.
+score-model:
+	$(RUN) python -m fraud_risk.scoring.batch train
+
+score:
+	$(RUN) python -m fraud_risk.scoring.batch score $(if $(MODEL),--model-dir $(MODEL),) $(if $(INPUT),--input $(INPUT),)
+
 # Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
 SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)
 simulate:
@@ -126,6 +150,22 @@ detect-report:
 # Stage F: static dashboard from artifacts/ (ADR 0007), written to artifacts/dashboard/index.html.
 dashboard:
 	$(RUN) python -m dashboard.build
+
+# Slides and weekly report (XeLaTeX, MiKTeX or TeX Live). Figures read results/ and the tuning run only.
+slides-figures:
+	$(RUN) python docs/slides/make_figures.py
+
+slides: slides-figures
+	cd docs/slides && xelatex -interaction=nonstopmode -halt-on-error slides.tex >/dev/null && xelatex -interaction=nonstopmode -halt-on-error slides.tex >/dev/null && echo docs/slides/slides.pdf
+
+weekly:
+	cd docs/weekly/latex && xelatex -interaction=nonstopmode -halt-on-error $(or $(WEEK),2026-W46).tex >/dev/null && xelatex -interaction=nonstopmode -halt-on-error $(or $(WEEK),2026-W46).tex >/dev/null && cp $(or $(WEEK),2026-W46).pdf .. && echo docs/weekly/$(or $(WEEK),2026-W46).pdf
+
+# Both products end to end with progress, results and a checklist (scripts/demo.py).
+# Product 01 needs PostgreSQL (make up) and uses the TUNING simulation only; Product 02 needs the
+# IEEE-CIS dataset and uses development data only. PRODUCT=01 or PRODUCT=02 runs one of them.
+demo:
+	@$(RUN) python scripts/demo.py $(if $(PRODUCT),--product $(PRODUCT),)
 
 # ADR 0010. verify-demo: fail with a clear message when the dashboard inputs are missing.
 verify-demo:

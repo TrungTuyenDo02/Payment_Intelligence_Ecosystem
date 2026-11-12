@@ -1,13 +1,34 @@
-# Bàn giao công việc — 2026-11-11
+# Bàn giao công việc — 2026-11-12
 
 > Dành cho người tiếp tục dự án từ ngày 2026-11-05. Đọc file này trước, sau đó đọc [`README.md`](README.md) và [tổng quan đề tài](docs/product/project-overview.md).
 > Chủ dự án: Đỗ Trung Tuyến (@TrungTuyenDo02).
 
-## 00. Cập nhật 2026-11-11: Stage G (đọc trước)
+## 000. Cập nhật 2026-11-12: G08, `make demo`, G09 (đọc trước)
+
+| Việc | Nhánh, commit | Kiểm chứng |
+| --- | --- | --- |
+| G08 bộ chấm điểm theo lô | `stage-g/g08-batch-scoring` (`7ab81f6`) | `make score-model` → `score-19e94be9616d` (chạy hai lần, file trùng từng byte); `make score` trên 2.000 dòng V3: lệch huấn luyện–chấm điểm 0; tham số Platt trùng G03; 10 test mới; phá hoại có chủ đích (lệch `hour_of_day` 7 giờ) bị 2 test bắt |
+| `make demo` (Product 01 đầu-cuối) | `stage-g/g08b-demo` (`4beab1c`) | Chỉ dùng bộ tuning; `scripts/check_demo.py` so với số đã công bố (D-B 3/4, 0 báo nhầm/ngày; D-A 2/4, 1,0). **Chưa chạy đầu-cuối trên máy này** (không có Docker/PostgreSQL); job `demo` trong CI chạy nó trên PostgreSQL 16 |
+| `make demo` dễ hiểu hơn (sau khi chủ dự án chạy thử không thấy kết quả) | `stage-g/g08c-demo-ux` | `scripts/demo.py`: kiểm tra PostgreSQL trước và in hướng dẫn nếu thiếu (trước đây là traceback sau 12 giây); in 7 bước kèm nơi ghi kết quả; [hướng dẫn demo](docs/demo-guide.md); bỏ cảnh báo `VIRTUAL_ENV` trên Windows; `make up` báo rõ khi thiếu Docker. **Đã chạy thật 2026-11-12** sau khi chủ dự án cài Docker Desktop: `make up` → `make demo` qua đủ 7 bước, D-B 3/4 và 0 báo nhầm/ngày, D-A 2/4 và 1,0, khớp số công bố; chạy lần hai: 0 dòng mới, 30.050 dòng đã có. `make test` với PostgreSQL: **454 pass, 1 skip** (7 test DB chạy thật) |
+| `make` chạy được từ PowerShell; `make demo` cho cả hai sản phẩm | `stage-g/g08c-demo-ux` | Chủ dự án chạy `make up` trong PowerShell bị lỗi `'{' is not recognized` (make rơi về cmd.exe vì `/bin/bash` không tồn tại ngoài Git Bash). Makefile nay tìm `usr/bin/bash.exe` cạnh `git` khi không ở Git Bash. `make demo` chạy Product 01 rồi Product 02 (nếu có dataset), thanh tiến độ %, bảng kết quả, danh sách ✓/✗ (7/7 đạt); `PRODUCT=01|02`. Kiểm từ PowerShell: `make up`, `make demo`, `make lint test` (457 pass, 1 skip) |
+| Giao diện terminal và dashboard mới (yêu cầu của chủ dự án, 2026-11-12) | `stage-g/g11-ui` | `make demo` dùng `rich` ([ADR 0011](docs/decisions/0011-rich-terminal-demo.md), nhóm `dev`): tiến độ động, panel kết quả, danh sách kiểm tra. Dashboard viết lại: một trang có thanh bên (theo mẫu dashboard fintech chủ dự án gửi), thẻ số liệu, biểu đồ SVG tự vẽ (bảng màu đã kiểm định, sáng/tối, tooltip), luồng pipeline. **Sửa vi phạm quy tắc 1**: dashboard cũ đọc `artifacts/runs/*/test/metrics.json` (số đã công bố, không đánh giá lại) và mỗi lần `make demo` trên máy này đều đọc nó; nay số test và số bộ report chỉ trích từ `results/published.json`, có test mồi chặn. Đã xem ảnh chụp (sáng, tối, 600px). 463 pass, 1 skip |
+| README ảnh dashboard mới; báo cáo tuần LaTeX; slide Beamer (yêu cầu của chủ dự án, 2026-11-12) | `stage-g/g11-ui` | Ảnh `docs/assets/results/dashboard.png` thay ảnh Stage F. [`docs/weekly/2026-W46.pdf`](docs/weekly/2026-W46.pdf) (5 trang, `make weekly`). [`docs/slides/slides.pdf`](docs/slides/slides.pdf) (14 trang, theme Metropolis có sẵn trong MiKTeX/TeX Live, `make slides`): sơ đồ hệ thống theo vòng đời giao dịch (5 sản phẩm, khoanh 2 sản phẩm đang làm), hai pipeline, biểu đồ; chú thích chỉ ghi tên hình, tránh mã viết tắt riêng của dự án; biểu đồ từ `docs/slides/make_figures.py` (chỉ đọc `results/` và lần chạy tuning). Đã xem từng trang |
+| G09 đồng bộ tài liệu | `stage-g/g09-docs` | README (demo 5 phút, Stage G, ADR 0001–0010), overview, dàn ý, báo cáo thực tập có mục 4.6 Stage G (PDF **25 trang**, đã xem các trang mới), báo cáo tuần [`docs/weekly/`](docs/weekly/) |
+
+`make test` sau G08: **439 pass, 8 skip**; sau `make demo`: thêm 4 test (`tests/test_check_demo.py`).
+
+Việc tiếp theo:
+
+1. Push ba nhánh mới, mở PR xếp chồng: G08 → G07, `g08b-demo` → G08, G09 → `g08b-demo`. Xác nhận CI xanh: `lint and test` (PostgreSQL, `REQUIRE_DB=1`), `registries`, `demo`.
+2. ADR 0002 đã Accepted (chủ dự án chấp nhận trong chat 2026-11-12).
+3. ~~Dashboard trên máy mới thiếu số test của Product 02.~~ Đã xử lý ở `g11-ui`: số test trích từ `results/published.json`.
+4. G10 ⏸: chủ dự án đồng ý lên kế hoạch (2026-11-12). Đặc tả nháp [`stage-g10-spec.md`](docs/architecture/stage-g10-spec.md) trên nhánh `stage-g/g10-spec`, **chờ duyệt D1–D9** trước khi viết code (đặc biệt D1: không tăng `GENERATOR_VERSION`, và D2: nơi chạy phần cần PostgreSQL).
+
+## 00. Cập nhật 2026-11-11: Stage G
 
 Stage G: từ xếp hạng đến quyết định, **chỉ trên train + validation (thăm dò)**. Hướng dẫn thường trực cho agent nằm trong `CLAUDE.md` (bị git-ignore, chỉ có trên máy này). Tập test không được mở; không config `frozen` nào bị sửa.
 
-### Đã làm (mỗi task một nhánh, xếp chồng: g01 → g02 → … → g07; **chưa push**)
+### Đã làm (mỗi task một nhánh, xếp chồng: g01 → g02 → … → g07; đã push đến G07 ngày 2026-11-12)
 
 | Task | Nhánh, commit | Kiểm chứng |
 | --- | --- | --- |
@@ -34,7 +55,7 @@ Stage G: từ xếp hạng đến quyết định, **chỉ trên train + validat
 2. G07 chỉ xong khi CI xanh với test DB chạy thật (job `lint and test` có PostgreSQL) và job `registries` pass.
 3. Máy này thiếu lần chạy detector của Product 01 (`make verify-demo` báo thiếu `detections/det-*`).
 4. Kế tiếp: G08 (chấm điểm theo lô, dùng `execution_id`); G09; G10 ⏸.
-5. Lệch tài liệu đã thấy (để G09): HANDOFF ghi PDF báo cáo 19–20 trang, thực tế 23 trang.
+5. ~~Lệch tài liệu: HANDOFF ghi PDF báo cáo 19–20 trang, thực tế 23 trang.~~ Đã sửa ở G09 (nay 25 trang).
 
 ## 0. Cập nhật 2026-11-09 (đọc trước)
 
@@ -194,7 +215,7 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 
 | Tài liệu | Nội dung |
 | --- | --- |
-| [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf), [mã LaTeX](docs/report/latex/) | Báo cáo đầy đủ (19 trang); bài báo 10 trang |
+| [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf), [mã LaTeX](docs/report/latex/) | Báo cáo đầy đủ (25 trang, có mục Stage G); bài báo 10 trang |
 | [Hướng dẫn GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook, tag bản nộp |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch 6 tuần, rủi ro, tài liệu tham khảo, trạng thái task |
 | [Contract `payment-event`](contracts/payment-event/) | Schema 1.0.0 và changelog (quy tắc giữa các attempt) |
@@ -203,4 +224,5 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
 | [Đặc tả](docs/architecture/stage-e-spec.md) và [báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ, Gradient Boosting |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md), [dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo |
-| [ADR 0001–0008](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh, đặc trưng lịch sử thực thể chỉ nhìn quá khứ |
+| [ADR 0001–0010](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh, đặc trưng lịch sử thực thể chỉ nhìn quá khứ, protocol đánh giá Stage G, `experiment_id` và `execution_id` |
+| [Báo cáo Stage G](docs/architecture/stage-g-report.md), [báo cáo tuần](docs/weekly/) | Hiệu chỉnh, chính sách, độ ổn định, chấm điểm theo lô; báo cáo theo tuần cho mentor |

@@ -215,3 +215,14 @@ class StabilityConfig(DecisionBase):
     """G05 (configs/stability.yaml)."""
 
     stability: StabilitySection
+
+
+class ScoringSection(_Strict):
+    calibration: Literal["raw", "prior_shift", "platt"]  # fixed from G03, fitted on V1 only
+    sample_rows: int = Field(default=2000, ge=1)  # label-free demo input taken from V3
+
+
+class ScoringConfig(DecisionBase):
+    """G08 batch scorer (configs/scoring.yaml)."""
+
+    scoring: ScoringSection

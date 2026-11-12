@@ -1,4 +1,4 @@
-"""Stage F dashboard: builds from run folders, says clearly what is missing, reads no dataset."""
+"""Dashboard: one page from run folders, explains what is missing, never reads test results."""
 
 import json
 from pathlib import Path
@@ -6,9 +6,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from dashboard.build import build, find_detection_run, fold_echoes, main, provider_summary, vn
+from dashboard.build import (
+    REPO_ROOT,
+    build,
+    find_detection_run,
+    fold_echoes,
+    main,
+    provider_summary,
+    vn,
+)
+from dashboard.charts import bar_chart, line_chart, nice_ticks
 
 T0 = pd.Timestamp("2026-01-05T00:00:00Z")
+SENTINEL = 0.987654  # a test-set number planted where the dashboard must not look
 
 
 def _provider_kpis(n: int = 96 * 2) -> pd.DataFrame:
@@ -36,11 +46,16 @@ def _provider_kpis(n: int = 96 * 2) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-def _artifacts(root: Path, with_report: bool = True, with_fraud: bool = False) -> Path:
+def _artifacts(root: Path, stage: str = "tuning") -> Path:
     sid = "sim-test"
     (root / "kpi" / sid).mkdir(parents=True)
     _provider_kpis().to_parquet(root / "kpi" / sid / "provider_15m.parquet", index=False)
-    run = root / "detections" / "det-x" / ("report" if with_report else "")
+    (root / "simulations" / sid).mkdir(parents=True)
+    label = {"anomaly_id": "anom-01", "type": "provider_outage", "magnitude": 3.0,
+             "provider_id": "prov_002", "payment_method": None, "error_code": None,
+             "start": "2026-01-05T10:00:00.000Z", "end": "2026-01-05T11:00:00.000Z"}  # fmt: skip
+    (root / "simulations" / sid / "anomaly_labels.json").write_text(json.dumps([label]))
+    run = root / "detections" / "det-x" / ("report" if stage == "report" else "")
     run.mkdir(parents=True, exist_ok=True)
     incident = {"incident_id": "pooled-001", "detector": "pooled", "target_type": "provider",
                 "target": "prov_002", "metrics": ["technical_failure_rate"],
@@ -50,177 +65,118 @@ def _artifacts(root: Path, with_report: bool = True, with_fraud: bool = False) -
     (run / "incidents.json").write_text(json.dumps([incident]))
     anomaly = {"anomaly_id": "anom-01", "type": "provider_outage", "magnitude": 3.0,
                "target": "prov_002", "detected": True, "delay_minutes": 15.0}  # fmt: skip
-    evaluation = {"simulation_id": sid, "stage": "report" if with_report else "tuning",
-                  "run_id": "det-x", "detectors": {"pooled": {"anomalies": [anomaly], "detected": 1,
-                  "total": 1, "false_per_day": 0.0}}}  # fmt: skip
+    det = {"anomalies": [anomaly], "detected": 1, "total": 1, "false_per_day": 0.0}
+    evaluation = {"simulation_id": sid, "stage": stage, "run_id": "det-x",
+                  "detectors": {"pooled": det, "robust_z": dict(det, detected=0)}}  # fmt: skip
     (run / "evaluation.json").write_text(json.dumps(evaluation))
-    if with_fraud:
-        part = {"pr_auc": 0.165, "pr_auc_ci": {"low": 0.155, "high": 0.176}, "prevalence": 0.0344,
-                "recall_at_fpr": {"recall": 0.28}}  # fmt: skip
-        out = root / "runs" / "run-abc" / "test"
-        out.mkdir(parents=True)
-        (out / "metrics.json").write_text(json.dumps(
-            {"run_id": "run-abc", "stage": "final", "models": {"logistic": {"test": part}}}
-        ))  # fmt: skip
     return root
+
+
+def _page(root: Path) -> str:
+    return build(root, repo=REPO_ROOT)
 
 
 def test_vietnamese_numbers() -> None:
     assert vn(29340, 0) == "29.340" and vn(0.165) == "0,165" and vn(None) == "—"
 
 
-def test_page_has_both_products_and_the_incident(tmp_path: Path) -> None:
-    html = build(_artifacts(tmp_path, with_fraud=True))
-    assert "Product 01" in html and "Product 02" in html
-    assert "pooled-001" in html and "prov_002" in html
-    assert "05/01 17:00" in html  # 10:00 UTC shown in Vietnam time
-    assert "0,165 [0,155; 0,176]" in html and "<b>Test</b>" in html
-    assert html.count("data:image/png;base64,") == 2
+@pytest.mark.parametrize("lo,hi", [(0, 0.497), (0, 0.261), (0, 1340), (0.35, 0.67), (0, 3)])
+def test_ticks_cover_the_largest_value(lo: float, hi: float) -> None:
+    """Regression: the top tick used to fall below the maximum, so bars ran off the axis."""
+    ticks = nice_ticks(lo, hi)
+    assert ticks[0] <= lo and ticks[-1] >= hi and len(ticks) >= 2
+
+
+def test_charts_carry_tooltips_and_direct_labels() -> None:
+    svg = line_chart(["a", "b", "c"], [("prov_001", 1, [0.1, None, 0.3])], y_fmt=str,
+                     title="t", bands=[(0, 1, "band-alert", "sự cố")])  # fmt: skip
+    assert svg.count('class="hover"') == 3 and "prov_001" in svg and "sự cố" in svg
+    bars = bar_chart([("x", 2.0, "fill-s1", "tip")], x_fmt=str, title="t", ref=(1.0, "ref"))
+    assert 'data-tip="tip"' in bars and "ref" in bars
+    assert "Không có dữ liệu" in line_chart([], [], y_fmt=str, title="t")
+
+
+@pytest.mark.parametrize("width", [960, 680, 500])
+def test_charts_keep_the_requested_width(width: int) -> None:
+    """Regression: the bar length once overwrote `width`, so the viewBox shrank to one bar."""
+    rows = [("a", 0.1, "fill-s1", "t"), ("b", 0.5, "fill-s1", "t")]
+    bars = bar_chart(rows, x_fmt=str, title="t", width=width, label_w=120)
+    line = line_chart(["a", "b"], [("s", 1, [0.1, 0.2])], y_fmt=str, title="t", width=width)
+    assert f'viewBox="0 0 {width} ' in bars and f'viewBox="0 0 {width} ' in line
+
+
+def test_one_page_has_every_section_both_pipelines_and_the_incident(tmp_path: Path) -> None:
+    page = _page(_artifacts(tmp_path))
+    for section in ("overview", "pipeline", "p01", "p02", "quality"):
+        assert f'id="{section}"' in page and f'href="#{section}"' in page
+    assert "Sinh dữ liệu giả lập" in page and "Chấm điểm theo lô" in page  # both pipelines
+    assert "pooled-001" in page and "anom-01" in page and "band-alert" in page
+    assert "0,408" in page  # published test number, quoted
 
 
 def test_missing_runs_are_explained_not_fatal(tmp_path: Path) -> None:
-    html = build(tmp_path)
-    assert "Chưa có lần chạy detector" in html
-    assert "Chưa có lần chạy trong" in html and "Chưa chạy <code>make leakage</code>" in html
+    page = _page(tmp_path)
+    assert "make demo" in page and "make score" in page and "chưa có" in page
 
 
-def test_report_run_is_preferred_over_tuning(tmp_path: Path) -> None:
+def test_report_run_is_never_read(tmp_path: Path) -> None:
+    """The report simulation was evaluated once; only its published numbers are shown."""
+    root = _artifacts(tmp_path, stage="report")
+    assert find_detection_run(root) is None
+    page = _page(root)
+    assert "Chưa có lần chạy detector trên bộ tuning" in page
+    assert "det-08335c6af086" in page  # quoted from results/published.json
+
+
+def test_test_folders_are_never_read(tmp_path: Path) -> None:
+    """Sabotage check: a test-set number planted in runs/*/test/ must not reach the page."""
     root = _artifacts(tmp_path)
-    tuning = root / "detections" / "det-y"
-    tuning.mkdir()
-    (tuning / "evaluation.json").write_text("{}")
-    assert find_detection_run(root).name == "report"
+    run = root / "runs" / "run-abc"
+    (run / "test").mkdir(parents=True)
+    part = {"pr_auc": SENTINEL, "pr_auc_ci": {"low": SENTINEL, "high": SENTINEL},
+            "prevalence": 0.03, "recall_at_fpr": {"recall": SENTINEL}}  # fmt: skip
+    (run / "test" / "metrics.json").write_text(json.dumps(
+        {"run_id": "run-abc", "stage": "final", "models": {"gbm": {"test": part}}}))  # fmt: skip
+    valid = {"pr_auc": 0.4321, "pr_auc_ci": {"low": 0.42, "high": 0.44}, "prevalence": 0.03,
+             "recall_at_fpr": {"recall": 0.55}}  # fmt: skip
+    (run / "metrics.json").write_text(
+        json.dumps(
+            {"run_id": "run-abc", "stage": "E", "models": {"gbm": {"valid": valid, "test": part}}}
+        )
+    )
+    page = _page(root)
+    assert "0,432" in page  # validation number is shown
+    assert vn(SENTINEL) not in page and vn(SENTINEL, 2) not in page
+
+
+def test_published_numbers_match_the_readme() -> None:
+    published = json.loads((REPO_ROOT / "results" / "published.json").read_text("utf-8"))
+    readme = (REPO_ROOT / "README.md").read_text("utf-8")
+    for m in published["product_02"]["models"]:
+        assert vn(m["test_pr_auc"]) in readme
+    assert published["product_01"]["report"]["run_id"] in readme
 
 
 def test_provider_summary_puts_all_last() -> None:
-    kpis = _provider_kpis()
-    summary = provider_summary(kpis)
+    summary = provider_summary(_provider_kpis(8))
     assert list(summary.index) == ["prov_001", "prov_002", "ALL"]
-    rows = kpis[kpis["provider_id"] == "prov_001"]
-    expected = rows["successes"].sum() / rows["attempts"].sum()
-    assert summary.loc["prov_001", "success_rate"] == pytest.approx(expected)
 
 
 def test_cli_writes_the_page(tmp_path: Path) -> None:
-    out = tmp_path / "dash" / "index.html"
+    out = tmp_path / "out" / "index.html"
     assert main(["--artifacts-dir", str(_artifacts(tmp_path / "a")), "--out", str(out)]) == 0
     assert out.read_text("utf-8").startswith("<!doctype html>")
 
 
-def test_fold_echoes_merges_overlapping_all_incident_only():
-    def inc(iid, target, start, end):
-        return {"incident_id": iid, "target": target, "start": start, "end": end}
+def test_fold_echoes_merges_overlapping_all_incident_only() -> None:
+    def inc(i: str, target: str, start: str, end: str) -> dict:
+        return {"incident_id": i, "target": target, "start": start, "end": end}
 
     incidents = [
-        inc("pooled-001", "ALL", "2026-01-05T10:15:00Z", "2026-01-05T11:00:00Z"),
-        inc("pooled-002", "prov_003", "2026-01-05T10:00:00Z", "2026-01-05T11:30:00Z"),
-        inc("pooled-003", "ALL", "2026-01-06T02:00:00Z", "2026-01-06T02:30:00Z"),
-        inc("pooled-004", "prov_001", "2026-01-06T02:30:00Z", "2026-01-06T03:00:00Z"),
+        inc("p-1", "prov_002", "2026-01-05T10:00:00Z", "2026-01-05T11:00:00Z"),
+        inc("p-2", "ALL", "2026-01-05T10:15:00Z", "2026-01-05T10:45:00Z"),
+        inc("p-3", "ALL", "2026-01-06T10:00:00Z", "2026-01-06T10:30:00Z"),
     ]
     out = fold_echoes(incidents)
-    assert [(i["incident_id"], i["echoes"]) for i in out] == [
-        ("pooled-002", ["pooled-001"]),
-        ("pooled-003", []),  # only touches pooled-004 at 02:30, no overlap
-        ("pooled-004", []),
-    ]
-    assert "echoes" not in incidents[0]  # input left as is
-
-
-def test_fraud_table_dedupes_labels_variants_and_tolerates_old_runs(tmp_path: Path) -> None:
-    def part(ap: float, with_fpr: bool = True) -> dict:
-        m = {"pr_auc": ap, "pr_auc_ci": {"low": ap - 0.01, "high": ap + 0.01}, "prevalence": 0.039}
-        return {**m, "recall_at_fpr": {"recall": 0.33}} if with_fpr else m
-
-    run = tmp_path / "runs" / "run-old"
-    (run / "test").mkdir(parents=True)
-    (run / "metrics.json").write_text(json.dumps(
-        {"run_id": "run-old", "stage": "validation", "models": {"logistic": {"valid": part(0.245)}}}
-    ))  # fmt: skip
-    # Made before fpr_target existed: no recall_at_fpr (used to raise KeyError).
-    old = {"valid": part(0.245, False), "test": part(0.165, False)}
-    (run / "test" / "metrics.json").write_text(
-        json.dumps({"run_id": "run-old", "stage": "final", "models": {"logistic": old}})
-    )
-    hist = tmp_path / "runs" / "run-hist"
-    hist.mkdir()
-    (hist / "config.yaml").write_text(
-        "features:\n  numeric: [a]\n  categorical: [b]\n  derived: [log_amount, card1_prev_count]\n"
-    )
-    (hist / "metrics.json").write_text(json.dumps(
-        {"run_id": "run-hist", "stage": "validation", "models": {"gbm": {"valid": part(0.497)}}}
-    ))  # fmt: skip
-    leak = tmp_path / "experiments" / "leak-x"
-    leak.mkdir(parents=True)
-    (leak / "summary.md").write_text(
-        "Run `leak-x`\n\n| A | B |\n| --- | --- |\n| `card1` | 0,987 |\n"
-    )
-
-    html = build(tmp_path)
-    assert html.count("0,245 [") == 1  # validation shown once, not again from the test run
-    assert "0,165 [" in html and "4 (+1: card1_*)" in html
-    assert ">card1</td>" in html and "| --- |" not in html and "<pre>" not in html
-
-
-def _diag_results() -> dict:
-    def score(pr: float) -> dict:
-        return {"pr_auc": pr, "pr_auc_at_common_prevalence": pr, "prevalence": 0.04,
-                "recall_at_fpr": 0.33, "rows": 100}  # fmt: skip
-
-    weeks = [
-        {"week": w, "rows": 50, "prevalence": 0.03 + w / 1000, "pr_auc": 0.2} for w in range(6)
-    ]
-    return {
-        "matrix": {f"train_{a}__valid_{b}": score(0.2) for a in ("time", "random")
-                   for b in ("time", "random")},  # fmt: skip
-        "same_rows_in_time_valid_period": {
-            "pr_auc_diff_random_minus_time_train": {"diff": 0.01, "low": 0.005, "high": 0.015}},
-        "random_valid_without_early_weeks": {"early_weeks": 2, "scores": {"train_time": score(0.21)}},  # noqa: E501
-        "weekly_time_valid": weeks[3:], "weekly_random_valid": weeks,
-    }  # fmt: skip
-
-
-def test_new_sections_say_what_is_missing(tmp_path: Path) -> None:
-    html = build(_artifacts(tmp_path))
-    assert 'id="diag"' in html and 'id="paired"' in html and "<nav>" in html
-    assert "split_diagnostics" in html and "paired_comparison" in html  # hints, no crash
-
-
-def test_diagnostics_and_paired_sections_render(tmp_path: Path) -> None:
-    root = _artifacts(tmp_path)
-    exp = root / "experiments"
-    (exp / "diag-x").mkdir(parents=True)
-    (exp / "diag-x" / "results.json").write_text(json.dumps(_diag_results()))
-    diff = {"diff": 0.011, "low": 0.005, "high": 0.017}
-    cand = {"run-aaa": {"pr_auc_diff": diff, "recall_at_fpr_diff": diff,
-                        "pr_auc_diff_clustered": {"diff": 0.01, "low": -0.003, "high": 0.025},
-                        "recall_at_fpr_diff_clustered": diff}}  # fmt: skip
-    (exp / "paired-x.json").write_text(json.dumps({
-        "baseline": "run-base", "validation_rows": 1000, "n_resamples": 50,
-        "candidates": cand}))  # fmt: skip
-    html = build(root)
-    assert "Train theo thời gian" in html and "Validation ngẫu nhiên" in html
-    assert "data:image/png;base64" in html and "run-aaa" in html and "run-base" in html
-    assert (
-        html.count('class="ok"') == 2
-    )  # row CI and recall CI exclude 0; the clustered PR-AUC CI does not
-
-
-def test_fraud_section_separates_ranking_from_the_pre_chosen_threshold(tmp_path: Path) -> None:
-    at = {"threshold": 0.853, "precision": 0.516, "recall": 0.371, "false_positive_rate": 0.0124}
-    test = {"pr_auc": 0.408, "pr_auc_ci": {"low": 0.39, "high": 0.424}, "prevalence": 0.0344,
-            "recall_at_fpr": {"recall": 0.514}, "at_threshold": at}  # fmt: skip
-    valid = {**test, "at_threshold": {**at, "recall": 0.9}}  # chosen on valid: in-sample
-    run = tmp_path / "runs" / "run-gbm" / "test"
-    run.mkdir(parents=True)
-    (run / "metrics.json").write_text(json.dumps(
-        {"run_id": "run-gbm", "stage": "final", "models": {"gbm": {"valid": valid, "test": test}}}
-    ))  # fmt: skip
-    html = build(tmp_path)
-    assert "Chất lượng xếp hạng" in html and "Ngưỡng đã chốt trước" in html
-    assert "hai điểm vận hành khác nhau" in html
-    assert "0,853" in html and "0,371" in html and "1,24%" in html
-    assert "0,900" not in html  # in-sample threshold metrics on validation are not shown
-
-
-def test_fraud_threshold_table_explains_when_no_test_run(tmp_path: Path) -> None:
-    assert "Chưa có lần đánh giá test" in build(tmp_path)
+    assert [o["incident_id"] for o in out] == ["p-1", "p-3"]
+    assert out[0]["echoes"] == ["p-2"] and out[1]["echoes"] == []

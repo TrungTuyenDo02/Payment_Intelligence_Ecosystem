@@ -11,7 +11,7 @@ Fitting a calibrator or choosing a threshold on a block with the wrong role rais
 `BlockRoleError`, so "fit on V3" cannot happen silently.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -64,6 +64,7 @@ class DevData:
     split_boundaries: dict[str, Any]
     train_prevalence: float
     models: dict[str, Any]
+    fitted_gbm: GbmModel | None = field(default=None, compare=False, repr=False)  # G08 scorer
 
 
 def prepare(X: pd.DataFrame, y: pd.Series, time: pd.Series, cfg: DecisionBase) -> DevData:
@@ -129,6 +130,7 @@ def prepare(X: pd.DataFrame, y: pd.Series, time: pd.Series, cfg: DecisionBase) -
         split_boundaries=split.boundaries,
         train_prevalence=float(y_train.mean()),
         models=described,
+        fitted_gbm=gbm,
     )
     check_reproduction(data, cfg)
     return data

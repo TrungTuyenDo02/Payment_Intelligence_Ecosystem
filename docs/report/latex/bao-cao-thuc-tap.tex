@@ -497,6 +497,38 @@ Tổng hợp, uid + \code{D1n} & +0,0014 [$-$0,0053; +0,0081] & +0,0022 [$-$0,01
 \textbf{Kết luận.} (1) Các cột đếm \code{C1}--\code{C14} có sẵn trong dataset mang gần như toàn bộ tín hiệu theo thực thể: bỏ chúng thì PR-AUC rơi từ 0,497 xuống 0,158, và lịch sử tự dựng chỉ bù được khoảng 0,02. Đó là lý do thêm lịch sử không giúp. (2) Đếm tích luỹ tăng dần theo thời gian (số giữa của \code{card1} là 186 ở train, 629 ở validation), nhưng đổi sang đếm theo cửa sổ cũng không giúp. (3) Với khoá \code{card1}, PR-AUC train tăng mạnh (0,584 lên 0,69) mà validation đứng yên: mô hình học thuộc thẻ. (4) Khoá có \code{D1n} là biến thể tốt nhất, nhưng khi lấy mẫu theo cụm chỉ recall loại trừ 0, và sát 0; đây là biến thể tốt nhất trong 5 biến thể đã thử, chưa hiệu chỉnh nhiều lần so sánh. (5) Lưới rộng hơn không giúp, nên hạn chế ``tổ hợp nằm ở cạnh lưới'' của Stage E được gỡ bỏ. Cấu hình đã chốt và kết quả test 0,408 giữ nguyên.
 \end{keypoint}
 
+\subsection{Từ xếp hạng đến quyết định (Stage G, thăm dò)}
+Stage E trả lời ``mô hình xếp hạng giao dịch tốt đến đâu''. Stage G hỏi tiếp: dùng điểm số đó để \emph{ra quyết định} thế nào. Mọi phân tích ở đây chỉ dùng train và validation (ADR 0009); tập test không được mở lại. Vì validation đã được dùng cho lưới Gradient Boosting và các thí nghiệm trước, mọi con số trong mục này là \textbf{thăm dò}, có thể lạc quan.
+
+Mô hình giữ nguyên cấu hình \code{run-f8807cb6f780} (tái tạo đúng PR-AUC validation 0,497). Validation được chia theo thời gian thành ba khối có vai trò cố định, và code từ chối mọi bước dùng sai vai trò (ví dụ fit bộ hiệu chỉnh trên V3):
+
+\begin{table}[H]\centering
+\caption{Ba khối validation của Stage G (ngày = \code{TransactionDT} chia 86.400).}
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+Khối & Vai trò & Ngày & Dòng & Gian lận & Tỷ lệ \\ \midrule
+V1 & Hiệu chỉnh xác suất & 101--113 & 38.426 & 1.523 & 3,96\% \\
+V2 & Chọn ngưỡng, chọn phương pháp & 114--126 & 41.426 & 1.741 & 4,20\% \\
+V3 & Đánh giá & 127--141 & 38.256 & 1.347 & 3,52\% \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]\centering\small
+\caption{Tóm tắt Stage G. Mọi số trên dữ liệu phát triển, thăm dò.}
+\begin{tabularx}{\linewidth}{@{}lXl@{}}
+\toprule
+Phần & Quan sát & Lần chạy \\ \midrule
+Hiệu chỉnh & Điểm gốc của Gradient Boosting có trung bình gấp khoảng 7 lần tỷ lệ gian lận thật (do \code{class\_weight="balanced"}). Dịch tiên nghiệm và Platt đều giảm log loss trên V3 từ 0,35 xuống 0,11; hai cách gần như ngang nhau; cả hai đi trễ so với trôi tỷ lệ gian lận theo tuần. PR-AUC không đổi (hiệu chỉnh đơn điệu) & \code{cal-04b3ad5944ce} \\
+Chính sách & Ngưỡng cho FPR 5\% chọn trên V2 cho FPR thực tế 3,9--5,6\% ở khối sau. Luật chi phí theo số tiền, dùng xác suất đã hiệu chỉnh, có tổng chi phí thấp nhất ở 27/27 tổ hợp chi phí giả định; dùng điểm gốc thì luật này cảnh báo gấp khoảng 6 lần (24.814 so với 4.325 ở tổ hợp giữa lưới) & \code{pol-af5df43efe54} \\
+Ổn định & PR-AUC theo tuần validation dao động 0,35--0,56; PSI của 4 đầu vào đều dưới 0,05 nên không giải thích được sự sụt giảm. Nhóm \code{ProductCD = W} (79\% giao dịch) có recall tại FPR 5\% thấp nhất (0,39) & \code{stab-36887d48b356} \\
+Chấm điểm theo lô & \code{make score} chấm một file CSV giao dịch không nhãn; trên 2.000 dòng V3, điểm theo lô trùng từng bit với điểm lúc huấn luyện. Từ chối file có nhãn hoặc có dòng thuộc giai đoạn test & \code{score-19e94be9616d} \\ \bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{keypoint}
+\textbf{Điều Stage G không chứng minh.} (1) Không phải hiệu quả khi vận hành, không phải ROI: chi phí là giả định và chỉ được quét trong một vùng (\code{loss\_rate} 0,5--1; chi phí duyệt 1--25; chi phí phiền khách 0--10). (2) Con số ``27/27'' có phần đúng theo cách xây dựng: luật chi phí là quy tắc tối thiểu chi phí kỳ vọng và được chấm bằng đúng hàm chi phí giả định đó, nên nếu xác suất được hiệu chỉnh tốt thì về lý thuyết nó phải thắng. Điều thực sự quan sát được hẹp hơn: hiệu chỉnh fit trên V1 vẫn đủ tốt trên V3, và xét số tiền từng giao dịch có lợi hơn một ngưỡng điểm chung, \emph{dưới hàm chi phí giả định}. (3) Validation đã bị dùng nhiều lần, nên không có con số ``chưa thấy'' nào. (4) Ba config được viết trước lần chạy đầu nhưng commit sau lần chạy đó (cùng commit với code); lần chạy sau commit cho kết quả trùng từng byte. Chi tiết: \code{docs/architecture/stage-g-report.md}.
+\end{keypoint}
+
 % ================================================================ 5
 \section{Product 01 — Độ ổn định thanh toán}
 
@@ -588,10 +620,10 @@ Phần Product 02 có ô số PR-AUC test của từng mô hình, bảng mọi l
 \section{Hướng phát triển}
 \begin{enumerate}
   \item \textbf{Kiểm chứng} phần còn lại của mức chênh khi chia ngẫu nhiên, và kiểm tra khoá có \code{D1n} trên giai đoạn dữ liệu mới (cần cấu hình mới và tập test mới).
-  \item \textbf{API chấm điểm} (đã cắt khỏi 6 tuần): nhận một giao dịch, trả điểm rủi ro và lý do; chỉ hỗ trợ quyết định, không tự động chặn.
+  \item \textbf{API chấm điểm} (đã cắt khỏi 6 tuần; hiện chỉ có bộ chấm điểm theo lô của Stage G): nhận một giao dịch, trả điểm rủi ro và lý do; chỉ hỗ trợ quyết định, không tự động chặn. Muốn dùng đặc trưng lịch sử thì phải lưu lịch sử của từng thực thể lúc chấm điểm.
   \item \textbf{Ngưỡng riêng cho từng loại KPI}: chuỗi tỷ trọng ít nhiễu hơn chuỗi lỗi, nên một ngưỡng chung bỏ sót mất lưu lượng. Cần một bộ report mới để đánh giá trung thực.
   \item \textbf{Detector có mùa vụ}: so với cùng giờ các ngày trước (phân rã chuỗi thời gian \cite{fpp}), hoặc phương pháp dò thay đổi tích luỹ (CUSUM) để bắt sự cố yếu nhưng kéo dài.
-  \item \textbf{Mô hình và đặc trưng}: LightGBM; đặc trưng theo thẻ chỉ dùng thông tin quá khứ; hiệu chỉnh xác suất; giải thích mô hình.
+  \item \textbf{Mô hình và đặc trưng}: LightGBM; giải thích mô hình; hiệu chỉnh xác suất theo cửa sổ trượt để theo kịp trôi tỷ lệ gian lận (Stage G cho thấy bộ hiệu chỉnh tĩnh đi trễ).
   \item \textbf{Nền tảng}: dbt thay SQL views khi số mô hình dữ liệu tăng; luồng sự kiện thời gian thực; theo dõi trôi dữ liệu.
   \item \textbf{Dữ liệu thật} khi có phê duyệt, cùng quy trình đánh giá đã xây.
 \end{enumerate}
@@ -616,6 +648,9 @@ Lệnh & Việc \\ \midrule
 \code{make gbm GBM\_CONFIG=…} & Một biến thể đặc trưng (cấu hình \code{draft}), chỉ validation \\
 \code{python -m fraud\_risk.experiments.split\_diagnostics} & Chia ngẫu nhiên và chia theo thời gian (mục 4.5) \\
 \code{python -m fraud\_risk.experiments.paired\_comparison} & Bootstrap cặp, theo dòng và theo cụm \code{card1} \\
+\code{make demo} & Product 01 từ đầu đến cuối trên bộ tuning, kiểm tra khớp số đã công bố, dựng dashboard \\
+\code{make calibration}, \code{make policy}, \code{make stability} & Stage G (thăm dò, chỉ train và validation) \\
+\code{make score-model}, \code{make score} & Bộ chấm điểm theo lô (Stage G) \\
 \code{make dashboard} & Dashboard HTML \\ \bottomrule
 \end{tabularx}
 

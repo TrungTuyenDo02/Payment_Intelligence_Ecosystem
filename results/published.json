@@ -1,0 +1,26 @@
+{
+  "note": "Numbers already published in README.md, the Stage D/E reports and the internship report. Quoted here so the dashboard never reads artifacts/runs/*/test/ or a report-simulation run (test-once rule). Never recomputed; change only when the owner publishes a new one-time evaluation.",
+  "product_01": {
+    "tuning": {
+      "run_id": "det-3ddc26cff253",
+      "simulation_id": "sim-485cacc9c858",
+      "pooled": {"detected": 3, "total": 4, "false_per_day": 0.0},
+      "robust_z": {"detected": 2, "total": 4, "false_per_day": 1.0}
+    },
+    "report": {
+      "run_id": "det-08335c6af086",
+      "simulation_id": "sim-f6e6749ff0bf",
+      "pooled": {"detected": 2, "total": 4, "false_per_day": 0.0},
+      "robust_z": {"detected": 0, "total": 4, "false_per_day": 2.0}
+    }
+  },
+  "product_02": {
+    "models": [
+      {"model": "rule_based", "run_id": "run-d6faa4699008", "valid_pr_auc": 0.089, "test_pr_auc": 0.078, "test_recall_at_fpr5": 0.22},
+      {"model": "logistic", "run_id": "run-d6faa4699008", "valid_pr_auc": 0.245, "test_pr_auc": 0.165, "test_pr_auc_ci": [0.155, 0.176], "test_recall_at_fpr5": 0.28},
+      {"model": "gbm", "run_id": "run-f8807cb6f780", "valid_pr_auc": 0.497, "valid_pr_auc_ci": [0.483, 0.514], "test_pr_auc": 0.408, "test_pr_auc_ci": [0.390, 0.424], "test_recall_at_fpr5": 0.51}
+    ],
+    "threshold": {"model": "gbm", "run_id": "run-f8807cb6f780", "threshold": 0.853, "precision": 0.516, "recall": 0.371, "fpr": 0.0124},
+    "leakage": {"run_id": "leak-827d929eaa73", "target_encoding_card1": 0.063, "random_split": -0.068}
+  }
+}

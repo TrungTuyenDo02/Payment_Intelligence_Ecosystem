@@ -19,8 +19,56 @@ Không dùng dữ liệu thật của công ty. Toàn bộ chạy trên máy cá
 | Dữ liệu | Product 01 là dữ liệu **giả lập** (4 sự cố mỗi bộ); Product 02 là dataset công khai IEEE-CIS, ý nghĩa nhiều cột đã bị ẩn danh, `C1–C14` mang gần hết tín hiệu nhưng chưa xác minh nghĩa |
 | Con số đánh giá | Đo trên dữ liệu lịch sử, một lần cắt theo thời gian. Không phải cam kết hiệu quả khi vận hành; chưa có thử nghiệm A/B hay dữ liệu chi phí thật |
 | Điểm vận hành | Recall tại FPR 5% chọn ngưỡng bằng nhãn của chính tập đánh giá, nên chỉ đo chất lượng xếp hạng. Hiệu quả của một ngưỡng đã chốt trước xem ở bảng riêng (mục Stage E) |
-| Chấm điểm | Không có API chấm điểm, không theo dõi mô hình, không huấn luyện lại định kỳ, không xác thực người dùng |
+| Chấm điểm | Chỉ có bộ chấm điểm **theo lô** trên file CSV (`make score`, chỉ dữ liệu phát triển). Không có API, không theo dõi mô hình, không huấn luyện lại định kỳ, không xác thực người dùng |
 | Nhãn | Giả định nhãn gian lận có ngay; thực tế chargeback đến muộn nhiều tuần ([ADR 0003](docs/decisions/0003-label-delay-and-entity-overlap.md)) |
+
+## Chạy demo trong 5 phút
+
+Hai sản phẩm là **hai pipeline độc lập**, chạy riêng; chúng chỉ dùng chung nền tảng (contract, quản lý run, quy tắc đánh giá), không dùng chung dữ liệu ([ADR 0002](docs/decisions/0002-product-boundaries.md)).
+
+Cần: Python 3.11+, [uv](https://docs.astral.sh/uv/), `make`, Git for Windows (trên Windows), Docker Desktop đang chạy. Chạy được từ PowerShell, cmd hoặc Git Bash.
+
+```bash
+make setup
+```
+
+```bash
+copy .env.example .env
+```
+
+```bash
+make up
+```
+
+```bash
+make demo
+```
+
+(`copy` trong PowerShell/cmd; Git Bash dùng `cp`.) `make demo` chạy cả hai sản phẩm, mỗi bước có thanh tiến độ, rồi in kết quả và danh sách kiểm tra ngay trong terminal:
+
+```text
+=== Product 01 — Payment Reliability (dữ liệu thanh toán giả lập) ===
+[██████░░░░░░░░░░░░░░░░░░]  25% | Product 01 | bước 3/6: Nạp sự kiện vào PostgreSQL, kiểm tra từng dòng theo contract payment-event
+      ✓ xong trong 6 giây → PostgreSQL: payment_events
+...
+--- Kết quả Product 01 ---
+Sự cố cài sẵn                                D-B (chính)            D-A (đường cơ sở)
+anom-01 provider_outage x4 (prov_002)        ✓ bắt, sau 15 phút     ✗ trượt
+anom-04 provider_outage x1,5 (prov_001)      ✗ trượt                ✗ trượt
+...
+=== Product 02 — Fraud & Risk (IEEE-CIS, chỉ dữ liệu phát triển) ===
+...
+[████████████████████████] 100% | Kiểm tra
+  ✓ Mọi sự kiện qua kiểm tra contract (0 dòng bị từ chối)
+  ✓ D-B gộp cửa sổ (chính) khớp số công bố (3/4, 0 báo nhầm/ngày)
+  ✓ Điểm theo lô trùng điểm lúc huấn luyện (2000 dòng, chênh lớn nhất 0,0)
+Tổng kết: 7/7 kiểm tra đạt
+```
+
+- **Product 01** (cần PostgreSQL, không cần tải dữ liệu): sinh dữ liệu giả lập → nạp PostgreSQL → KPI 15 phút → hai detector → dashboard. Chạy trên bộ **tuning**; con số 2/4 của bộ report là đánh giá một lần (`det-08335c6af086`), chỉ được trích lại, không chạy lại.
+- **Product 02** (cần dataset IEEE-CIS, xem mục [Chạy thử](#chạy-thử)): huấn luyện bộ chấm điểm trên train, hiệu chỉnh trên khối V1, chấm 2.000 giao dịch validation không nhãn. Không có dataset thì phần này được bỏ qua kèm lý do.
+- Chỉ chạy một sản phẩm: `make demo PRODUCT=01` hoặc `make demo PRODUCT=02`. Thiếu PostgreSQL thì Product 01 bị bỏ qua kèm cách khắc phục. CI chạy `make demo` trên PostgreSQL thật ở mỗi pull request.
+- **Giải thích từng bước, file nào để mở, cách đọc kết quả: [hướng dẫn demo](docs/demo-guide.md).**
 
 ## Hệ thống
 
@@ -36,6 +84,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 - **Tuần 4 (xong):** KPI độ tin cậy, hai detector, chỉnh ngưỡng trên bộ tuning và đánh giá một lần trên bộ report.
 - **Tuần 5 (xong):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02, test đã chạy một lần ([báo cáo Stage E](docs/architecture/stage-e-report.md)).
 - **Tuần 6 (xong):** dashboard HTML cho cả hai sản phẩm (`make dashboard`), báo cáo thực tập và bài báo khoa học (PDF).
+- **Stage G (sau 6 tuần, thăm dò):** dùng điểm số để ra quyết định, chỉ trên train và validation: hiệu chỉnh xác suất, so sánh chính sách, độ ổn định theo tuần, bộ chấm điểm theo lô, `make demo` ([báo cáo Stage G](docs/architecture/stage-g-report.md)).
 
 ## Kết quả đến nay
 
@@ -46,6 +95,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 | D · KPI và detector | Detector chính bắt 2/4 sự cố trên bộ report, 0 báo nhầm (`det-08335c6af086`) | ✅ Xong, report đã chạy một lần |
 | E · Rò rỉ, Gradient Boosting | Gradient Boosting PR-AUC test 0,408 (`run-f8807cb6f780`); rò nhãn qua mã hoá `card1` +0,063 (`leak-827d929eaa73`) | ✅ Xong, test đã chạy một lần |
 | F · Dashboard, báo cáo | `make dashboard`, [báo cáo PDF](docs/report/bao-cao-thuc-tap.pdf) | ✅ Xong |
+| G · Từ xếp hạng đến quyết định | Điểm gốc gấp khoảng 7 lần tỷ lệ gian lận thật, hiệu chỉnh sửa được (`cal-04b3ad5944ce`); luật chi phí theo số tiền rẻ nhất dưới mọi giả định chi phí đã quét (`pol-af5df43efe54`, phân tích độ nhạy, không phải ROI); PR-AUC theo tuần 0,35–0,56 (`stab-36887d48b356`) | ✅ Thăm dò, chỉ train + validation |
 
 **Product 02: phát hiện gian lận trên IEEE-CIS.** Dữ liệu được chia theo thời gian: mô hình học trên phần cũ, được đánh giá trên phần mới hơn, giống như khi chạy thật.
 
@@ -67,9 +117,9 @@ Detector chính bắt được sự cố về lỗi và độ trễ trong 15–3
 
 <p align="center"><img src="docs/assets/results/stage-d-report.png" alt="KPI và điểm của hai detector quanh bốn sự cố trên bộ report" width="100%"></p>
 
-**Dashboard** (`make dashboard`): một trang HTML tĩnh cho cả hai sản phẩm, mở được không cần mạng. Ảnh dưới là phần Product 01 trên bộ report.
+**Dashboard** (`make dashboard`, cũng chạy trong `make demo`): một trang HTML tĩnh, mở được không cần mạng; một trang cuộn với thanh điều hướng bên trái: **hàng số liệu chính** và **luồng pipeline** của hai sản phẩm (mỗi bước có trạng thái và số liệu), **Product 01** (tỷ lệ lỗi theo giờ từng provider, độ trễ, lưu lượng, sự cố detector báo so với sự cố cài sẵn), **Product 02** (chất lượng xếp hạng, hiệu chỉnh, chính sách, độ ổn định theo tuần, lần chấm điểm gần nhất), **Dữ liệu & chất lượng** (kiểm tra tự động, mã lần chạy, nguồn dữ liệu, hạn chế). Rê chuột lên biểu đồ để xem số. Số test và số của bộ report chỉ được trích từ [`results/published.json`](results/published.json); dashboard không đọc thư mục test. Ảnh dưới: phần đầu trang sau `make demo` trên máy chủ dự án (12/11/2026).
 
-<p align="center"><img src="docs/assets/results/dashboard-product01.png" alt="Dashboard Product 01: ô số tổng, bảng theo provider, tỷ lệ lỗi và độ trễ theo giờ, danh sách sự cố" width="85%"></p>
+<p align="center"><img src="docs/assets/results/dashboard.png" alt="Dashboard một trang: thanh điều hướng, 5 số liệu chính, luồng pipeline của hai sản phẩm, tỷ lệ lỗi theo giờ và bảng detector so với đáp án" width="100%"></p>
 
 **Product 02, Stage E:** cùng 20 đặc trưng và cùng cách chia ([báo cáo Stage E](docs/architecture/stage-e-report.md)).
 
@@ -125,6 +175,7 @@ make lint test
 | Lệnh | Việc |
 | --- | --- |
 | `make up` / `make down` | Bật / tắt PostgreSQL 16 |
+| `make demo` | Product 01 từ đầu đến cuối trên bộ tuning, kiểm tra khớp số đã công bố, rồi dựng dashboard |
 | `make simulate` | Sinh dữ liệu thanh toán giả lập vào `artifacts/simulations/<simulation_id>/` (`CONFIG=...` để chọn kịch bản) |
 | `make db-init` / `make ingest SIM=<simulation_id>` | Tạo bảng và view KPI / nạp một lần mô phỏng vào PostgreSQL |
 | `make kpi SIM=<simulation_id>` | Xuất KPI 15 phút ra Parquet |
@@ -137,6 +188,8 @@ make lint test
 | `make leakage` | Thí nghiệm rò rỉ dữ liệu (chỉ trên validation) |
 | `make dashboard` | Dashboard HTML cho cả hai sản phẩm, ghi vào `artifacts/dashboard/index.html` |
 | `make gbm` / `make gbm-final` | Gradient Boosting trên validation / đánh giá test một lần với config đã `frozen` (chỉ chủ dự án chạy) |
+| `make calibration` / `make policy` / `make stability` | Stage G (thăm dò, chỉ train + validation): hiệu chỉnh xác suất, so sánh chính sách, độ ổn định ([báo cáo Stage G](docs/architecture/stage-g-report.md)) |
+| `make score-model` / `make score` | Bộ chấm điểm theo lô: huấn luyện và lưu vào `artifacts/models/` / chấm một CSV giao dịch không nhãn (`INPUT=...`; mặc định là mẫu 2.000 dòng validation). Từ chối dòng thuộc giai đoạn test |
 
 **Dữ liệu IEEE-CIS:** tải [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) từ Kaggle (cần đăng nhập và chấp nhận điều khoản cuộc thi), đặt `train_transaction.csv` và `train_identity.csv` vào `datasets/raw/ieee-cis/` (không commit). Tạo manifest checksum:
 
@@ -162,6 +215,8 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | Tài liệu | Nội dung |
 | --- | --- |
 | [Bài báo khoa học (PDF)](docs/report/bai-bao-khoa-hoc.pdf) · [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Bài báo 10 trang; báo cáo đầy đủ có giải thích kiến thức nền |
+| [Slide trình bày (PDF)](docs/slides/slides.pdf) · [mã LaTeX](docs/slides/slides.tex) | 14 trang Beamer: sơ đồ hệ thống nhiều sản phẩm, hai pipeline, biểu đồ kết quả, hạn chế (`make slides`) |
+| [Báo cáo tuần](docs/weekly/) | Markdown và PDF LaTeX cho mentor (`make weekly`) |
 | [Hướng dẫn thao tác GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch, rủi ro, tài liệu tham khảo |
 | [Bàn giao công việc](HANDOFF.md) | Trạng thái hiện tại và việc tiếp theo |
@@ -171,7 +226,8 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | [Đặc tả](docs/architecture/stage-e-spec.md) · [Báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting |
 | [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md) · [Dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo thực tập |
-| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0008) |
+| [Đặc tả](docs/architecture/stage-g-spec.md) · [Báo cáo](docs/architecture/stage-g-report.md) Stage G | Từ xếp hạng đến quyết định (thăm dò): hiệu chỉnh, chính sách, độ ổn định, chấm điểm theo lô |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0011) |
 
 ## Giấy phép
 

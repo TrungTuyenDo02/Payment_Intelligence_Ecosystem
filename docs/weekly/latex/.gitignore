@@ -1,0 +1,6 @@
+# LaTeX build outputs (the PDF is copied to docs/weekly/)
+*.aux
+*.log
+*.out
+*.toc
+*.pdf
