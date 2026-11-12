@@ -1,13 +1,30 @@
-# Bàn giao công việc — 2026-11-11
+# Bàn giao công việc — 2026-11-12
 
 > Dành cho người tiếp tục dự án từ ngày 2026-11-05. Đọc file này trước, sau đó đọc [`README.md`](README.md) và [tổng quan đề tài](docs/product/project-overview.md).
 > Chủ dự án: Đỗ Trung Tuyến (@TrungTuyenDo02).
 
-## 00. Cập nhật 2026-11-11: Stage G (đọc trước)
+## 000. Cập nhật 2026-11-12: G08, `make demo`, G09 (đọc trước)
+
+| Việc | Nhánh, commit | Kiểm chứng |
+| --- | --- | --- |
+| G08 bộ chấm điểm theo lô | `stage-g/g08-batch-scoring` (`7ab81f6`) | `make score-model` → `score-19e94be9616d` (chạy hai lần, file trùng từng byte); `make score` trên 2.000 dòng V3: lệch huấn luyện–chấm điểm 0; tham số Platt trùng G03; 10 test mới; phá hoại có chủ đích (lệch `hour_of_day` 7 giờ) bị 2 test bắt |
+| `make demo` (Product 01 đầu-cuối) | `stage-g/g08b-demo` (`4beab1c`) | Chỉ dùng bộ tuning; `scripts/check_demo.py` so với số đã công bố (D-B 3/4, 0 báo nhầm/ngày; D-A 2/4, 1,0). **Chưa chạy đầu-cuối trên máy này** (không có Docker/PostgreSQL); job `demo` trong CI chạy nó trên PostgreSQL 16 |
+| G09 đồng bộ tài liệu | `stage-g/g09-docs` | README (demo 5 phút, Stage G, ADR 0001–0010), overview, dàn ý, báo cáo thực tập có mục 4.6 Stage G (PDF **25 trang**, đã xem các trang mới), báo cáo tuần [`docs/weekly/`](docs/weekly/) |
+
+`make test` sau G08: **439 pass, 8 skip**; sau `make demo`: thêm 4 test (`tests/test_check_demo.py`).
+
+Việc tiếp theo:
+
+1. Push ba nhánh mới, mở PR xếp chồng: G08 → G07, `g08b-demo` → G08, G09 → `g08b-demo`. Xác nhận CI xanh: `lint and test` (PostgreSQL, `REQUIRE_DB=1`), `registries`, `demo`.
+2. **Chủ dự án quyết:** ADR 0002 đổi sang Accepted? (văn bản đã đúng với lựa chọn ngày 2026-11-03: hai sản phẩm độc lập về dữ liệu).
+3. Dashboard trên máy mới thiếu số test của Product 02: chép `artifacts/runs/run-f8807cb6f780/test/` từ máy chủ dự án, hoặc chủ dự án chạy `make bundle RUN_DIR=artifacts/runs/run-f8807cb6f780 OWNER_TEST=1` rồi commit. Agent không đọc thư mục test.
+4. G10 ⏸ (thử nghiệm độ bền) chỉ làm khi chủ dự án đồng ý.
+
+## 00. Cập nhật 2026-11-11: Stage G
 
 Stage G: từ xếp hạng đến quyết định, **chỉ trên train + validation (thăm dò)**. Hướng dẫn thường trực cho agent nằm trong `CLAUDE.md` (bị git-ignore, chỉ có trên máy này). Tập test không được mở; không config `frozen` nào bị sửa.
 
-### Đã làm (mỗi task một nhánh, xếp chồng: g01 → g02 → … → g07; **chưa push**)
+### Đã làm (mỗi task một nhánh, xếp chồng: g01 → g02 → … → g07; đã push đến G07 ngày 2026-11-12)
 
 | Task | Nhánh, commit | Kiểm chứng |
 | --- | --- | --- |
@@ -34,7 +51,7 @@ Stage G: từ xếp hạng đến quyết định, **chỉ trên train + validat
 2. G07 chỉ xong khi CI xanh với test DB chạy thật (job `lint and test` có PostgreSQL) và job `registries` pass.
 3. Máy này thiếu lần chạy detector của Product 01 (`make verify-demo` báo thiếu `detections/det-*`).
 4. Kế tiếp: G08 (chấm điểm theo lô, dùng `execution_id`); G09; G10 ⏸.
-5. Lệch tài liệu đã thấy (để G09): HANDOFF ghi PDF báo cáo 19–20 trang, thực tế 23 trang.
+5. ~~Lệch tài liệu: HANDOFF ghi PDF báo cáo 19–20 trang, thực tế 23 trang.~~ Đã sửa ở G09 (nay 25 trang).
 
 ## 0. Cập nhật 2026-11-09 (đọc trước)
 
@@ -194,7 +211,7 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 
 | Tài liệu | Nội dung |
 | --- | --- |
-| [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf), [mã LaTeX](docs/report/latex/) | Báo cáo đầy đủ (19 trang); bài báo 10 trang |
+| [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf), [mã LaTeX](docs/report/latex/) | Báo cáo đầy đủ (25 trang, có mục Stage G); bài báo 10 trang |
 | [Hướng dẫn GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook, tag bản nộp |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch 6 tuần, rủi ro, tài liệu tham khảo, trạng thái task |
 | [Contract `payment-event`](contracts/payment-event/) | Schema 1.0.0 và changelog (quy tắc giữa các attempt) |
@@ -203,4 +220,5 @@ Dataset IEEE-CIS chỉ có trên máy chủ dự án (`datasets/raw/ieee-cis/`, 
 | [Đặc tả](docs/architecture/stage-d-spec.md) và [báo cáo](docs/architecture/stage-d-report.md) Stage D | KPI, detector, đánh giá, kết quả tuning |
 | [Đặc tả](docs/architecture/stage-e-spec.md) và [báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ, Gradient Boosting |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md), [dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo |
-| [ADR 0001–0008](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh, đặc trưng lịch sử thực thể chỉ nhìn quá khứ |
+| [ADR 0001–0010](docs/decisions/) | Cấu trúc package, ranh giới hai sản phẩm, độ trễ nhãn, driver PostgreSQL, tầng KPI bằng SQL views, Gradient Boosting của scikit-learn, dashboard HTML tĩnh, đặc trưng lịch sử thực thể chỉ nhìn quá khứ, protocol đánh giá Stage G, `experiment_id` và `execution_id` |
+| [Báo cáo Stage G](docs/architecture/stage-g-report.md), [báo cáo tuần](docs/weekly/) | Hiệu chỉnh, chính sách, độ ổn định, chấm điểm theo lô; báo cáo theo tuần cho mentor |

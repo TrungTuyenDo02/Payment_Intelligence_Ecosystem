@@ -66,6 +66,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 - **Tuần 4 (xong):** KPI độ tin cậy, hai detector, chỉnh ngưỡng trên bộ tuning và đánh giá một lần trên bộ report.
 - **Tuần 5 (xong):** thí nghiệm rò rỉ dữ liệu và Gradient Boosting cho Product 02, test đã chạy một lần ([báo cáo Stage E](docs/architecture/stage-e-report.md)).
 - **Tuần 6 (xong):** dashboard HTML cho cả hai sản phẩm (`make dashboard`), báo cáo thực tập và bài báo khoa học (PDF).
+- **Stage G (sau 6 tuần, thăm dò):** dùng điểm số để ra quyết định, chỉ trên train và validation: hiệu chỉnh xác suất, so sánh chính sách, độ ổn định theo tuần, bộ chấm điểm theo lô, `make demo` ([báo cáo Stage G](docs/architecture/stage-g-report.md)).
 
 ## Kết quả đến nay
 
@@ -76,6 +77,7 @@ Hai sản phẩm dùng chung nền tảng (contract dữ liệu, quản lý data
 | D · KPI và detector | Detector chính bắt 2/4 sự cố trên bộ report, 0 báo nhầm (`det-08335c6af086`) | ✅ Xong, report đã chạy một lần |
 | E · Rò rỉ, Gradient Boosting | Gradient Boosting PR-AUC test 0,408 (`run-f8807cb6f780`); rò nhãn qua mã hoá `card1` +0,063 (`leak-827d929eaa73`) | ✅ Xong, test đã chạy một lần |
 | F · Dashboard, báo cáo | `make dashboard`, [báo cáo PDF](docs/report/bao-cao-thuc-tap.pdf) | ✅ Xong |
+| G · Từ xếp hạng đến quyết định | Điểm gốc gấp khoảng 7 lần tỷ lệ gian lận thật, hiệu chỉnh sửa được (`cal-04b3ad5944ce`); luật chi phí theo số tiền rẻ nhất dưới mọi giả định chi phí đã quét (`pol-af5df43efe54`, phân tích độ nhạy, không phải ROI); PR-AUC theo tuần 0,35–0,56 (`stab-36887d48b356`) | ✅ Thăm dò, chỉ train + validation |
 
 **Product 02: phát hiện gian lận trên IEEE-CIS.** Dữ liệu được chia theo thời gian: mô hình học trên phần cũ, được đánh giá trên phần mới hơn, giống như khi chạy thật.
 
@@ -204,7 +206,8 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | [Đặc tả](docs/architecture/stage-e-spec.md) · [Báo cáo](docs/architecture/stage-e-report.md) Stage E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting |
 | [Contract `payment-event`](contracts/payment-event/) | JSON Schema 1.0.0 và changelog |
 | [Đặc tả Stage F](docs/architecture/stage-f-spec.md) · [Dàn ý báo cáo](docs/report/report-outline.md) | Dashboard, báo cáo thực tập |
-| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0008) |
+| [Đặc tả](docs/architecture/stage-g-spec.md) · [Báo cáo](docs/architecture/stage-g-report.md) Stage G | Từ xếp hạng đến quyết định (thăm dò): hiệu chỉnh, chính sách, độ ổn định, chấm điểm theo lô |
+| [ADR](docs/decisions/) | Các quyết định kiến trúc (0001–0010) |
 
 ## Giấy phép
 

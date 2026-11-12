@@ -1,7 +1,7 @@
 # Payment_Intelligence_Ecosystem — Tổng quan đề tài
 
 > Tài liệu giới thiệu ban đầu. **Phần I** dành cho mentor và người hướng dẫn: đề tài, phạm vi, phương pháp, kế hoạch, rủi ro, tài liệu tham khảo. **Phần II** là phụ lục kỹ thuật cho team phát triển.
-> Cài đặt và lệnh chi tiết: xem [`README.md`](../../README.md). Cập nhật: 2026-11-04 (hết tuần 3 của lịch 6 tuần).
+> Cài đặt và lệnh chi tiết: xem [`README.md`](../../README.md). Cập nhật: 2026-11-12 (đã xong lịch 6 tuần, Stage A–F; Stage G thăm dò sau đó). Trạng thái chi tiết và việc tiếp theo: [`HANDOFF.md`](../../HANDOFF.md).
 
 ---
 
@@ -33,7 +33,7 @@ Không có dataset công khai nào chứa đồng thời dữ liệu vận hành
 | --- | --- | --- |
 | **Shared Foundation** | — | Contract `payment-event`, quản lý dataset (manifest, checksum SHA-256), quy tắc đánh giá (chia theo thời gian, test-một-lần, run log), hạ tầng (Docker, PostgreSQL) |
 | **Product 01 — Payment Reliability** | Dữ liệu giả lập theo contract `payment-event` | KPI, phát hiện bất thường, sự cố, dashboard |
-| **Product 02 — Fraud & Risk** | IEEE-CIS (Kaggle) | Đặc trưng, baseline, mô hình, đánh giá, API chấm điểm |
+| **Product 02 — Fraud & Risk** | IEEE-CIS (Kaggle) | Đặc trưng, baseline, mô hình, đánh giá, chấm điểm theo lô (API đã cắt) |
 
 Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](../decisions/0002-product-boundaries.md)). Trong hệ thống thật, chúng sẽ nối với nhau qua khoá `payment_id` từ nguồn sự kiện. Contract đã giữ sẵn trường này cho bước đó.
 
@@ -47,6 +47,7 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | D | Mô hình dữ liệu (SQL views, [ADR 0005](../decisions/0005-kpi-layer-sql-views.md)), KPI độ tin cậy, bộ phát hiện bất thường |
 | E | Thí nghiệm rò rỉ dữ liệu, Gradient Boosting (API chấm điểm đã cắt, quyết định 2026-11-04) |
 | F | Dashboard và báo cáo |
+| G | Sau 6 tuần, thăm dò, chỉ train + validation: hiệu chỉnh xác suất, so sánh chính sách quyết định, độ ổn định, đóng gói kết quả, bộ chấm điểm theo lô, `make demo` ([ADR 0009](../decisions/0009-decision-evaluation-protocol.md), [ADR 0010](../decisions/0010-experiment-and-execution-ids.md)) |
 
 ### 3.3 Ngoài phạm vi
 
@@ -78,7 +79,7 @@ Hai sản phẩm **chung nền tảng, không chung dữ liệu** ([ADR 0002](..
 | 5 | E | Báo cáo thí nghiệm rò rỉ, mô hình Gradient Boosting (API đã cắt) | Đăng ký trước danh sách config chạy test (xong: chỉ `gbm.yaml`) |
 | 6 | F | Dashboard, báo cáo thực tập | ADR framework dashboard (xong: [ADR 0007](../decisions/0007-static-html-dashboard.md)) |
 
-**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). **Stage C: C01–C05 xong code** ([báo cáo](../architecture/stage-c-report.md)): sau sửa đổi ngày 2026-11-04 (150 payment/giờ, thêm sự cố yếu x1,5), demo `tuning` sinh 25.573 payment, 30.050 sự kiện; config `report` riêng. Đã nạp thử cả hai vào PostgreSQL; hai config mô phỏng đã `frozen` (2026-11-04). **Stage D hoàn tất** ([đặc tả](../architecture/stage-d-spec.md), [báo cáo](../architecture/stage-d-report.md)): detector D-B bắt 3/4 bất thường trên bộ tuning và 2/4 trên bộ report (`det-08335c6af086`, đánh giá một lần với config `frozen`), không báo nhầm lần nào; trượt sự cố mất lưu lượng (loại chưa gặp khi chỉnh) và sự cố yếu x1,5. Đường cơ sở D-A: 0/4 trên report, 2 báo nhầm mỗi ngày.
+**Trạng thái hiện tại:** Stage A/B đã xong code (T01–T10 và bổ sung recall tại FPR) và đã merge vào `main` (PR #2). Contract `payment-event` 1.0.0 đã được duyệt (2026-11-03). 9 quyết định EDA đã duyệt. Đã chạy đánh giá test một lần với config `frozen` (`run-d6faa4699008`): Logistic Regression PR-AUC 0,165 trên test (0,245 trên validation), baseline luật 0,078 (xem [README](../../README.md#kết-quả)). Lần chạy test trước (`run-515a1190a0a4`, config cũ chưa có `fpr_target`) cho kết quả trùng khớp ở mọi metric chung. **Stage A/B hoàn tất.** Đặc tả Stage C đã duyệt (2026-11-04): [`stage-c-spec.md`](../architecture/stage-c-spec.md). **Stage C: C01–C05 xong code** ([báo cáo](../architecture/stage-c-report.md)): sau sửa đổi ngày 2026-11-04 (150 payment/giờ, thêm sự cố yếu x1,5), demo `tuning` sinh 25.573 payment, 30.050 sự kiện; config `report` riêng. Đã nạp thử cả hai vào PostgreSQL; hai config mô phỏng đã `frozen` (2026-11-04). **Stage D hoàn tất** ([đặc tả](../architecture/stage-d-spec.md), [báo cáo](../architecture/stage-d-report.md)): detector D-B bắt 3/4 bất thường trên bộ tuning và 2/4 trên bộ report (`det-08335c6af086`, đánh giá một lần với config `frozen`), không báo nhầm lần nào; trượt sự cố mất lưu lượng (loại chưa gặp khi chỉnh) và sự cố yếu x1,5. Đường cơ sở D-A: 0/4 trên report, 2 báo nhầm mỗi ngày. **Stage E và F hoàn tất** (2026-11-08): Gradient Boosting PR-AUC test 0,408 (`run-f8807cb6f780`), dashboard, báo cáo thực tập và bài báo. **Stage G** (2026-11-11 đến 2026-11-12, thăm dò, không mở lại test): xem [báo cáo Stage G](../architecture/stage-g-report.md).
 
 ## 6. Rủi ro và hạn chế đã biết
 
@@ -201,6 +202,22 @@ Toàn bộ Stage A/B đã gộp qua nhánh `integration/stage-ab` và merge vào
 | --- | --- | --- |
 | F01 | Dashboard HTML tĩnh (`make dashboard`, ADR 0007) | Xong; phần Product 02 hiện số khi có run IEEE-CIS trên máy |
 | F02 | Dàn ý báo cáo thực tập ([dàn ý](../report/report-outline.md)), báo cáo và bài báo PDF | Xong; mục 4.3 và 4.4 đã có số Stage E |
+
+### Stage G (thăm dò, chỉ train + validation)
+
+| ID | Việc | Trạng thái |
+| --- | --- | --- |
+| G01 | Đặc tả protocol, ADR 0009 | Xong, chủ dự án duyệt |
+| G02 | Tách bảng chất lượng xếp hạng và bảng ngưỡng đã chốt | Xong |
+| G03 | Hiệu chỉnh xác suất | Xong (`cal-04b3ad5944ce`) |
+| G04 | So sánh chính sách, phép thử chuyển ngưỡng | Xong (`pol-af5df43efe54`) |
+| G05 | Độ ổn định theo tuần và nhóm | Xong (`stab-36887d48b356`) |
+| G06 | Báo cáo Stage G | Xong ([báo cáo](../architecture/stage-g-report.md)) |
+| G07 | `experiment_id` / `execution_id`, CI có PostgreSQL, gói `results/` (ADR 0010) | Code xong; chờ CI xanh |
+| G08 | Bộ chấm điểm theo lô (`make score-model`, `make score`) | Xong (`score-19e94be9616d`) |
+| — | `make demo` cho Product 01 | Xong; kiểm chứng đầu-cuối chạy trong CI |
+| G09 | Đồng bộ tài liệu | Xong, trừ trạng thái ADR 0002 (chờ chủ dự án) |
+| G10 | Thử nghiệm độ bền | Chưa làm; cần chủ dự án đồng ý |
 
 ## 9. Quy tắc bắt buộc
 
