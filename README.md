@@ -22,6 +22,36 @@ Không dùng dữ liệu thật của công ty. Toàn bộ chạy trên máy cá
 | Chấm điểm | Chỉ có bộ chấm điểm **theo lô** trên file CSV (`make score`, chỉ dữ liệu phát triển). Không có API, không theo dõi mô hình, không huấn luyện lại định kỳ, không xác thực người dùng |
 | Nhãn | Giả định nhãn gian lận có ngay; thực tế chargeback đến muộn nhiều tuần ([ADR 0003](docs/decisions/0003-label-delay-and-entity-overlap.md)) |
 
+## Chạy demo trong 5 phút
+
+Hai sản phẩm là **hai pipeline độc lập**, chạy riêng; chúng chỉ dùng chung nền tảng (contract, quản lý run, quy tắc đánh giá), không dùng chung dữ liệu ([ADR 0002](docs/decisions/0002-product-boundaries.md)).
+
+**Product 01, không cần tải gì** (cần Docker cho PostgreSQL):
+
+```bash
+make setup && make up && make demo
+```
+
+Lệnh `make demo` chạy liền: sinh dữ liệu giả lập → nạp PostgreSQL (kiểm tra contract) → KPI 15 phút → hai detector → so với số đã công bố → dashboard. Kết quả mong đợi:
+
+```text
+Product 01 demo (sim-485cacc9c858, det-3ddc26cff253, bộ tuning):
+  D-B gộp cửa sổ (chính): bắt 3/4 sự cố, 0 báo nhầm/ngày (công bố: 3/4, 0)
+  D-A z-score bền vững: bắt 2/4 sự cố, 1 báo nhầm/ngày (công bố: 2/4, 1)
+  Khớp số đã công bố cho bộ tuning.
+Dashboard: artifacts/dashboard/index.html
+```
+
+Demo chạy trên bộ **tuning**. Con số 2/4 của bộ report là đánh giá một lần (`det-08335c6af086`), chỉ được trích lại, không chạy lại. Kết quả không khớp thì lệnh báo `MISMATCH` và trả mã lỗi. CI chạy đúng lệnh này trên PostgreSQL thật ở mỗi pull request.
+
+**Product 02, cần dataset IEEE-CIS** (tải từ Kaggle, xem mục [Chạy thử](#chạy-thử)):
+
+```bash
+make score-model && make score
+```
+
+Lệnh đầu huấn luyện mô hình Gradient Boosting đã chốt trên phần train và hiệu chỉnh xác suất trên khối V1, chỉ dùng dữ liệu phát triển. Lệnh sau chấm một file CSV giao dịch không có nhãn, mặc định là 2.000 dòng của validation. Kết quả nằm trong `artifacts/scores/exec-….csv` gồm điểm gốc, điểm đã hiệu chỉnh, `model_version`, `feature_version` và `execution_id`. Lệnh in `skew_check.max_abs_diff: 0.0`, nghĩa là điểm chấm theo lô trùng điểm lúc huấn luyện. Bộ chấm điểm từ chối file có cột nhãn hoặc có dòng thuộc giai đoạn test.
+
 ## Hệ thống
 
 <p align="center"><img src="docs/assets/diagrams/system-overview.svg" alt="Sơ đồ tổng thể: nền tảng dùng chung, hai sản phẩm và trạng thái từng bước" width="100%"></p>
@@ -125,6 +155,7 @@ make lint test
 | Lệnh | Việc |
 | --- | --- |
 | `make up` / `make down` | Bật / tắt PostgreSQL 16 |
+| `make demo` | Product 01 từ đầu đến cuối trên bộ tuning, kiểm tra khớp số đã công bố, rồi dựng dashboard |
 | `make simulate` | Sinh dữ liệu thanh toán giả lập vào `artifacts/simulations/<simulation_id>/` (`CONFIG=...` để chọn kịch bản) |
 | `make db-init` / `make ingest SIM=<simulation_id>` | Tạo bảng và view KPI / nạp một lần mô phỏng vào PostgreSQL |
 | `make kpi SIM=<simulation_id>` | Xuất KPI 15 phút ra Parquet |

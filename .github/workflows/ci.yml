@@ -64,6 +64,46 @@ jobs:
       - name: Tests with coverage (synthetic fixtures only, no real data; DB tests on PostgreSQL)
         run: make test
 
+  # Product 01 end to end on PostgreSQL: simulate -> ingest -> KPI -> detect, then the run must
+  # reproduce the published TUNING numbers (scripts/check_demo.py). Synthetic data only.
+  demo:
+    name: Product 01 demo (make demo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pie
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          POSTGRES_DB: pie
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pie -d pie"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: pie
+      POSTGRES_PASSWORD: ci-only-not-a-secret
+      POSTGRES_DB: pie
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies from uv.lock
+        run: uv sync --frozen
+
+      - name: make demo
+        run: make demo
+
   # The two test-once registries may only grow, and never with "forced": true (ADR 0010).
   # Runs on every PR (stacked branches included), compared with the PR's target branch.
   registries:

@@ -22,10 +22,10 @@ endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
 
-.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score bundle verify-demo
+.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score demo bundle verify-demo
 
 help:
-	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score bundle verify-demo"
+	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score demo bundle verify-demo"
 
 setup:
 ifeq ($(UV),)
@@ -134,6 +134,20 @@ detect-report:
 # Stage F: static dashboard from artifacts/ (ADR 0007), written to artifacts/dashboard/index.html.
 dashboard:
 	$(RUN) python -m dashboard.build
+
+# Product 01 end to end in one command, on the TUNING simulation only (demo.yaml). Needs PostgreSQL
+# (make up, or a server set in .env). The last check compares with the published tuning numbers.
+DEMO_SIM := sim-485cacc9c858
+demo:
+	@echo "== Product 01 demo: simulate -> ingest -> KPI -> detect -> check -> dashboard (needs PostgreSQL: make up) =="
+	$(MAKE) simulate CONFIG=shared/synthetic-generator/configs/demo.yaml
+	$(MAKE) db-init
+	$(MAKE) ingest SIM=$(DEMO_SIM)
+	$(MAKE) kpi SIM=$(DEMO_SIM)
+	$(MAKE) detect DETECTOR_CONFIG=
+	$(RUN) python scripts/check_demo.py
+	$(MAKE) dashboard
+	@echo "Dashboard: artifacts/dashboard/index.html"
 
 # ADR 0010. verify-demo: fail with a clear message when the dashboard inputs are missing.
 verify-demo:
