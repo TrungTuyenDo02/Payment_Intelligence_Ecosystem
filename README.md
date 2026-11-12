@@ -26,33 +26,49 @@ Không dùng dữ liệu thật của công ty. Toàn bộ chạy trên máy cá
 
 Hai sản phẩm là **hai pipeline độc lập**, chạy riêng; chúng chỉ dùng chung nền tảng (contract, quản lý run, quy tắc đánh giá), không dùng chung dữ liệu ([ADR 0002](docs/decisions/0002-product-boundaries.md)).
 
-**Product 01, không cần tải gì** (cần PostgreSQL; cách dễ nhất là Docker Desktop):
+Cần: Python 3.11+, [uv](https://docs.astral.sh/uv/), `make`, Git for Windows (trên Windows), Docker Desktop đang chạy. Chạy được từ PowerShell, cmd hoặc Git Bash.
 
 ```bash
-make setup && make up && make demo
+make setup
 ```
 
-`make demo` kiểm tra PostgreSQL trước, rồi chạy và giải thích 7 bước: sinh dữ liệu giả lập → tạo bảng → nạp PostgreSQL (kiểm tra contract) → KPI 15 phút → hai detector → so với số đã công bố → dashboard. Cuối cùng in:
+```bash
+copy .env.example .env
+```
+
+```bash
+make up
+```
+
+```bash
+make demo
+```
+
+(`copy` trong PowerShell/cmd; Git Bash dùng `cp`.) `make demo` chạy cả hai sản phẩm, mỗi bước có thanh tiến độ, rồi in kết quả và danh sách kiểm tra ngay trong terminal:
 
 ```text
-[6/7] So với số đã công bố cho bộ tuning
-      D-B gộp cửa sổ (chính): bắt 3/4 sự cố, 0 báo nhầm/ngày (công bố: 3/4, 0)
-      D-A z-score bền vững: bắt 2/4 sự cố, 1 báo nhầm/ngày (công bố: 2/4, 1)
-      Khớp số đã công bố cho bộ tuning.
-[7/7] Dựng dashboard HTML tĩnh cho cả hai sản phẩm
-== Xong ==
-Mở dashboard bằng trình duyệt: ...\artifacts\dashboard\index.html
+=== Product 01 — Payment Reliability (dữ liệu thanh toán giả lập) ===
+[██████░░░░░░░░░░░░░░░░░░]  25% | Product 01 | bước 3/6: Nạp sự kiện vào PostgreSQL, kiểm tra từng dòng theo contract payment-event
+      ✓ xong trong 6 giây → PostgreSQL: payment_events
+...
+--- Kết quả Product 01 ---
+Sự cố cài sẵn                                D-B (chính)            D-A (đường cơ sở)
+anom-01 provider_outage x4 (prov_002)        ✓ bắt, sau 15 phút     ✗ trượt
+anom-04 provider_outage x1,5 (prov_001)      ✗ trượt                ✗ trượt
+...
+=== Product 02 — Fraud & Risk (IEEE-CIS, chỉ dữ liệu phát triển) ===
+...
+[████████████████████████] 100% | Kiểm tra
+  ✓ Mọi sự kiện qua kiểm tra contract (0 dòng bị từ chối)
+  ✓ D-B gộp cửa sổ (chính) khớp số công bố (3/4, 0 báo nhầm/ngày)
+  ✓ Điểm theo lô trùng điểm lúc huấn luyện (2000 dòng, chênh lớn nhất 0,0)
+Tổng kết: 7/7 kiểm tra đạt
 ```
 
-Thiếu PostgreSQL thì lệnh dừng ngay và in cách khắc phục. Demo chạy trên bộ **tuning**; con số 2/4 của bộ report là đánh giá một lần (`det-08335c6af086`), chỉ được trích lại, không chạy lại. CI chạy đúng lệnh này trên PostgreSQL thật ở mỗi pull request. **Giải thích từng bước, file nào để mở, cách đọc kết quả: [hướng dẫn demo](docs/demo-guide.md).**
-
-**Product 02, cần dataset IEEE-CIS** (tải từ Kaggle, xem mục [Chạy thử](#chạy-thử)):
-
-```bash
-make score-model && make score
-```
-
-Lệnh đầu huấn luyện mô hình Gradient Boosting đã chốt trên phần train và hiệu chỉnh xác suất trên khối V1, chỉ dùng dữ liệu phát triển. Lệnh sau chấm một file CSV giao dịch không có nhãn, mặc định là 2.000 dòng của validation. Kết quả nằm trong `artifacts/scores/exec-….csv` gồm điểm gốc, điểm đã hiệu chỉnh, `model_version`, `feature_version` và `execution_id`. Lệnh in `skew_check.max_abs_diff: 0.0`, nghĩa là điểm chấm theo lô trùng điểm lúc huấn luyện. Bộ chấm điểm từ chối file có cột nhãn hoặc có dòng thuộc giai đoạn test.
+- **Product 01** (cần PostgreSQL, không cần tải dữ liệu): sinh dữ liệu giả lập → nạp PostgreSQL → KPI 15 phút → hai detector → dashboard. Chạy trên bộ **tuning**; con số 2/4 của bộ report là đánh giá một lần (`det-08335c6af086`), chỉ được trích lại, không chạy lại.
+- **Product 02** (cần dataset IEEE-CIS, xem mục [Chạy thử](#chạy-thử)): huấn luyện bộ chấm điểm trên train, hiệu chỉnh trên khối V1, chấm 2.000 giao dịch validation không nhãn. Không có dataset thì phần này được bỏ qua kèm lý do.
+- Chỉ chạy một sản phẩm: `make demo PRODUCT=01` hoặc `make demo PRODUCT=02`. Thiếu PostgreSQL thì Product 01 bị bỏ qua kèm cách khắc phục. CI chạy `make demo` trên PostgreSQL thật ở mỗi pull request.
+- **Giải thích từng bước, file nào để mở, cách đọc kết quả: [hướng dẫn demo](docs/demo-guide.md).**
 
 ## Hệ thống
 

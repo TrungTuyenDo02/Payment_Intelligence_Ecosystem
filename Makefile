@@ -1,5 +1,18 @@
 # Payment Intelligence Ecosystem: developer commands (AGENTS.md section 6).
-SHELL := /bin/bash
+# Recipes use bash. From PowerShell or cmd on Windows, /bin/bash does not exist and make would
+# fall back to cmd.exe; use the bash that comes with Git for Windows instead (found next to git).
+ifeq ($(OS)$(MSYSTEM),Windows_NT)
+  GIT_EXE := $(subst \,/,$(firstword $(shell where git 2>NUL)))
+  GIT_ROOT := $(patsubst %/,%,$(dir $(patsubst %/,%,$(dir $(GIT_EXE)))))
+  ifneq ($(wildcard $(GIT_ROOT)/usr/bin/bash.exe),)
+    SHELL := $(GIT_ROOT)/usr/bin/bash.exe
+    export PATH := $(GIT_ROOT)/usr/bin;$(PATH)
+  else
+    $(error bash not found: install Git for Windows, or run make from Git Bash)
+  endif
+else
+  SHELL := /bin/bash
+endif
 .DEFAULT_GOAL := help
 
 UV := $(shell command -v uv 2>/dev/null)
@@ -138,11 +151,11 @@ detect-report:
 dashboard:
 	$(RUN) python -m dashboard.build
 
-# Product 01 end to end in one command, on the TUNING simulation only (demo.yaml). Checks
-# PostgreSQL first (make up), prints each step and where its output goes, then compares with
-# the published tuning numbers (scripts/demo.py, scripts/check_demo.py).
+# Both products end to end with progress, results and a checklist (scripts/demo.py).
+# Product 01 needs PostgreSQL (make up) and uses the TUNING simulation only; Product 02 needs the
+# IEEE-CIS dataset and uses development data only. PRODUCT=01 or PRODUCT=02 runs one of them.
 demo:
-	@$(RUN) python scripts/demo.py
+	@$(RUN) python scripts/demo.py $(if $(PRODUCT),--product $(PRODUCT),)
 
 # ADR 0010. verify-demo: fail with a clear message when the dashboard inputs are missing.
 verify-demo:
