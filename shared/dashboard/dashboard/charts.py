@@ -31,9 +31,10 @@ def nice_ticks(lo: float, hi: float, n: int = 4) -> list[float]:
     return [round(start + k * step, 12) for k in range(count + 1)]
 
 
-def _svg(height: int, body: str, label: str) -> str:
+def _svg(height: int, body: str, label: str, width: int = W) -> str:
     return (
-        f'<svg class="chart" viewBox="0 0 {W} {height}" role="img" aria-label="{escape(label)}" '
+        f'<svg class="chart" viewBox="0 0 {width} {height}" role="img" '
+        f'aria-label="{escape(label)}" '
         f'preserveAspectRatio="xMidYMid meet">{body}</svg>'
     )
 
@@ -62,6 +63,7 @@ def line_chart(
     y_min: float | None = 0.0,
     y_max: float | None = None,
     markers: bool = False,
+    width: int = W,
 ) -> str:
     """Lines over evenly spaced x positions; `labels` name each x (tooltip header).
 
@@ -76,7 +78,7 @@ def line_chart(
     hi = max(values) if y_max is None else max(y_max, max(values))
     ticks = nice_ticks(lo, hi, 3 if height < 160 else 4)
     y0, y1 = ticks[0], ticks[-1] if ticks[-1] > ticks[0] else ticks[0] + 1
-    plot_w, plot_h = W - PAD_L - PAD_R, height - PAD_T - PAD_B
+    plot_w, plot_h = width - PAD_L - PAD_R, height - PAD_T - PAD_B
     step = plot_w / max(n - 1, 1)
 
     def x(i: float) -> float:
@@ -94,11 +96,11 @@ def line_chart(
             f'data-tip="{escape(tip)}"/>'
         )
     for t in ticks:
-        parts.append(f'<line class="grid" x1="{PAD_L}" x2="{W - PAD_R}" y1="{y(t):.1f}" '
+        parts.append(f'<line class="grid" x1="{PAD_L}" x2="{width - PAD_R}" y1="{y(t):.1f}" '
                      f'y2="{y(t):.1f}"/>')  # fmt: skip
         parts.append(f'<text class="tick" x="{PAD_L - 8}" y="{y(t) + 4:.1f}" '
                      f'text-anchor="end">{escape(y_fmt(t))}</text>')  # fmt: skip
-    parts.append(f'<line class="axis" x1="{PAD_L}" x2="{W - PAD_R}" y1="{y(y0):.1f}" '
+    parts.append(f'<line class="axis" x1="{PAD_L}" x2="{width - PAD_R}" y1="{y(y0):.1f}" '
                  f'y2="{y(y0):.1f}"/>')  # fmt: skip
     for i, text in x_ticks:
         parts.append(f'<text class="tick" x="{x(i):.1f}" y="{height - 8}" '
@@ -125,9 +127,9 @@ def line_chart(
             ends.append((y(last), name, slot))
     ys = _spread([e[0] for e in ends], 14, PAD_T + 6, PAD_T + plot_h)
     for (_, name, slot), yy in zip(ends, ys, strict=True):
-        parts.append(f'<circle cx="{W - PAD_R + 10}" cy="{yy - 4:.1f}" r="4" '
+        parts.append(f'<circle cx="{width - PAD_R + 10}" cy="{yy - 4:.1f}" r="4" '
                      f'style="fill:var(--s{slot})"/>')  # fmt: skip
-        parts.append(f'<text class="direct" x="{W - PAD_R + 18}" y="{yy:.1f}">'
+        parts.append(f'<text class="direct" x="{width - PAD_R + 18}" y="{yy:.1f}">'
                      f"{escape(name)}</text>")  # fmt: skip
 
     # Hover columns: one invisible rect per x with every series' value (crosshair + tooltip).
@@ -144,7 +146,7 @@ def line_chart(
             f'height="{plot_h}" data-cx="{x(i):.1f}" data-tip="{tip}"/>'
         )
     parts.append(f'<line class="crosshair" x1="0" x2="0" y1="{PAD_T}" y2="{PAD_T + plot_h}"/>')
-    return _svg(height, "".join(parts), title)
+    return _svg(height, "".join(parts), title, width)
 
 
 def bar_chart(
@@ -154,6 +156,8 @@ def bar_chart(
     title: str,
     ref: tuple[float, str] | None = None,
     value_fmt: Fmt | None = None,
+    width: int = W,
+    label_w: int = 230,
 ) -> str:
     """Horizontal bars: (label, value, css fill, tooltip). Value printed at the bar end.
 
@@ -161,12 +165,13 @@ def bar_chart(
     """
     if not rows:
         return '<p class="empty">Không có dữ liệu để vẽ.</p>'
-    bar_h, gap, label_w, right = 22, 10, 230, 90
-    height = PAD_T + len(rows) * (bar_h + gap) + 24
+    bar_h, gap, right = 22, 10, 90
+    top_pad = PAD_T + (18 if ref else 0)  # room for the reference label above the bars
+    height = top_pad + len(rows) * (bar_h + gap) + 24
     hi = max([r[1] for r in rows] + ([ref[0]] if ref else []))
     ticks = nice_ticks(0, hi)
     top = ticks[-1] or 1.0
-    plot_w = W - label_w - right
+    plot_w = width - label_w - right
 
     def x(v: float) -> float:
         return label_w + plot_w * v / top
@@ -178,24 +183,24 @@ def bar_chart(
         parts.append(f'<text class="tick" x="{x(t):.1f}" y="{height - 6}" '
                      f'text-anchor="middle">{escape(x_fmt(t))}</text>')  # fmt: skip
     for k, (label, value, fill, tip) in enumerate(rows):
-        yy = PAD_T + k * (bar_h + gap)
-        width = max(x(value) - label_w, 1.5)
+        yy = top_pad + k * (bar_h + gap)
+        bar_w = max(x(value) - label_w, 1.5)
         parts.append(f'<text class="label" x="{label_w - 10}" y="{yy + bar_h / 2 + 4}" '
                      f'text-anchor="end">{escape(label)}</text>')  # fmt: skip
         # Square at the baseline, rounded (4px) at the data end.
-        r = min(4.0, width / 2)
-        d = (f"M{label_w},{yy} H{label_w + width - r} Q{label_w + width},{yy} "
-             f"{label_w + width},{yy + r} V{yy + bar_h - r} Q{label_w + width},{yy + bar_h} "
-             f"{label_w + width - r},{yy + bar_h} H{label_w} Z")  # fmt: skip
+        r = min(4.0, bar_w / 2)
+        d = (f"M{label_w},{yy} H{label_w + bar_w - r} Q{label_w + bar_w},{yy} "
+             f"{label_w + bar_w},{yy + r} V{yy + bar_h - r} Q{label_w + bar_w},{yy + bar_h} "
+             f"{label_w + bar_w - r},{yy + bar_h} H{label_w} Z")  # fmt: skip
         parts.append(f'<path class="bar {fill}" d="{d}" data-tip="{escape(tip)}"/>')
-        parts.append(f'<text class="value" x="{label_w + width + 6}" y="{yy + bar_h / 2 + 4}">'
+        parts.append(f'<text class="value" x="{label_w + bar_w + 6}" y="{yy + bar_h / 2 + 4}">'
                      f"{escape((value_fmt or x_fmt)(value))}</text>")  # fmt: skip
     if ref:
         parts.append(f'<line class="ref" x1="{x(ref[0]):.1f}" x2="{x(ref[0]):.1f}" '
                      f'y1="{PAD_T - 6}" y2="{height - 22}"/>')  # fmt: skip
-        parts.append(f'<text class="ref-label" x="{x(ref[0]) + 4:.1f}" y="{PAD_T - 6 + 10}">'
+        parts.append(f'<text class="ref-label" x="{x(ref[0]) + 4:.1f}" y="{PAD_T + 6}">'
                      f"{escape(ref[1])}</text>")  # fmt: skip
-    return _svg(height, "".join(parts), title)
+    return _svg(height, "".join(parts), title, width)
 
 
 def histogram(

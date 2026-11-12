@@ -1,4 +1,4 @@
-"""Dashboard: four tabs from run folders, explains what is missing, never reads test results."""
+"""Dashboard: one page from run folders, explains what is missing, never reads test results."""
 
 import json
 from pathlib import Path
@@ -96,10 +96,19 @@ def test_charts_carry_tooltips_and_direct_labels() -> None:
     assert "Không có dữ liệu" in line_chart([], [], y_fmt=str, title="t")
 
 
-def test_page_has_four_tabs_both_pipelines_and_the_incident(tmp_path: Path) -> None:
+@pytest.mark.parametrize("width", [960, 680, 500])
+def test_charts_keep_the_requested_width(width: int) -> None:
+    """Regression: the bar length once overwrote `width`, so the viewBox shrank to one bar."""
+    rows = [("a", 0.1, "fill-s1", "t"), ("b", 0.5, "fill-s1", "t")]
+    bars = bar_chart(rows, x_fmt=str, title="t", width=width, label_w=120)
+    line = line_chart(["a", "b"], [("s", 1, [0.1, 0.2])], y_fmt=str, title="t", width=width)
+    assert f'viewBox="0 0 {width} ' in bars and f'viewBox="0 0 {width} ' in line
+
+
+def test_one_page_has_every_section_both_pipelines_and_the_incident(tmp_path: Path) -> None:
     page = _page(_artifacts(tmp_path))
-    for tab in ("overview", "p01", "p02", "quality"):
-        assert f'data-tab="{tab}"' in page
+    for section in ("overview", "pipeline", "p01", "p02", "quality"):
+        assert f'id="{section}"' in page and f'href="#{section}"' in page
     assert "Sinh dữ liệu giả lập" in page and "Chấm điểm theo lô" in page  # both pipelines
     assert "pooled-001" in page and "anom-01" in page and "band-alert" in page
     assert "0,408" in page  # published test number, quoted

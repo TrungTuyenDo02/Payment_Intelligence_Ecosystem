@@ -1,7 +1,8 @@
-"""`make dashboard`: one static HTML page for both products (ADR 0007), four tabs.
+"""`make dashboard`: one static HTML page for both products (ADR 0007).
 
-Tabs: overview with the two pipelines, Product 01, Product 02, data & quality. Charts are inline
-SVG (`charts.py`), so the file opens offline and can be attached to the report.
+One scrolling page with a sidebar: KPI tiles, the two pipelines, Product 01, Product 02, data &
+quality. Charts are inline SVG (`charts.py`), so the file opens offline and can be attached to
+the report.
 
 What it reads, and what it never reads:
 
@@ -83,6 +84,31 @@ def mtime(path: Path) -> str:
     )
 
 
+# --- building blocks --------------------------------------------------------------------------
+
+FULL, WIDE, HALF = 960, 680, 500  # chart viewBox widths: full row, 2/3 column, 1/2 column
+
+ICONS = {
+    "grid": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" '
+    'height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" '
+    'y="14" width="7" height="7" rx="1.5"/>',
+    "flow": '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" '
+    'r="3"/><path d="M18 9a9 9 0 0 1-9 9"/><path d="M6 9v6"/>',
+    "activity": '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    "shield": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    "check": '<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14 9 11"/>',
+    "alert": '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 '
+    '0z"/><path d="M12 9v4M12 17h.01"/>',
+    "chart": '<path d="M18 20V10M12 20V4M6 20v-6"/>',
+    "layers": '<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+    "moon": '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>',
+}
+
+
+def icon(name: str) -> str:
+    return f'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">{ICONS[name]}</svg>'
+
+
 def table(head: list[str], rows: list[list[str]], numeric_from: int = 1) -> str:
     """HTML table; cells are already-escaped HTML."""
     th = "".join(f"<th>{escape(h)}</th>" for h in head)
@@ -94,30 +120,70 @@ def table(head: list[str], rows: list[list[str]], numeric_from: int = 1) -> str:
         + "</tr>"
         for r in rows
     )
-    return f'<div class="table-wrap"><table><thead><tr>{th}</tr></thead><tbody>{body}</tbody></table></div>'  # noqa: E501
+    return (
+        f'<div class="table-wrap"><table><thead><tr>{th}</tr></thead>'
+        f"<tbody>{body}</tbody></table></div>"
+    )
 
 
-def tile(label: str, value: str, sub: str = "", tone: str = "") -> str:
+def tile(label: str, value: str, sub: str = "", *, ico: str = "chart", hue: str = "s1") -> str:
+    """KPI tile: colored icon chip, label, big value, one line of context."""
     sub_html = f'<div class="sub">{sub}</div>' if sub else ""
-    return (f'<div class="tile {tone}"><div class="label">{escape(label)}</div>'
-            f'<div class="value">{value}</div>{sub_html}</div>')  # fmt: skip
+    return (
+        f'<div class="tile"><div class="tile-head"><span class="chip chip-{hue}">{icon(ico)}'
+        f'</span><span class="label">{escape(label)}</span></div>'
+        f'<div class="value">{value}</div>{sub_html}</div>'
+    )
 
 
 def status(ok: bool | None, text: str) -> str:
-    """Status with icon + word (never color alone)."""
+    """Status pill with icon + word (never color alone)."""
     if ok is None:
-        return f'<span class="status info">ⓘ {text}</span>'
-    return (f'<span class="status good">✓ {text}</span>' if ok
-            else f'<span class="status bad">✗ {text}</span>')  # fmt: skip
+        return f'<span class="pill info">ⓘ {text}</span>'
+    return (f'<span class="pill good">✓ {text}</span>' if ok
+            else f'<span class="pill bad">✗ {text}</span>')  # fmt: skip
 
 
 def empty(text: str) -> str:
     return f'<p class="empty">{text}</p>'
 
 
-def card(title: str, body: str, note: str = "") -> str:
+def card(title: str, body: str, note: str = "", meta: str = "") -> str:
+    """White card; `meta` is a small label at the top right (run id, scope)."""
     note_html = f'<p class="note">{note}</p>' if note else ""
-    return f'<section class="card"><h3>{escape(title)}</h3>{body}{note_html}</section>'
+    meta_html = f'<span class="meta">{meta}</span>' if meta else ""
+    return (
+        f'<section class="card"><div class="card-head"><h3>{escape(title)}</h3>{meta_html}</div>'
+        f"{body}{note_html}</section>"
+    )
+
+
+def stats(rows: list[tuple[str, str, str]]) -> str:
+    """Label / value / detail rows for the narrow side cards."""
+    items = "".join(
+        f'<div class="stat"><span class="stat-label">{label}</span><b>{value}</b>'
+        + (f"<small>{sub}</small>" if sub else "")
+        + "</div>"
+        for label, value, sub in rows
+    )
+    return f'<div class="stats">{items}</div>'
+
+
+def grid(kind: str, *cells: str) -> str:
+    """`g21`: two-thirds + one-third; `g11`: two halves. Stacks on narrow screens."""
+    return f'<div class="grid {kind}">' + "".join(cells) + "</div>"
+
+
+def section(sid: str, title: str, sub: str, body: str) -> str:
+    return (
+        f'<section class="section" id="{sid}"><div class="section-head"><h2>{escape(title)}</h2>'
+        f"<p>{sub}</p></div>{body}</section>"
+    )
+
+
+def meter(p: float) -> str:
+    """Small inline bar for a probability in a table cell."""
+    return f'<span class="meter" aria-hidden="true"><i style="width:{p * 100:.0f}%"></i></span>'
 
 
 # --- loading ----------------------------------------------------------------------------------
@@ -313,7 +379,7 @@ def p01_matches_published(ctx: Context) -> bool | None:
     )
 
 
-# --- tab 1: overview and pipelines ------------------------------------------------------------
+# --- overview: KPI tiles and the two pipelines ------------------------------------------------
 
 
 def node(state: str, title: str, lines: list[str], where: str = "") -> dict[str, Any]:
@@ -324,17 +390,28 @@ ICON = {"ok": "✓", "missing": "○", "locked": "🔒", "info": "ⓘ"}
 STATE_VN = {"ok": "đã chạy", "missing": "chưa có", "locked": "khoá (một lần)", "info": "thông tin"}
 
 
-def flow(nodes: list[dict[str, Any]]) -> str:
-    items = "".join(
-        f'<li class="node {n["state"]}"><div class="node-head"><span class="node-icon" '
-        f'aria-hidden="true">{ICON[n["state"]]}</span><span class="node-state">'
-        f"{STATE_VN[n['state']]}</span></div><h4>{escape(n['title'])}</h4>"
-        + "".join(f"<p>{line}</p>" for line in n["lines"])
-        + (f"<code>{escape(n['where'])}</code>" if n["where"] else "")
-        + "</li>"
-        for n in nodes
+def flow(nodes: list[dict[str, Any]], label: str) -> str:
+    """Horizontal stepper; the folder each step writes to is in the step's tooltip."""
+    items = []
+    for n in nodes:
+        tip = f"<b>{escape(n['title'])}</b>: {STATE_VN[n['state']]}"
+        if n["where"]:
+            tip += f"<br>kết quả ở <code>{escape(n['where'])}</code>"
+        items.append(
+            f'<li class="step {n["state"]}" data-tip="{escape(tip)}">'
+            f'<span class="step-dot" aria-hidden="true">{ICON[n["state"]]}</span>'
+            f'<div class="step-body"><b>{escape(n["title"])}</b>'
+            + "".join(f"<small>{line}</small>" for line in n["lines"])
+            + f'<span class="sr">{STATE_VN[n["state"]]}</span></div></li>'
+        )
+    return f'<ol class="steps" aria-label="{escape(label)}">{"".join(items)}</ol>'
+
+
+def lane(name: str, desc: str, steps: str, hint: str) -> str:
+    return (
+        f'<div class="lane"><div class="lane-head"><b>{name}</b><span>{desc}</span></div>'
+        f'{steps}<p class="note">{hint}</p></div>'
     )
-    return f'<ol class="flow">{items}</ol>'
 
 
 def pipeline_01(ctx: Context) -> str:
@@ -343,105 +420,117 @@ def pipeline_01(ctx: Context) -> str:
     kpi = p.kpi_manifest if p else None
     matches = p01_matches_published(ctx)
     nodes = [
-        node("ok", "Cấu hình", ["<b>demo.yaml</b> (frozen)", "7 ngày, 3 provider, 4 sự cố"],
+        node("ok", "Cấu hình", ["<b>demo.yaml</b> (frozen)", "7 ngày · 3 provider · 4 sự cố"],
              "shared/synthetic-generator/configs/"),
         node("ok" if sim else "missing", "Sinh dữ liệu giả lập",
              [f"<b>{vn(sim['events'], 0)}</b> sự kiện", f"{vn(sim['payments'], 0)} payment"]
              if sim else ["chạy <code>make simulate</code>"],
-             f"simulations/{sim['simulation_id']}/" if sim else ""),
+             f"artifacts/simulations/{sim['simulation_id']}/" if sim else ""),
         node("ok" if kpi else "missing", "PostgreSQL",
-             ["kiểm tra contract payment-event", "bảng <b>payment_events</b>"]
-             if kpi else ["chạy <code>make up</code>, <code>make ingest</code>"]),
-        node("ok" if kpi else "missing", "KPI 15 phút (SQL view)",
-             [f"<b>{vn(kpi['rows']['provider_15m'], 0)}</b> dòng provider × khung",
-              "tỷ lệ lỗi, độ trễ, lưu lượng"] if kpi else ["chạy <code>make kpi</code>"],
-             f"kpi/{kpi['simulation_id']}/" if kpi else ""),
+             ["kiểm tra contract", "bảng <b>payment_events</b>"]
+             if kpi else ["<code>make up</code>, <code>make ingest</code>"]),
+        node("ok" if kpi else "missing", "KPI 15 phút",
+             [f"<b>{vn(kpi['rows']['provider_15m'], 0)}</b> dòng", "SQL view"]
+             if kpi else ["chạy <code>make kpi</code>"],
+             f"artifacts/kpi/{kpi['simulation_id']}/" if kpi else ""),
         node("ok" if p else "missing", "Detector D-A, D-B",
-             [f"D-B: <b>{p.alerts.get('pooled', 0)}</b> khung cảnh báo",
-              f"D-A: {p.alerts.get('robust_z', 0)} khung cảnh báo"]
+             [f"D-B <b>{p.alerts.get('pooled', 0)}</b> khung cảnh báo",
+              f"D-A {p.alerts.get('robust_z', 0)} khung"]
              if p else ["chạy <code>make detect</code>"],
-             f"detections/{p.run.name}/" if p else ""),
-        node("ok" if matches else ("missing" if matches is None else "info"), "Sự cố và đánh giá",
+             f"artifacts/detections/{p.run.name}/" if p else ""),
+        node("ok" if matches else ("missing" if matches is None else "info"), "Đánh giá sự cố",
              [f"D-B bắt <b>{p.evaluation['detectors']['pooled']['detected']}/"
-              f"{len(p.evaluation['detectors']['pooled']['anomalies'])}</b> sự cố",
-              status(matches, "khớp số công bố")]
+              f"{len(p.evaluation['detectors']['pooled']['anomalies'])}</b>",
+              "khớp số công bố" if matches else "chưa khớp số công bố"]
              if p else ["chưa có lần chạy"]),
         node("ok", "Dashboard", ["trang này"], "artifacts/dashboard/index.html"),
     ]  # fmt: skip
-    return flow(nodes)
+    return flow(nodes, "Pipeline Product 01")
 
 
 def pipeline_02(ctx: Context) -> str:
     p = ctx.p02
     card_ = p.card or {}
+    feats = card_.get("features", {})
     raw = (ctx.repo / "datasets" / "raw" / "ieee-cis" / "train_transaction.csv").exists()
     pub = {m["model"]: m for m in ctx.published.get("product_02", {}).get("models", [])}
     gbm = pub.get("gbm", {})
     skew = (p.scores or {}).get("skew_check", {})
     nodes = [
         node("ok" if raw else "info", "Dataset IEEE-CIS",
-             ["590.540 giao dịch, 3,5% gian lận", "checksum trong manifest"
-              + ("" if raw else "; <b>file thô không có trên máy này</b>")],
+             ["590.540 giao dịch", "3,5% gian lận" if raw else "<b>không có trên máy này</b>"],
              "datasets/manifests/ieee-cis.yaml"),
-        node("ok", "Chia theo thời gian", ["train 60% · validation 20% · test 20%",
-                                           "validation chia V1 / V2 / V3"]),
-        node("ok" if p.card else "missing", "Mô hình Gradient Boosting",
-             [f"học trên <b>{vn(card_.get('train_rows'), 0)}</b> dòng train",
-              f"{len(card_.get('features', {}).get('numeric', [])) + len(card_.get('features', {}).get('categorical', []))} đặc trưng"]  # noqa: E501
+        node("ok", "Chia theo thời gian", ["train 60 · valid 20 · test 20", "valid → V1/V2/V3"]),
+        node("ok" if p.card else "missing", "Gradient Boosting",
+             [f"<b>{vn(card_.get('train_rows'), 0)}</b> dòng train",
+              f"{len(feats.get('numeric', [])) + len(feats.get('categorical', []))} đặc trưng"]
              if p.card else ["chạy <code>make score-model</code>"],
-             f"models/{p.model_dir.name}/" if p.model_dir else ""),
-        node("ok" if p.card else "missing", "Hiệu chỉnh xác suất",
-             [f"<b>{escape(card_['calibration']['method'])}</b> fit trên V1"]
-             if p.card else ["cùng lệnh <code>make score-model</code>"]),
+             f"artifacts/models/{p.model_dir.name}/" if p.model_dir else ""),
+        node("ok" if p.card else "missing", "Hiệu chỉnh",
+             [f"<b>{escape(card_['calibration']['method'])}</b>", "fit trên V1"]
+             if p.card else ["<code>make score-model</code>"]),
         node("ok" if p.scores else "missing", "Chấm điểm theo lô",
-             [f"<b>{vn(p.scores['rows'], 0)}</b> giao dịch không nhãn",
-              status(skew.get("max_abs_diff") == 0.0, "trùng điểm lúc huấn luyện")]
+             [f"<b>{vn(p.scores['rows'], 0)}</b> giao dịch",
+              "lệch huấn luyện 0" if skew.get("max_abs_diff") == 0.0 else "có lệch"]
              if p.scores else ["chạy <code>make score</code>"],
-             f"scores/{p.scores_path.name}" if p.scores_path else ""),
-        node("locked", "Tập test (một lần)",
-             [f"PR-AUC test <b>{vn(gbm.get('test_pr_auc'))}</b> (trích lại)",
-              "không chạy lại, không đọc lại"], escape(gbm.get("run_id", ""))),
+             f"artifacts/scores/{p.scores_path.name}" if p.scores_path else ""),
+        node("locked", "Tập test", [f"PR-AUC <b>{vn(gbm.get('test_pr_auc'))}</b>", "trích lại"],
+             gbm.get("run_id", "")),
     ]  # fmt: skip
-    return flow(nodes)
+    return flow(nodes, "Pipeline Product 02")
 
 
-def tab_overview(ctx: Context) -> str:
+def overview_tiles(ctx: Context) -> str:
     pub01 = ctx.published.get("product_01", {})
     pub02 = {m["model"]: m for m in ctx.published.get("product_02", {}).get("models", [])}
     gbm = pub02.get("gbm", {})
+    ci = gbm.get("test_pr_auc_ci")
     rep = pub01.get("report", {}).get("pooled", {})
-    tun = ctx.p01.evaluation["detectors"]["pooled"] if ctx.p01 else None
-    tiles = "".join([
-        tile("Product 01 · D-B trên bộ tuning",
+    p = ctx.p01
+    tun = p.evaluation["detectors"]["pooled"] if p else None
+    all_row = None
+    if p is not None and p.kpi is not None:
+        summary = provider_summary(p.kpi)
+        all_row = summary.loc["ALL"] if "ALL" in summary.index else summary.iloc[0]
+    skew = (ctx.p02.scores or {}).get("skew_check", {})
+    return '<div class="tiles">' + "".join([
+        tile("Attempt thanh toán (7 ngày)",
+             vn(float(all_row["attempts"]), 0) if all_row is not None else "—",
+             f"thành công {pct(all_row['success_rate'])}" if all_row is not None
+             else "chưa chạy <code>make demo</code>", ico="activity", hue="s1"),
+        tile("Tỷ lệ lỗi kỹ thuật",
+             pct(all_row["technical_failure_rate"]) if all_row is not None else "—",
+             "Product 01, toàn kỳ" if all_row is not None else "chưa có KPI",
+             ico="alert", hue="s2"),
+        tile("Sự cố D-B bắt được",
              f"{tun['detected']}/{len(tun['anomalies'])}" if tun else "—",
-             f"sự cố, {vn(tun['false_per_day'], 1)} báo nhầm/ngày" if tun else "chưa chạy"),
-        tile("Product 01 · D-B trên bộ report", f"{rep.get('detected', '—')}/{rep.get('total', 4)}",
-             "đánh giá một lần, trích lại"),
-        tile("Product 02 · PR-AUC test", vn(gbm.get("test_pr_auc")),
-             "Gradient Boosting, đánh giá một lần, trích lại"),
-        tile("Product 02 · lần chấm gần nhất",
+             (f"bộ tuning · bộ report {rep.get('detected', '—')}/{rep.get('total', 4)}"
+              if tun else "chưa chạy detector"), ico="check", hue="s3"),
+        tile("PR-AUC test · Gradient Boosting", vn(gbm.get("test_pr_auc")),
+             (f"[{vn(ci[0])}; {vn(ci[1])}] · trích lại" if ci else "trích lại"),
+             ico="chart", hue="s1"),
+        tile("Giao dịch đã chấm điểm",
              vn(ctx.p02.scores["rows"], 0) if ctx.p02.scores else "—",
-             "giao dịch đã chấm" if ctx.p02.scores else "chưa chạy make score"),
-    ])  # fmt: skip
-    run01 = (
-        "Chạy lại: <code>make up</code> rồi <code>make demo</code>. "
-        "Bộ report (đánh giá một lần) không bao giờ được chạy lại."
-    )
-    run02 = (
-        "Chạy lại: <code>make score-model</code>, <code>make score</code> (cần dataset). "
-        "Mọi thứ trừ ô 🔒 chỉ dùng train và validation."
-    )
-    flow01 = card("Product 01 · Độ ổn định thanh toán (dữ liệu giả lập)", pipeline_01(ctx), run01)
-    flow02 = card("Product 02 · Rủi ro gian lận (IEEE-CIS)", pipeline_02(ctx), run02)
-    lead = (
-        '<p class="lead">Một nền tảng dùng chung (contract dữ liệu, quản lý dataset, quy tắc đánh '
-        "giá, PostgreSQL), <b>hai pipeline độc lập</b> không dùng chung dữ liệu (ADR 0002). Mỗi ô "
-        "dưới đây là một bước; ✓ là đã có kết quả trên máy này.</p>"
-    )
-    return f'{lead}<div class="tiles">{tiles}</div>{flow01}{flow02}'
+             (f"lệch huấn luyện–chấm điểm {vn(skew.get('max_abs_diff'), 1)}"
+              if ctx.p02.scores else "chưa chạy <code>make score</code>"),
+             ico="shield", hue="s2"),
+    ]) + "</div>"  # fmt: skip
 
 
-# --- tab 2: Product 01 ------------------------------------------------------------------------
+def pipeline_card(ctx: Context) -> str:
+    return card(
+        "Luồng pipeline",
+        lane("Product 01 · Độ ổn định thanh toán", "dữ liệu giả lập", pipeline_01(ctx),
+             "Chạy lại: <code>make up</code> rồi <code>make demo</code>. Bộ report (đánh giá "
+             "một lần) không chạy lại.")
+        + lane("Product 02 · Rủi ro gian lận", "IEEE-CIS", pipeline_02(ctx),
+               "Chạy lại: <code>make score-model</code>, <code>make score</code> (cần dataset). "
+               "Mọi bước trừ 🔒 chỉ dùng train và validation."),
+        meta="✓ đã chạy · ○ chưa có · 🔒 một lần",
+    )  # fmt: skip
+
+
+# --- Product 01 -------------------------------------------------------------------------------
 
 
 def hourly(prov: pd.DataFrame) -> tuple[pd.DatetimeIndex, dict[str, pd.DataFrame]]:
@@ -488,12 +577,14 @@ def _bands(
             i1 = _hour_index(index, inc["end"])
             tip = (f"<b>D-B báo {escape(inc['incident_id'])}</b><br>{escape(inc['target'])}: "
                    f"{escape(METRIC_VN.get(metric, metric))}<br>cảnh báo lúc "
-                   f"{local(inc['first_alert_at'])}, điểm cao nhất {vn(inc['max_score'], 1)}")  # fmt: skip  # noqa: E501
+                   f"{local(inc['first_alert_at'])}, điểm cao nhất "
+                   f"{vn(inc['max_score'], 1)}")  # fmt: skip
             bands.append((i0, i1, "band-alert", tip))
     return bands
 
 
-def kpi_charts(p: P01) -> str:
+def p01_charts(p: P01) -> tuple[str, str, str]:
+    """(failure-rate small multiples, latency, traffic) cards."""
     assert p.kpi is not None
     index, per = hourly(p.kpi)
     labels = [t.tz_convert(LOCAL).strftime("%d/%m %H:00") for t in index]
@@ -517,136 +608,157 @@ def kpi_charts(p: P01) -> str:
     top_fail = max((v for _, _, vs in fail for v in vs if v is not None), default=0.0)
     traffic = [("Tất cả provider", 1, [float(v) for v in per["ALL"]["attempts"]])] \
         if "ALL" in per else []  # fmt: skip
-    legend = "".join(
-        f'<span class="key"><i style="background:var(--s{s})"></i>{escape(n)}</span>'
-        for n, s, _ in fail
-    ) + ('<span class="key"><i class="key-alert"></i>D-B báo sự cố</span>'
-         '<span class="key"><i class="key-truth"></i>sự cố cài sẵn (đáp án)</span>')  # fmt: skip
-    return (
-        f'<div class="legend">{legend}</div>'
-        + card("Tỷ lệ lỗi kỹ thuật theo giờ, mỗi provider một hàng (cùng thang)",
-               "".join(
-                   line_chart(labels, [(name, slot, vals)], y_fmt=lambda v: pct(v, 0),
-                              title=f"Tỷ lệ lỗi kỹ thuật {name}", x_ticks=ticks, height=150,
-                              y_max=top_fail,
-                              bands=_bands(index, p, "technical_failure_rate",
-                                           {"provider_outage", "error_burst"}, target=name))
-                   for name, slot, vals in fail
-               ),
-               f"Giờ Việt Nam. Ẩn giờ có dưới {MIN_ATTEMPTS} attempt (tỷ lệ trên vài attempt chủ "
-               "yếu là nhiễu). Rê chuột để xem số và sự cố.")
-        + card("Độ trễ trung vị theo giờ (ms, không tính TIMEOUT)",
-               line_chart(labels, lat, y_fmt=lambda v: vn(v, 0), title="Độ trễ trung vị",
-                          x_ticks=ticks, bands=_bands(index, p, "latency_p50",
-                                                      {"latency_degradation"})))
-        + card("Lưu lượng: số attempt mỗi giờ",
-               line_chart(labels, traffic, y_fmt=lambda v: vn(v, 0), title="Lưu lượng",
-                          x_ticks=ticks, height=180),
-               "Mùa vụ theo giờ trong ngày là giả định của bộ sinh dữ liệu: thấp ban đêm, đỉnh trưa và tối.")  # noqa: E501
-    )  # fmt: skip  # noqa: E501
+    legend = (
+        '<div class="legend"><span class="key"><i class="key-alert"></i>D-B báo sự cố</span>'
+        '<span class="key"><i class="key-truth"></i>sự cố cài sẵn (đáp án)</span></div>'
+    )
+    failure = card(
+        "Tỷ lệ lỗi kỹ thuật theo giờ",
+        legend + "".join(
+            line_chart(labels, [(name, slot, vals)], y_fmt=lambda v: pct(v, 0),
+                       title=f"Tỷ lệ lỗi kỹ thuật {name}", x_ticks=ticks, height=150,
+                       y_max=top_fail, width=WIDE,
+                       bands=_bands(index, p, "technical_failure_rate",
+                                    {"provider_outage", "error_burst"}, target=name))
+            for name, slot, vals in fail
+        ),
+        f"Mỗi provider một hàng, cùng thang. Giờ Việt Nam; ẩn giờ có dưới {MIN_ATTEMPTS} attempt. "
+        "Rê chuột để xem số và sự cố.",
+        meta="theo provider",
+    )  # fmt: skip
+    latency = card(
+        "Độ trễ trung vị theo giờ (ms)",
+        line_chart(labels, lat, y_fmt=lambda v: vn(v, 0), title="Độ trễ trung vị", x_ticks=ticks,
+                   width=HALF, height=220,
+                   bands=_bands(index, p, "latency_p50", {"latency_degradation"})),
+        "Không tính TIMEOUT.",
+    )  # fmt: skip
+    volume = card(
+        "Lưu lượng: attempt mỗi giờ",
+        line_chart(labels, traffic, y_fmt=lambda v: vn(v, 0), title="Lưu lượng", x_ticks=ticks,
+                   width=HALF, height=220),
+        "Thấp ban đêm, đỉnh trưa và tối (giả định của bộ sinh dữ liệu).",
+    )  # fmt: skip
+    return failure, latency, volume
 
 
-def report_card(ctx: Context) -> str:
+def report_stats(ctx: Context) -> str:
     """Report-simulation numbers, quoted from results/published.json (evaluated once)."""
     rep = ctx.published.get("product_01", {}).get("report", {})
-    rep_rows = [
-        [escape(DETECTOR_VN[d]), f"{rep[d]['detected']}/{rep[d]['total']}",
-         vn(rep[d]["false_per_day"], 1)]
-        for d in ("pooled", "robust_z") if d in rep
-    ]  # fmt: skip
-    return card("Bộ report: đánh giá một lần (trích lại)",
-                table(["Detector", "Bắt được", "Báo nhầm/ngày"], rep_rows),
-                f"Lần chạy <code>{escape(rep.get('run_id', ''))}</code> trên "
-                f"<code>{escape(rep.get('simulation_id', ''))}</code>, seed khác và có một loại "
-                "sự cố chưa gặp khi chỉnh ngưỡng. Không chạy lại; số lấy từ "
-                "results/published.json.")  # fmt: skip
+    rows = [(escape(DETECTOR_VN[d]), f"{rep[d]['detected']}/{rep[d]['total']}",
+             f"{vn(rep[d]['false_per_day'], 1)} báo nhầm/ngày")
+            for d in ("pooled", "robust_z") if d in rep]  # fmt: skip
+    return (
+        f"<h4>Bộ report · đánh giá một lần (trích lại)</h4>{stats(rows)}"
+        f'<p class="note"><code>{escape(rep.get("run_id", ""))}</code> trên '
+        f"<code>{escape(rep.get('simulation_id', ''))}</code>: seed khác, có một loại sự cố chưa "
+        "gặp khi chỉnh ngưỡng. Không chạy lại.</p>"
+    )
 
 
-def tab_p01(ctx: Context) -> str:
+def detector_card(ctx: Context) -> str:
     p = ctx.p01
-    if p is None:
-        return empty("Chưa có lần chạy detector trên bộ tuning. Chạy <code>make up</code> rồi "
-                     "<code>make demo</code>.") + report_card(ctx)  # fmt: skip
+    assert p is not None
     ev = p.evaluation
-    head = (f'<p class="lead">Mô phỏng <code>{escape(ev["simulation_id"])}</code> (bộ tuning), lần '
-            f'chạy detector <code>{escape(ev["run_id"])}</code>. Dữ liệu giả lập; 4 sự cố được cài '
-            "sẵn để kiểm chứng detector.</p>")  # fmt: skip
-    if p.kpi is None:
-        return head + empty(f"Thiếu KPI: chạy <code>make kpi SIM={escape(ev['simulation_id'])}"
-                            "</code>.")  # fmt: skip
-    summary = provider_summary(p.kpi)
-    all_row = summary.loc["ALL"] if "ALL" in summary.index else summary.iloc[0]
-    folded = fold_echoes([i for i in p.incidents if i["detector"] == "pooled"])
-    pooled = ev["detectors"]["pooled"]
-    tiles = "".join([
-        tile("Attempt (7 ngày)", vn(float(all_row["attempts"]), 0)),
-        tile("Thành công", pct(all_row["success_rate"])),
-        tile("Thành công ngay lần đầu", pct(all_row["first_attempt_success_rate"])),
-        tile("Lỗi kỹ thuật", pct(all_row["technical_failure_rate"])),
-        tile("Sự cố D-B báo", str(len(folded)),
-             f"bắt {pooled['detected']}/{len(pooled['anomalies'])} sự cố cài sẵn"),
-    ])  # fmt: skip
-    prov_rows = [
-        [escape(str(name)), vn(float(r["attempts"]), 0), pct(r["success_rate"]),
-         pct(r["first_attempt_success_rate"]), pct(r["technical_failure_rate"]),
-         pct(r["business_failure_rate"]), pct(r["retry_share"]), vn(r["median_bucket_p50_ms"], 0)]
-        for name, r in summary.iterrows()
+    per = {d: {a["anomaly_id"]: a for a in r["anomalies"]} for d, r in ev["detectors"].items()}
+
+    def cell(a: dict[str, Any] | None) -> str:
+        if a and a["detected"]:
+            return status(True, f"{a['delay_minutes']:.0f} phút")
+        return status(False, "trượt")
+
+    rows = [
+        [f"<b>{escape(lab['anomaly_id'])}</b><small class='cell-sub'>{escape(lab['type'])} "
+         f"x{vn(lab['magnitude'], 1)} · "
+         f"{escape(lab['provider_id'] or lab['payment_method'] or lab['error_code'] or 'ALL')}"
+         "</small>",
+         cell(per.get("pooled", {}).get(lab["anomaly_id"])),
+         cell(per.get("robust_z", {}).get(lab["anomaly_id"]))]
+        for lab in p.labels
     ]  # fmt: skip
+    rep = ctx.published.get("product_01", {}).get("report", {})
+
+    def score(r: dict[str, Any] | None, total: int | None = None) -> str:
+        if not r:
+            return "—"
+        n = total if total is not None else r.get("total", len(r.get("anomalies", [])))
+        fp = vn(r["false_per_day"], 1)
+        return f"<b>{r['detected']}/{n}</b><small class='cell-sub'>{fp} nhầm/ngày</small>"
+
+    summary = [[escape(DETECTOR_VN[d]), score(r, len(r["anomalies"])), score(rep.get(d))]
+               for d, r in ev["detectors"].items() if d in DETECTOR_VN]  # fmt: skip
+    return card(
+        "Detector so với đáp án",
+        table(["Sự cố cài sẵn", "D-B", "D-A"], rows)
+        + "<h4>Tổng hợp</h4>"
+        + table(["Detector", "Tuning", "Report (trích lại)"], summary)
+        + f'<p class="note">Report: <code>{escape(rep.get("run_id", ""))}</code>, seed khác, '
+        "đánh giá một lần, không chạy lại.</p>",
+        "Đáp án chỉ dùng để đánh giá. Sự cố x1,5 nằm dưới giới hạn phát hiện.",
+        meta="bộ tuning",
+    )
+
+
+def section_p01(ctx: Context) -> str:
+    p = ctx.p01
+    title = "Product 01 · Độ ổn định thanh toán"
+    if p is None:
+        body = grid("g11",
+                    card("Chưa có dữ liệu",
+                         empty("Chưa có lần chạy detector trên bộ tuning. Chạy <code>make up"
+                               "</code> rồi <code>make demo</code>.")),
+                    card("Số đã công bố", report_stats(ctx)))  # fmt: skip
+        return section("p01", title, "Dữ liệu giả lập theo contract payment-event.", body)
+    ev = p.evaluation
+    sub = (f"Mô phỏng <code>{escape(ev['simulation_id'])}</code> (bộ tuning) · detector "
+           f"<code>{escape(ev['run_id'])}</code> · dữ liệu giả lập, 4 sự cố cài sẵn")  # fmt: skip
+    if p.kpi is None:
+        msg = f"Thiếu KPI: chạy <code>make kpi SIM={escape(ev['simulation_id'])}</code>."
+        return section("p01", title, sub, card("Thiếu KPI", empty(msg)))
+    failure, latency, volume = p01_charts(p)
+    folded = fold_echoes([i for i in p.incidents if i["detector"] == "pooled"])
     inc_rows = [
-        [escape(i["incident_id"]), escape(i["target"]),
+        [f"<b>{escape(i['incident_id'])}</b>", escape(i["target"]),
          escape(", ".join(METRIC_VN.get(m, m) for m in i["metrics"])), local(i["start"]),
          f"{i['buckets'] * 15} phút", local(i["first_alert_at"]), vn(i["max_score"], 1),
          escape(", ".join(i["echoes"])) or "—"]
         for i in folded
     ]  # fmt: skip
-    per = {d: {a["anomaly_id"]: a for a in r["anomalies"]} for d, r in ev["detectors"].items()}
-
-    def cell(a: dict[str, Any] | None) -> str:
-        if a and a["detected"]:
-            return status(True, f"bắt, sau {a['delay_minutes']:.0f} phút")
-        return status(False, "trượt")
-
-    truth_rows = [
-        [escape(lab["anomaly_id"]), escape(lab["type"]), f"x{vn(lab['magnitude'], 1)}",
-         escape(lab["provider_id"] or lab["payment_method"] or lab["error_code"] or "ALL"),
-         f"{local(lab['start'])}–{local(lab['end'])[-5:]}",
-         cell(per.get("pooled", {}).get(lab["anomaly_id"])),
-         cell(per.get("robust_z", {}).get(lab["anomaly_id"]))]
-        for lab in p.labels
+    summary = provider_summary(p.kpi)
+    prov_rows = [
+        [f"<b>{escape(str(name))}</b>", vn(float(r["attempts"]), 0), pct(r["success_rate"]),
+         pct(r["first_attempt_success_rate"]), pct(r["technical_failure_rate"]),
+         pct(r["business_failure_rate"]), pct(r["retry_share"]), vn(r["median_bucket_p50_ms"], 0)]
+        for name, r in summary.iterrows()
     ]  # fmt: skip
-    summary_rows = [
-        [escape(DETECTOR_VN[d]), f"{r['detected']}/{len(r['anomalies'])}",
-         vn(r["false_per_day"], 1)]
-        for d, r in ev["detectors"].items() if d in DETECTOR_VN
-    ]  # fmt: skip
-    return (
-        head + f'<div class="tiles">{tiles}</div>' + kpi_charts(p)
-        + card("Detector so với sự cố cài sẵn (bộ tuning)",
-               table(["Sự cố", "Loại", "Mức", "Đối tượng", "Thời gian", "D-B (chính)",
-                      "D-A (cơ sở)"], truth_rows, numeric_from=7)
-               + table(["Detector", "Bắt được", "Báo nhầm/ngày"], summary_rows),
-               "Đáp án chỉ dùng để đánh giá; người vận hành thật không có nó. Sự cố x1,5 nằm "
-               "dưới giới hạn phát hiện.")
-        + report_card(ctx)
-        + card("Sự cố D-B báo", table(["Sự cố", "Đối tượng", "Chỉ số", "Bắt đầu", "Kéo dài",
-                                       "Cảnh báo lúc", "Điểm cao nhất", "Gộp ALL"], inc_rows,
-                                      numeric_from=4)
-               if inc_rows else empty("Detector không báo sự cố nào."),
-               "Cảnh báo ALL trùng thời gian với một provider được gộp vào sự cố của provider đó.")
-        + card("Theo provider (cả kỳ)", table(["Provider", "Attempt", "Thành công",
-                                               "Thành công lần đầu", "Lỗi kỹ thuật",
-                                               "Lỗi nghiệp vụ", "Tỷ lệ retry",
-                                               "Độ trễ trung vị (ms)"], prov_rows))
+    incidents = card(
+        "Sự cố D-B báo",
+        table(["Sự cố", "Đối tượng", "Chỉ số", "Bắt đầu", "Kéo dài", "Cảnh báo lúc",
+               "Điểm cao nhất", "Gộp ALL"], inc_rows, numeric_from=4)
+        if inc_rows else empty("Detector không báo sự cố nào."),
+        "Cảnh báo ALL trùng thời gian với một provider được gộp vào sự cố của provider đó.",
+        meta=f"{len(folded)} sự cố",
     )  # fmt: skip
+    providers = card(
+        "Theo provider (cả kỳ)",
+        table(["Provider", "Attempt", "Thành công", "Thành công lần đầu", "Lỗi kỹ thuật",
+               "Lỗi nghiệp vụ", "Tỷ lệ retry", "Độ trễ trung vị (ms)"], prov_rows),
+    )  # fmt: skip
+    body = (
+        grid("g21", failure, detector_card(ctx))
+        + grid("g11", latency, volume)
+        + grid("g11", incidents, providers)
+    )
+    return section("p01", title, sub, body)
 
 
-# --- tab 3: Product 02 ------------------------------------------------------------------------
+# --- Product 02 -------------------------------------------------------------------------------
 
 
-def published_models(ctx: Context) -> str:
+def published_card(ctx: Context) -> str:
     models = ctx.published.get("product_02", {}).get("models", [])
     if not models:
-        return empty("Thiếu results/published.json.")
+        return card("Chất lượng xếp hạng", empty("Thiếu results/published.json."))
     bars = []
     for m in models:
         name = MODEL_VN.get(m["model"], m["model"])
@@ -654,7 +766,7 @@ def published_models(ctx: Context) -> str:
         ci_text = f" [{vn(ci[0])}; {vn(ci[1])}]" if ci else ""
         bars.append(
             (
-                f"{name} · validation",
+                f"{name} · valid",
                 m["valid_pr_auc"],
                 "fill-s2",
                 f"<b>{escape(name)}</b><br>PR-AUC validation {vn(m['valid_pr_auc'])}",
@@ -670,146 +782,170 @@ def published_models(ctx: Context) -> str:
          vn(m["test_recall_at_fpr5"], 2), f"<code>{escape(m['run_id'])}</code>"]
         for m in models
     ]  # fmt: skip
-    th = ctx.published.get("product_02", {}).get("threshold", {})
     legend = ('<div class="legend"><span class="key"><i style="background:var(--s2)"></i>'
               'validation</span><span class="key"><i style="background:var(--s1)"></i>test (một '
               "lần)</span></div>")  # fmt: skip
-    return (
-        card("Chất lượng xếp hạng (trích lại số đã công bố)",
-             legend + bar_chart(bars, x_fmt=lambda v: vn(v, 2), title="PR-AUC theo mô hình")
-             + table(["Mô hình", "PR-AUC validation", "PR-AUC test [95% CI]",
-                      "Recall @ FPR 5% (test)", "Lần chạy"], rows),
-             "Recall tại FPR 5% chọn ngưỡng bằng nhãn của chính tập test, nên chỉ đo thứ tự điểm, "
-             "không phải hiệu quả của một ngưỡng triển khai.")
-        + card("Ngưỡng đã chốt trước khi mở test",
-               table(["Mô hình", "Ngưỡng", "Precision (test)", "Recall (test)", "FPR (test)"],
-                     [[escape(MODEL_VN.get(th.get("model", ""), "")), vn(th.get("threshold")),
-                       vn(th.get("precision")), vn(th.get("recall")), pct(th.get("fpr"), 2)]]),
-               "Bảng này và bảng trên ở hai điểm vận hành khác nhau (FPR 1,24% và 5%), nên không "
-               "đọc là recall “tụt từ 51% xuống 37%”.")
+    return card(
+        "Chất lượng xếp hạng: PR-AUC",
+        legend + bar_chart(bars, x_fmt=lambda v: vn(v, 2), title="PR-AUC theo mô hình",
+                           width=WIDE, label_w=210)
+        + table(["Mô hình", "Validation", "Test [95% CI]", "Recall @ FPR 5%", "Lần chạy"], rows),
+        "Recall tại FPR 5% chọn ngưỡng bằng nhãn của chính tập test: chỉ đo thứ tự điểm, không "
+        "phải hiệu quả của một ngưỡng triển khai.",
+        meta="trích lại số công bố",
     )  # fmt: skip
 
 
-def calibration_card(ctx: Context) -> str:
-    res, src = ctx.p02.cal
-    if not res:
-        return card(
-            "Hiệu chỉnh xác suất", empty("Chưa có kết quả G03 (<code>make calibration</code>).")
-        )  # noqa: E501
-    gbm = res["models"]["gbm"]
-    names = {"raw": "Điểm gốc", "prior_shift": "Dịch tiên nghiệm", "platt": "Platt (chọn)"}
-    v3 = {m: gbm[m]["blocks"]["V3"] for m in ("raw", "prior_shift", "platt") if m in gbm}
-    truth = next(iter(v3.values()))["prevalence"]
-    bars = [(names[m], b["mean_pred"], "fill-s1" if m != "raw" else "fill-muted",
-             f"<b>{names[m]}</b><br>xác suất trung bình {pct(b['mean_pred'], 1)}<br>log loss "
-             f"{vn(b['log_loss'])} · Brier {vn(b['brier'], 4)}") for m, b in v3.items()]  # fmt: skip  # noqa: E501
-    rows = [[names[m], pct(b["mean_pred"], 1), vn(b["log_loss"]), vn(b["brier"], 4),
-             vn(b["pr_auc"])] for m, b in v3.items()]  # fmt: skip
-    return card("Hiệu chỉnh: điểm có đọc được như xác suất không? (khối V3)",
-                bar_chart(bars, x_fmt=lambda v: pct(v, 0), title="Xác suất trung bình trên V3",
-                          ref=(truth, f"tỷ lệ gian lận thật {pct(truth, 1)}"),
-                          value_fmt=lambda v: pct(v, 1))
-                + table(["Phương pháp", "Xác suất TB", "Log loss", "Brier", "PR-AUC"], rows),
-                f"Thăm dò, chỉ train + validation · <code>{escape(src.name)}</code>. PR-AUC không "
-                "đổi giữa các phương pháp (hiệu chỉnh đơn điệu).")  # fmt: skip
-
-
-def policy_card(ctx: Context) -> str:
-    res, src = ctx.p02.pol
-    if not res:
-        return card("So sánh chính sách", empty("Chưa có kết quả G04 (<code>make policy</code>)."))
-    rows = [r for r in res["v3"] if r["cost_key"] == MID_COST]
-    rows.sort(key=lambda r: r["cost"])
-    bars = [(POLICY_VN.get(r["policy"], r["policy"]), r["cost"],
-             "fill-s1" if r["policy"] == "rule_calibrated" else "fill-muted",
-             f"<b>{escape(POLICY_VN.get(r['policy'], r['policy']))}</b><br>tổng chi phí "
-             f"{vn(r['cost'], 0)} [{vn(r['cost_ci_day'][0], 0)}; {vn(r['cost_ci_day'][1], 0)}]"
-             f"<br>{r['alerts']} cảnh báo, bắt {r['tp']} gian lận") for r in rows]  # fmt: skip
-    table_rows = [[escape(POLICY_VN.get(r["policy"], r["policy"])), vn(r["alerts"], 0),
-                   vn(r["tp"], 0), pct(r["recall"], 1), vn(r["caught_amount"], 0),
-                   vn(r["cost"], 0)] for r in rows]  # fmt: skip
-    wins = sum(1 for w in res.get("v3_winners", {}).values() if w == "rule_calibrated")
-    return card(f"Chính sách quyết định: tổng chi phí giả định trên V3 ({MID_COST})",
-                bar_chart(bars, x_fmt=lambda v: vn(v, 0), title="Tổng chi phí theo chính sách")
-                + table(["Chính sách", "Cảnh báo", "Gian lận bắt", "Recall", "Tiền gian lận bắt",
-                         "Tổng chi phí"], table_rows),
-                f"<b>Phân tích độ nhạy, không phải ROI</b>: chi phí là giả định (mất 0,75 × số "
-                f"tiền khi bỏ sót, 5 mỗi lần duyệt, 1 mỗi cảnh báo nhầm). Luật chi phí đã hiệu chỉnh "  # noqa: E501
-                f"rẻ nhất ở {wins}/{len(res.get('v3_winners', {}))} tổ hợp, một phần do được chấm "
-                f"bằng chính hàm chi phí nó tối ưu. <code>{escape(src.name)}</code>.")  # fmt: skip
-
-
-def stability_card(ctx: Context) -> str:
-    res, src = ctx.p02.stab
-    if not res:
-        return card(
-            "Độ ổn định theo tuần", empty("Chưa có kết quả G05 (<code>make stability</code>).")
-        )  # noqa: E501
-    weeks = res["weekly"]
-    labels = [f"{'Train' if w['part'] == 'train' else 'Validation'} tuần {w['week']}"
-              for w in weeks]  # fmt: skip
-    ticks = [(i, ("T" if w["part"] == "train" else "V") + str(w["week"]))
-             for i, w in enumerate(weeks) if i % 2 == 0 or w["part"] == "valid"]  # fmt: skip
-    train = [w["pr_auc"] if w["part"] == "train" else None for w in weeks]
-    valid = [w["pr_auc"] if w["part"] == "valid" else None for w in weeks]
-    rate = [("Tỷ lệ gian lận", 1, [w["prevalence"] for w in weeks])]
-    groups = [[escape(g["column"]), escape(str(g["value"])), vn(g["rows"], 0), vn(g["frauds"], 0),
-               pct(g["prevalence"], 1), vn(g["recall_at_fpr"], 2),
-               status(False, "cỡ mẫu nhỏ") if g["small_sample"] else ""]
-              for g in res["groups"]]  # fmt: skip
-    return (
-        card("PR-AUC theo tuần (cùng một mô hình)",
-             line_chart(labels, [("train (trong mẫu)", 2, train), ("validation", 1, valid)],
-                        y_fmt=lambda v: vn(v, 2), title="PR-AUC theo tuần", x_ticks=ticks,
-                        markers=True, y_min=None),
-             "Tuần train là trong mẫu nên cao hơn; hai tuần validation cuối thấp nhất. PSI của 4 "
-             f"đầu vào đều dưới 0,05 nên không giải thích được sự sụt. <code>{escape(src.name)}</code>.")  # noqa: E501
-        + card("Tỷ lệ gian lận theo tuần",
-               line_chart(labels, rate, y_fmt=lambda v: pct(v, 1), title="Tỷ lệ gian lận theo tuần",
-                          x_ticks=ticks, markers=True, height=180))
-        + card("Theo nhóm (validation)", table(["Cột", "Giá trị", "Dòng", "Gian lận",
-                                                 "Tỷ lệ gian lận", "Recall @ FPR 5%", ""], groups,
-                                                numeric_from=2),
-               "Không so PR-AUC giữa nhóm vì nó phụ thuộc tỷ lệ gian lận; recall tại FPR cố định "
-               "so được hơn.")
-    )  # fmt: skip  # noqa: E501
+def threshold_card(ctx: Context) -> str:
+    p02 = ctx.published.get("product_02", {})
+    th = p02.get("threshold", {})
+    leak = p02.get("leakage", {})
+    body = stats([
+        ("Ngưỡng (chốt trước khi mở test)", vn(th.get("threshold")),
+         escape(MODEL_VN.get(th.get("model", ""), ""))),
+        ("Precision", vn(th.get("precision")), "trên tập test"),
+        ("Recall", vn(th.get("recall")), "trên tập test"),
+        ("FPR", pct(th.get("fpr"), 2), "cảnh báo nhầm / giao dịch thật"),
+    ]) + "<h4>Thí nghiệm rò rỉ (validation)</h4>" + stats([
+        ("Mã hoá card1 bằng nhãn", "+" + vn(leak.get("target_encoding_card1")), "PR-AUC tăng giả"),
+        ("Chia ngẫu nhiên", "−" + vn(abs(leak.get("random_split", 0))), "so với chia thời gian"),
+    ])  # fmt: skip
+    return card(
+        "Ngưỡng đã chốt",
+        body,
+        "Điểm vận hành FPR 1,24%, khác bảng bên trái (FPR 5%): không đọc là recall “tụt từ 51% "
+        f"xuống 37%”. Rò rỉ: <code>{escape(leak.get('run_id', ''))}</code>.",
+        meta="trích lại",
+    )
 
 
 BUCKETS = [(0.0, 0.01, "< 1%"), (0.01, 0.02, "1–2%"), (0.02, 0.05, "2–5%"), (0.05, 0.1, "5–10%"),
            (0.1, 0.2, "10–20%"), (0.2, 0.5, "20–50%"), (0.5, 1.01, "≥ 50%")]  # fmt: skip
 
 
-def scoring_card(ctx: Context) -> str:
+def scoring_cards(ctx: Context) -> tuple[str, str]:
+    """(distribution card, top-10 card) of the latest batch-scoring run."""
     p = ctx.p02
     if not p.scores or p.scores_csv is None:
-        return card(
-            "Chấm điểm theo lô gần nhất",
-            empty("Chưa chấm: chạy <code>make score-model</code> rồi <code>make score</code>."),
-        )  # noqa: E501
+        msg = empty("Chưa chấm: chạy <code>make score-model</code> rồi <code>make score</code>.")
+        return card("Chấm điểm theo lô gần nhất", msg), card("Giao dịch rủi ro nhất", msg)
     probs = p.scores_csv["score_calibrated"]
     counts = [int(((probs >= lo) & (probs < hi)).sum()) for lo, hi, _ in BUCKETS]
     bars = [(name, c, "fill-s1", f"xác suất {name}: <b>{c}</b> giao dịch")
             for (_, _, name), c in zip(BUCKETS, counts, strict=True)]  # fmt: skip
-    top = p.scores_csv.sort_values("score_calibrated", ascending=False).head(10)
-    rows = [[str(r.TransactionID), vn(r.score), pct(r.score_calibrated, 1)]
-            for r in top.itertuples()]  # fmt: skip
     skew = p.scores.get("skew_check", {})
-    tiles = "".join([
-        tile("Giao dịch đã chấm", vn(p.scores["rows"], 0), escape(p.scores["execution_id"])),
-        tile("Xác suất trung bình", pct(p.scores.get("score_calibrated_mean"), 1), "đã hiệu chỉnh"),
-        tile("Xác suất ≥ 50%", str(counts[-1]), "giao dịch"),
-        tile("Lệch huấn luyện–chấm điểm", vn(skew.get("max_abs_diff"), 1),
-             f"trên {skew.get('rows_compared', 0)} dòng",
-             "good" if skew.get("max_abs_diff") == 0.0 else "bad"),
+    mini = stats([
+        ("Đã chấm", vn(p.scores["rows"], 0), "giao dịch không nhãn"),
+        ("Xác suất trung bình", pct(p.scores.get("score_calibrated_mean"), 1), "đã hiệu chỉnh"),
+        ("Lệch huấn luyện–chấm", vn(skew.get("max_abs_diff"), 1),
+         status(skew.get("max_abs_diff") == 0.0, f"{skew.get('rows_compared', 0)} dòng")),
     ])  # fmt: skip
-    return card("Chấm điểm theo lô gần nhất",
-                f'<div class="tiles">{tiles}</div><h4>Phân bố xác suất gian lận (đã hiệu chỉnh)</h4>'  # noqa: E501
-                + bar_chart(bars, x_fmt=lambda v: vn(v, 0), title="Phân bố xác suất")
-                + "<h4>10 giao dịch rủi ro nhất</h4>"
-                + table(["TransactionID", "Điểm gốc", "Xác suất"], rows),
-                f"Mô hình <code>{escape(p.scores['model_version'])}</code>, đặc trưng "
-                f"<code>{escape(p.scores['feature_version'])}</code>. Đầu vào là giao dịch validation "  # noqa: E501
-                "không nhãn; 10 giao dịch rủi ro nhất chỉ để minh hoạ, không phải quyết định chặn.")  # fmt: skip  # noqa: E501
+    dist = card(
+        "Chấm điểm theo lô gần nhất",
+        f'<div class="stats-row">{mini}</div><h4>Phân bố xác suất gian lận</h4>'
+        + bar_chart(bars, x_fmt=lambda v: vn(v, 0), title="Phân bố xác suất", width=HALF,
+                    label_w=90),
+        f"Mô hình <code>{escape(p.scores['model_version'])}</code>, đặc trưng "
+        f"<code>{escape(p.scores['feature_version'])}</code>.",
+        meta=escape(p.scores["execution_id"]),
+    )  # fmt: skip
+    top = p.scores_csv.sort_values("score_calibrated", ascending=False).head(10)
+    rows = [[f"<b>{r.TransactionID}</b>", vn(r.score),
+             f"{meter(float(r.score_calibrated))} {pct(r.score_calibrated, 1)}"]
+            for r in top.itertuples()]  # fmt: skip
+    top_card = card(
+        "10 giao dịch rủi ro nhất",
+        table(["TransactionID", "Điểm gốc", "Xác suất (đã hiệu chỉnh)"], rows),
+        "Giao dịch validation không nhãn; chỉ minh hoạ, không phải quyết định chặn.",
+    )
+    return dist, top_card
+
+
+def calibration_card(ctx: Context) -> str:
+    res, src = ctx.p02.cal
+    if not res:
+        msg = empty("Chưa có kết quả G03 (<code>make calibration</code>).")
+        return card("Hiệu chỉnh xác suất", msg)
+    gbm = res["models"]["gbm"]
+    names = {"raw": "Điểm gốc", "prior_shift": "Dịch tiên nghiệm", "platt": "Platt (chọn)"}
+    v3 = {m: gbm[m]["blocks"]["V3"] for m in ("raw", "prior_shift", "platt") if m in gbm}
+    truth = next(iter(v3.values()))["prevalence"]
+    bars = [(names[m], b["mean_pred"], "fill-s1" if m != "raw" else "fill-muted",
+             f"<b>{names[m]}</b><br>xác suất trung bình {pct(b['mean_pred'], 1)}<br>log loss "
+             f"{vn(b['log_loss'])} · Brier {vn(b['brier'], 4)}")
+            for m, b in v3.items()]  # fmt: skip
+    rows = [[names[m], pct(b["mean_pred"], 1), vn(b["log_loss"]), vn(b["brier"], 4)]
+            for m, b in v3.items()]  # fmt: skip
+    return card(
+        "Hiệu chỉnh: điểm có đọc được như xác suất?",
+        bar_chart(bars, x_fmt=lambda v: pct(v, 0), title="Xác suất trung bình trên V3",
+                  ref=(truth, f"thật {pct(truth, 1)}"), value_fmt=lambda v: pct(v, 1),
+                  width=HALF, label_w=150)
+        + table(["Phương pháp", "Xác suất TB", "Log loss", "Brier"], rows),
+        "Khối V3. PR-AUC không đổi giữa các phương pháp (hiệu chỉnh đơn điệu).",
+        meta=escape(src.name),
+    )  # fmt: skip
+
+
+def policy_card(ctx: Context) -> str:
+    res, src = ctx.p02.pol
+    if not res:
+        return card("So sánh chính sách", empty("Chưa có kết quả G04 (<code>make policy</code>)."))
+    rows = sorted((r for r in res["v3"] if r["cost_key"] == MID_COST), key=lambda r: r["cost"])
+    bars = [(POLICY_VN.get(r["policy"], r["policy"]), r["cost"],
+             "fill-s1" if r["policy"] == "rule_calibrated" else "fill-muted",
+             f"<b>{escape(POLICY_VN.get(r['policy'], r['policy']))}</b><br>tổng chi phí "
+             f"{vn(r['cost'], 0)} [{vn(r['cost_ci_day'][0], 0)}; {vn(r['cost_ci_day'][1], 0)}]"
+             f"<br>{r['alerts']} cảnh báo, bắt {r['tp']} gian lận") for r in rows]  # fmt: skip
+    wins = sum(1 for w in res.get("v3_winners", {}).values() if w == "rule_calibrated")
+    return card(
+        "Chính sách quyết định: tổng chi phí giả định",
+        bar_chart(bars, x_fmt=lambda v: vn(v, 0), title="Tổng chi phí theo chính sách",
+                  width=HALF, label_w=190),
+        "<b>Phân tích độ nhạy, không phải ROI.</b> Chi phí giả định: mất 0,75 × số tiền khi bỏ "
+        f"sót, 5 mỗi lần duyệt, 1 mỗi cảnh báo nhầm. Luật chi phí đã hiệu chỉnh rẻ nhất ở {wins}/"
+        f"{len(res.get('v3_winners', {}))} tổ hợp, một phần vì được chấm bằng chính hàm chi phí "
+        "nó tối ưu.",
+        meta=f"V3 · {MID_COST}",
+    )  # fmt: skip
+
+
+def stability_cards(ctx: Context) -> str:
+    res, src = ctx.p02.stab
+    if not res:
+        msg = empty("Chưa có kết quả G05 (<code>make stability</code>).")
+        return card("Độ ổn định theo tuần", msg)
+    weeks = res["weekly"]
+    labels = [f"{'Train' if w['part'] == 'train' else 'Validation'} tuần {w['week']}"
+              for w in weeks]  # fmt: skip
+    ticks = [(i, ("T" if w["part"] == "train" else "V") + str(w["week"]))
+             for i, w in enumerate(weeks) if i % 3 == 0 or w["part"] == "valid"]  # fmt: skip
+    train = [w["pr_auc"] if w["part"] == "train" else None for w in weeks]
+    valid = [w["pr_auc"] if w["part"] == "valid" else None for w in weeks]
+    rate = [("Tỷ lệ gian lận", 1, [w["prevalence"] for w in weeks])]
+    groups = [[escape(g["column"]), f"<b>{escape(str(g['value']))}</b>", vn(g["rows"], 0),
+               vn(g["frauds"], 0), pct(g["prevalence"], 1), vn(g["recall_at_fpr"], 2),
+               status(False, "cỡ mẫu nhỏ") if g["small_sample"] else ""]
+              for g in res["groups"]]  # fmt: skip
+    return grid(
+        "g11",
+        card("PR-AUC theo tuần (cùng một mô hình)",
+             line_chart(labels, [("train", 2, train), ("validation", 1, valid)],
+                        y_fmt=lambda v: vn(v, 2), title="PR-AUC theo tuần", x_ticks=ticks,
+                        markers=True, y_min=None, width=HALF, height=220),
+             "Tuần train là trong mẫu nên cao hơn; hai tuần validation cuối thấp nhất. PSI của "
+             "4 đầu vào đều dưới 0,05.", meta=escape(src.name)),
+        card("Tỷ lệ gian lận theo tuần",
+             line_chart(labels, rate, y_fmt=lambda v: pct(v, 1), title="Tỷ lệ gian lận theo tuần",
+                        x_ticks=ticks, markers=True, width=HALF, height=220),
+             "Dao động 1,85%–4,55% mỗi tuần: ngưỡng xác suất cố định sẽ trôi theo."),
+    ) + card(
+        "Theo nhóm (validation)",
+        table(["Cột", "Giá trị", "Dòng", "Gian lận", "Tỷ lệ gian lận", "Recall @ FPR 5%", ""],
+              groups, numeric_from=2),
+        "Không so PR-AUC giữa nhóm vì nó phụ thuộc tỷ lệ gian lận; recall tại FPR cố định so được "
+        "hơn.",
+    )  # fmt: skip
 
 
 def feature_label(folder: Path) -> str:
@@ -835,36 +971,32 @@ def runs_card(ctx: Context) -> str:
                          escape(feature_label(folder)),
                          f"{vn(m['pr_auc'])} [{vn(ci.get('low'))}; {vn(ci.get('high'))}]",
                          vn(m.get("recall_at_fpr", {}).get("recall"), 2)])  # fmt: skip
-    pub = ctx.published.get("product_02", {}).get("leakage", {})
-    leak = (
-        f"Thí nghiệm rò rỉ <code>{escape(pub.get('run_id', ''))}</code> (trích lại): mã hoá "
-        f"<code>card1</code> bằng nhãn làm PR-AUC validation tăng {vn(pub.get('target_encoding_card1'))}; "  # noqa: E501
-        f"chia ngẫu nhiên thay vì theo thời gian làm PR-AUC giảm "
-        f"{vn(abs(pub.get('random_split', 0)))}."
-    )
     body = (table(["Lần chạy", "Mô hình", "Số đặc trưng", "PR-AUC validation [95% CI]",
                    "Recall @ FPR 5%"], rows, numeric_from=3)
             if rows else empty("Chưa có lần chạy validation trên máy này (cần dataset: "
                                "<code>make baseline</code>, <code>make gbm</code>)."))  # fmt: skip
-    return card("Các biến thể trên validation (thăm dò)", body, leak)
+    return card("Các biến thể trên validation", body, meta="thăm dò")
 
 
-def tab_p02(ctx: Context) -> str:
-    return (
-        '<p class="lead">Dataset công khai IEEE-CIS, chia theo thời gian 60/20/20. Số test chỉ '
-        "được <b>trích lại</b> (đánh giá một lần); mọi phân tích khác dùng train và validation "
-        "(thăm dò). Điểm rủi ro chỉ hỗ trợ quyết định, không tự động chặn giao dịch.</p>"
-        + published_models(ctx)
-        + scoring_card(ctx)
-        + '<h2 class="section">Từ xếp hạng đến quyết định (Stage G, thăm dò)</h2>'
-        + calibration_card(ctx)
-        + policy_card(ctx)
-        + stability_card(ctx)
+def section_p02(ctx: Context) -> str:
+    dist, top = scoring_cards(ctx)
+    body = (
+        grid("g21", published_card(ctx), threshold_card(ctx))
+        + grid("g11", dist, top)
+        + '<h3 class="subhead">Từ xếp hạng đến quyết định (Stage G, thăm dò)</h3>'
+        + grid("g11", policy_card(ctx), calibration_card(ctx))
+        + stability_cards(ctx)
         + runs_card(ctx)
     )
+    sub = (
+        "Dataset công khai IEEE-CIS, chia theo thời gian 60/20/20. Số test chỉ được <b>trích "
+        "lại</b>; mọi phân tích khác dùng train và validation. Điểm rủi ro hỗ trợ quyết định, "
+        "không tự động chặn giao dịch."
+    )
+    return section("p02", "Product 02 · Rủi ro gian lận", sub, body)
 
 
-# --- tab 4: data & quality --------------------------------------------------------------------
+# --- data & quality ---------------------------------------------------------------------------
 
 
 def checks(ctx: Context) -> list[tuple[bool | None, str, str]]:
@@ -886,13 +1018,9 @@ def checks(ctx: Context) -> list[tuple[bool | None, str, str]]:
             )
         )
     skew = (ctx.p02.scores or {}).get("skew_check")
-    out.append(
-        (
-            None if skew is None else skew.get("max_abs_diff") == 0.0,
-            "Điểm chấm theo lô trùng điểm lúc huấn luyện",
-            f"{skew['rows_compared']} dòng" if skew else "chưa chấm",
-        )
-    )
+    out.append((None if skew is None else skew.get("max_abs_diff") == 0.0,
+                "Điểm chấm theo lô trùng điểm lúc huấn luyện",
+                f"{skew['rows_compared']} dòng" if skew else "chưa chấm"))  # fmt: skip
     for path, name in (
         (ctx.artifacts / "test_runs.json", "test Product 02"),
         (ctx.artifacts / "detect_report_runs.json", "bộ report Product 01"),
@@ -902,23 +1030,15 @@ def checks(ctx: Context) -> list[tuple[bool | None, str, str]]:
             out.append((None, f"Sổ test-một-lần ({name})", "không tìm thấy"))
         else:
             forced = sum(bool(e.get("forced")) for e in entries)
-            out.append(
-                (
-                    forced == 0,
-                    f"Sổ test-một-lần ({name}) không có lần chạy --force",
-                    f"{len(entries)} lần đánh giá đã ghi",
-                )
-            )
-    for prefix, name in (
-        ("cal", "G03 hiệu chỉnh"),
-        ("pol", "G04 chính sách"),
-        ("stab", "G05 độ ổn định"),
-    ):
+            out.append((forced == 0, f"Sổ test-một-lần ({name}) không có --force",
+                        f"{len(entries)} lần đánh giá đã ghi"))  # fmt: skip
+    for prefix, name in (("cal", "G03 hiệu chỉnh"), ("pol", "G04 chính sách"),
+                         ("stab", "G05 độ ổn định")):  # fmt: skip
         res, src = getattr(ctx.p02, prefix)
-        out.append((res is not None, f"Kết quả {name} có sẵn", escape(src.name) if src else "—"))
-    out.append(
-        (None, "Dashboard không đọc tập test", "số test chỉ trích từ results/published.json")
-    )
+        where = escape(src.name) if src else "—"
+        out.append((res is not None, f"Kết quả {name} có sẵn", where))
+    note = "số test chỉ trích từ results/published.json"
+    out.append((None, "Dashboard không đọc tập test", note))
     return out
 
 
@@ -935,11 +1055,8 @@ def runs_table(ctx: Context) -> str:
 
     if ctx.p01:
         add("Detector (tuning)", ctx.p01.run, ctx.p01.run.name)
-    for prefix, kind in (
-        ("cal", "G03 hiệu chỉnh"),
-        ("pol", "G04 chính sách"),
-        ("stab", "G05 độ ổn định"),
-    ):
+    for prefix, kind in (("cal", "G03 hiệu chỉnh"), ("pol", "G04 chính sách"),
+                         ("stab", "G05 độ ổn định")):  # fmt: skip
         _, src = getattr(ctx.p02, prefix)
         add(kind, src, src.name if src else "")
     if ctx.p02.model_dir:
@@ -950,17 +1067,8 @@ def runs_table(ctx: Context) -> str:
                      mtime(ctx.p02.scores_path) if ctx.p02.scores_path else "—"])  # fmt: skip
     if not rows:
         return empty("Chưa có lần chạy nào trên máy này.")
-    return table(
-        [
-            "Loại",
-            "experiment_id (khoá cấu hình)",
-            "execution_id (lần chạy gần nhất)",
-            "Commit",
-            "Lúc",
-        ],
-        rows,
-        numeric_from=5,
-    )
+    return table(["Loại", "experiment_id (khoá cấu hình)", "execution_id (lần chạy gần nhất)",
+                  "Commit", "Lúc"], rows, numeric_from=5)  # fmt: skip
 
 
 LIMITS = [
@@ -976,13 +1084,15 @@ LIMITS = [
 ]
 
 
-def tab_quality(ctx: Context) -> str:
+def section_quality(ctx: Context) -> str:
+    results = checks(ctx)
     check_rows = [[status(ok, "đạt" if ok else ("không đạt" if ok is False else "ghi chú")),
-                   escape(name), detail] for ok, name, detail in checks(ctx)]  # fmt: skip
+                   escape(name), detail] for ok, name, detail in results]  # fmt: skip
+    passed = sum(ok is True for ok, _, _ in results)
+    failed = sum(ok is False for ok, _, _ in results)
     sim = ctx.p01.sim_manifest if ctx.p01 else None
-    manifest = yaml.safe_load((ctx.repo / "datasets" / "manifests" / "ieee-cis.yaml")
-                              .read_text("utf-8")) if (ctx.repo / "datasets" / "manifests" /
-                                                       "ieee-cis.yaml").exists() else None  # fmt: skip  # noqa: E501
+    manifest_path = ctx.repo / "datasets" / "manifests" / "ieee-cis.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text("utf-8")) if manifest_path.exists() else None
     data_rows = []
     if sim:
         data_rows.append(["Mô phỏng (Product 01)", f"<code>{escape(sim['simulation_id'])}</code>",
@@ -995,60 +1105,83 @@ def tab_quality(ctx: Context) -> str:
                           f"{len(manifest['files'])} file, {vn(size, 0)} MB, tải "
                           f"{escape(str(manifest['download_date']))}; không nằm trong git",
                           f"<code>{escape(manifest['checksum'][:12])}…</code>"])  # fmt: skip
-    return (
-        card("Kiểm tra tự động", table(["Kết quả", "Kiểm tra", "Chi tiết"], check_rows,
-                                       numeric_from=3))
+    body = (
+        grid("g21",
+             card("Kiểm tra tự động", table(["Kết quả", "Kiểm tra", "Chi tiết"], check_rows,
+                                            numeric_from=3),
+                  meta=f"{passed} đạt · {failed} không đạt"),
+             card("Hạn chế: những gì dashboard này không chứng minh",
+                  "<ul class='limits'>" + "".join(f"<li>{x}</li>" for x in LIMITS) + "</ul>"))
         + card("Các lần chạy và mã nhận diện", runs_table(ctx),
                "experiment_id nhận diện cấu hình (cũng là khoá chặn test-một-lần); execution_id "
                "nhận diện từng lần chạy, kèm commit và môi trường (ADR 0010).")
         + card("Nguồn dữ liệu", table(["Nguồn", "Mã", "Mô tả", "Checksum"], data_rows,
                                       numeric_from=4) if data_rows else empty("Không có."))
-        + card("Hạn chế: những gì dashboard này không chứng minh",
-               "<ul class='limits'>" + "".join(f"<li>{x}</li>" for x in LIMITS) + "</ul>")
     )  # fmt: skip
+    return section(
+        "quality",
+        "Dữ liệu & chất lượng",
+        "Kiểm tra tự động, mã lần chạy, nguồn dữ liệu và hạn chế.",
+        body,
+    )
 
 
 # --- page -------------------------------------------------------------------------------------
 
-TABS = [("overview", "Tổng quan"), ("p01", "Product 01 · Độ ổn định"),
-        ("p02", "Product 02 · Gian lận"), ("quality", "Dữ liệu & chất lượng")]  # fmt: skip
+NAV = [("overview", "grid", "Tổng quan"), ("pipeline", "flow", "Luồng pipeline"),
+       ("p01", "activity", "Product 01 · Ổn định"), ("p02", "shield", "Product 02 · Gian lận"),
+       ("quality", "check", "Dữ liệu & chất lượng")]  # fmt: skip
 
 CSS_PATH = Path(__file__).with_name("page.css")
 JS_PATH = Path(__file__).with_name("page.js")
 
 
 def build(artifacts: Path, git_sha: str = "", repo: Path = REPO_ROOT) -> str:
-    """The whole page as HTML text."""
+    """The whole page as HTML text: one scrolling page, sidebar links to each section."""
     ctx = load(artifacts, repo)
     built = datetime.now(UTC).astimezone(LOCAL).strftime("%d/%m/%Y %H:%M")
     sha = f" · commit <code>{escape(git_sha[:7])}</code>" if git_sha else ""
-    tabs = "".join(
-        f'<button role="tab" id="tab-{k}" aria-controls="panel-{k}" data-tab="{k}">{escape(v)}</button>'  # noqa: E501
-        for k, v in TABS
+    nav = "".join(f'<a href="#{k}">{icon(i)}<span>{escape(v)}</span></a>' for k, i, v in NAV)
+    m01 = p01_matches_published(ctx)
+    skew = (ctx.p02.scores or {}).get("skew_check")
+    badges = (
+        status(m01, "P01 khớp số công bố" if m01 is not False else "P01 chưa khớp")
+        if m01 is not None else status(None, "P01 chưa chạy")
+    ) + (
+        status(skew.get("max_abs_diff") == 0.0, "P02 lệch chấm điểm 0")
+        if skew else status(None, "P02 chưa chấm")
+    )  # fmt: skip
+    overview = (
+        '<section class="section" id="overview">'
+        + overview_tiles(ctx)
+        + "</section>"
+        + f'<div id="pipeline" class="anchor">{pipeline_card(ctx)}</div>'
     )
-    bodies = {"overview": tab_overview(ctx), "p01": tab_p01(ctx), "p02": tab_p02(ctx),
-              "quality": tab_quality(ctx)}  # fmt: skip
-    panels = "".join(
-        f'<section class="panel" role="tabpanel" id="panel-{k}" data-tab="{k}" '
-        f'aria-labelledby="tab-{k}">'
-        f'<h2 class="print-only">{escape(v)}</h2>{bodies[k]}</section>'
-        for k, v in TABS
-    )
+    body = overview + section_p01(ctx) + section_p02(ctx) + section_quality(ctx)
     css, js = CSS_PATH.read_text("utf-8"), JS_PATH.read_text("utf-8")
     return f"""<!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Payment Intelligence Dashboard</title><style>{css}</style></head>
-<body>
-<header class="top"><div class="wrap">
-<div class="brand"><h1>Payment Intelligence Ecosystem</h1>
-<p>Dashboard tĩnh từ kết quả các lần chạy · dựng lúc {built}{sha} · không dùng dữ liệu thật</p></div>
-<button class="theme" type="button" aria-label="Đổi giao diện sáng/tối">◐</button>
-</div><nav class="wrap tabs" role="tablist">{tabs}</nav></header>
-<main class="wrap">{panels}</main>
+<body><div class="app">
+<aside class="side">
+<div class="logo"><span class="logo-mark">PI</span>
+<div><b>Payment Intelligence</b><small>Ecosystem · demo</small></div></div>
+<nav class="side-nav" aria-label="Các phần của trang">{nav}</nav>
+<div class="side-foot">
+<button class="theme" type="button">{icon("moon")}<span>Sáng / tối</span></button>
+<p>Dựng lúc {built}{sha}</p><p>Không dùng dữ liệu thật</p></div>
+</aside>
+<main class="main">
+<header class="topbar"><div><h1>Dashboard</h1>
+<p>Kết quả các lần chạy trên máy này · hai sản phẩm, một nền tảng, không chung dữ liệu</p></div>
+<div class="badges">{badges}</div></header>
+{body}
+</main></div>
 <div class="tooltip" role="status" hidden></div>
 <script>{js}</script>
 </body></html>
-"""  # noqa: E501
+"""
 
 
 def main(argv: list[str] | None = None) -> int:

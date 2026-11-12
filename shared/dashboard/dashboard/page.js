@@ -1,19 +1,15 @@
 (() => {
   "use strict";
-  // Tabs: the URL hash keeps the open tab (bookmarkable); without JS every panel is visible.
-  const tabs = [...document.querySelectorAll('[role="tab"]')];
-  const panels = [...document.querySelectorAll('[role="tabpanel"]')];
-  function show(id) {
-    if (!panels.some((p) => p.dataset.tab === id)) id = panels[0].dataset.tab;
-    tabs.forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === id)));
-    panels.forEach((p) => { p.hidden = p.dataset.tab !== id; });
+  // Sidebar: highlight the link of the section in view (the page is one scrolling page).
+  const links = [...document.querySelectorAll(".side-nav a")];
+  const targets = links.map((a) => document.getElementById(a.hash.slice(1))).filter(Boolean);
+  function mark() {
+    let current = targets[0];
+    for (const t of targets) if (t.getBoundingClientRect().top < 120) current = t;
+    links.forEach((a) => a.classList.toggle("active", current && a.hash === "#" + current.id));
   }
-  tabs.forEach((t) => t.addEventListener("click", () => {
-    history.replaceState(null, "", "#" + t.dataset.tab);
-    show(t.dataset.tab);
-    window.scrollTo({ top: 0 });
-  }));
-  show(location.hash.slice(1));
+  addEventListener("scroll", mark, { passive: true });
+  mark();
 
   // Theme toggle (light/dark); remembered per browser when storage is available.
   const root = document.documentElement;
@@ -29,7 +25,7 @@
     try { localStorage.setItem("pie-theme", root.dataset.theme); } catch (e) { /* ignore */ }
   });
 
-  // Tooltip for every mark with data-tip; crosshair on line charts.
+  // Tooltip for every element with data-tip; crosshair on line charts.
   const tip = document.querySelector(".tooltip");
   let cross = null;
   function place(ev) {
