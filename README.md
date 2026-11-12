@@ -215,7 +215,7 @@ Mỗi pull request được [CI](.github/workflows/ci.yml) chạy `make lint` v�
 | Tài liệu | Nội dung |
 | --- | --- |
 | [Bài báo khoa học (PDF)](docs/report/bai-bao-khoa-hoc.pdf) · [Báo cáo thực tập (PDF)](docs/report/bao-cao-thuc-tap.pdf) · [mã LaTeX](docs/report/latex/) | Bài báo 10 trang; báo cáo đầy đủ có giải thích kiến thức nền |
-| [Slide trình bày (PDF)](docs/slides/slides.pdf) · [mã LaTeX](docs/slides/slides.tex) | 21 trang Beamer: hệ sinh thái, kiến trúc, pipeline, biểu đồ kết quả, hạn chế (`make slides`) |
+| [Slide trình bày (PDF)](docs/slides/slides.pdf) · [mã LaTeX](docs/slides/slides.tex) | 14 trang Beamer: sơ đồ hệ thống nhiều sản phẩm, hai pipeline, biểu đồ kết quả, hạn chế (`make slides`) |
 | [Báo cáo tuần](docs/weekly/) | Markdown và PDF LaTeX cho mentor (`make weekly`) |
 | [Hướng dẫn thao tác GitHub](docs/github-guide.md) | Nhánh, PR, merge, dọn nhánh, git hook |
 | [Tổng quan đề tài](docs/product/project-overview.md) | Bài toán, phạm vi, kế hoạch, rủi ro, tài liệu tham khảo |

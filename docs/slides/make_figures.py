@@ -80,19 +80,24 @@ def p01_failure(ctx) -> None:
     axes[-1].xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%d/%m", tz=local.tz))
     handles = [plt.Rectangle((0, 0), 1, 1, color=RED, alpha=0.18),
                plt.Rectangle((0, 0), 1, 1, fill=False, ls="--", ec=INK2)]  # fmt: skip
-    fig.legend(handles, ["D-B báo sự cố", "sự cố cài sẵn (đáp án)"], loc="upper right", ncol=2)
-    fig.suptitle("Tỷ lệ lỗi kỹ thuật theo giờ, bộ tuning", x=0.02, ha="left", fontsize=9)
+    fig.legend(
+        handles,
+        ["detector báo sự cố", "sự cố cài sẵn (đáp án)"],
+        loc="upper center",
+        ncol=2,
+        bbox_to_anchor=(0.5, 1.04),
+    )
     save(fig, "p01_failure")
 
 
 def p01_detectors(pub: dict) -> None:
     p01 = pub["product_01"]
     fig, ax = plt.subplots(figsize=(3.5, 2.5))
-    names = ["D-A z-score\n(cơ sở)", "D-B gộp cửa sổ\n(chính)"]
+    names = ["Detector z-score\n(đường cơ sở)", "Detector nhị thức\n(chính)"]
     keys = ["robust_z", "pooled"]
     w = 0.36
     for k, (stage, color, label) in enumerate(
-        [("tuning", MUTED, "tuning"), ("report", S1, "report (một lần)")]
+        [("tuning", MUTED, "bộ chỉnh ngưỡng"), ("report", S1, "bộ kiểm tra (một lần)")]
     ):
         vals = [p01[stage][d]["detected"] for d in keys]
         xs = [i + (k - 0.5) * w for i in range(2)]
@@ -151,19 +156,20 @@ def p02_calibration() -> None:
     ax.invert_yaxis()
     ax.set_ylim(2.5, -0.9)
     ax.xaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
-    ax.set_title("Xác suất trung bình trên V3", fontsize=10, loc="left")
+    ax.set_title("Xác suất dự đoán trung bình", fontsize=9, loc="left")
     ax = axes[1]
     for i, (_, k, color) in enumerate(rows):
         ax.barh(i, v3[k]["log_loss"], color=color, height=0.6)
         ax.text(v3[k]["log_loss"] + 0.005, i, vn(v3[k]["log_loss"]), va="center", fontsize=9)
     ax.set_yticks(range(3), ["", "", ""])
     ax.set_ylim(2.5, -0.9)
-    ax.set_title("Log loss trên V3 (thấp hơn là tốt)", fontsize=10, loc="left")
+    ax.set_title("Log loss (thấp hơn là tốt)", fontsize=9, loc="left")
     save(fig, "p02_calibration")
 
 
 POLICY = {
-    "none": "Không cảnh báo", "max_f1": "Ngưỡng max F1 (mốc)", "cost_v2": "Ngưỡng chi phí (V2)",
+    "none": "Không cảnh báo", "max_f1": "Ngưỡng F1 tốt nhất (mốc)",
+    "cost_v2": "Ngưỡng chi phí cố định",
     "rule_raw": "Luật chi phí, điểm gốc", "rule_calibrated": "Luật chi phí, đã hiệu chỉnh",
     "top_0.5%": "Top 0,5%/ngày", "top_1%": "Top 1%/ngày", "top_2%": "Top 2%/ngày",
     "top_5%": "Top 5%/ngày",
@@ -184,16 +190,17 @@ def p02_policy() -> None:
     ax.invert_yaxis()
     ax.set_xticks([0, 50000, 100000, 150000, 200000])
     ax.xaxis.set_major_formatter(lambda v, _: f"{v / 1000:.0f}k")
-    ax.set_xlabel("tổng chi phí giả định trên V3 (CI bootstrap theo ngày)")
+    ax.set_xlabel("tổng chi phí giả định (đơn vị tương đối)")
     save(fig, "p02_policy")
 
 
 def p02_transfer() -> None:
     res = bundle("pol")
-    pts = [("V2 → V3", res["transfer_v3"])] + [
-        (f"{r['window']}: {r['select']} → {r['evaluate']}", r["transfer"]) for r in res["rolling"]
+    pts = [("khối chọn → khối đánh giá", res["transfer_v3"])] + [
+        (f"tuần {r['select'][1:]} → tuần {r['evaluate'][1:]}", r["transfer"])
+        for r in res["rolling"]
     ]
-    fig, ax = plt.subplots(figsize=(2.9, 2.2))
+    fig, ax = plt.subplots(figsize=(3.2, 2.2))
     ax.axvline(0.05, color=INK, ls="--", lw=1.2)
     ax.text(0.0505, -0.55, "mục tiêu 5%", fontsize=8)
     for i, (_, t) in enumerate(pts):
@@ -204,14 +211,13 @@ def p02_transfer() -> None:
     ax.set_xlim(0.03, 0.065)
     ax.set_xticks([0.03, 0.04, 0.05, 0.06])
     ax.xaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
-    ax.set_xlabel("FPR thực tế ở khối sau")
+    ax.set_xlabel("tỷ lệ báo nhầm thực tế ở giai đoạn sau")
     save(fig, "p02_transfer")
 
 
 def p02_stability() -> None:
     weeks = bundle("stab")["weekly"]
     xs = list(range(len(weeks)))
-    labels = [("T" if w["part"] == "train" else "V") + str(w["week"]) for w in weeks]
     fig, axes = plt.subplots(2, 1, figsize=(3.6, 2.5), sharex=True,
                              gridspec_kw={"height_ratios": [3, 2]})  # fmt: skip
     ax = axes[0]
@@ -220,11 +226,15 @@ def p02_stability() -> None:
         ax.plot(*zip(*pts, strict=True), "o-", color=color, ms=4, lw=1.6, label=name)
     ax.set_ylabel("PR-AUC")
     ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2)
+    first_valid = next(i for i, w in enumerate(weeks) if w["part"] == "valid")
+    for a in axes:
+        a.axvspan(first_valid - 0.5, len(weeks) - 0.5, color=S1, alpha=0.06, lw=0)
     ax = axes[1]
     ax.plot(xs, [w["prevalence"] for w in weeks], "o-", color=S3, ms=3.5, lw=1.4)
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
     ax.set_ylabel("tỷ lệ gian lận")
-    ax.set_xticks(xs, [lab if i % 2 == 0 else "" for i, lab in enumerate(labels)], fontsize=7)
+    ax.set_xticks(xs[::3], [str(i + 1) for i in xs[::3]], fontsize=7)
+    ax.set_xlabel("tuần (nền xanh: validation)")
     save(fig, "p02_stability")
 
 
@@ -250,8 +260,9 @@ def p02_scores(ctx) -> None:
 
 
 def tests_progress() -> None:
-    steps = [("G00 mốc", 381), ("G05", 414), ("G07", 429), ("G08", 439), ("demo + G09", 443),
-             ("có PostgreSQL", 454), ("UI", 460), ("dashboard 1 trang", 463)]  # fmt: skip
+    steps = [("đầu tuần", 381), ("độ ổn định", 414), ("đóng gói", 429), ("chấm điểm lô", 439),
+             ("demo", 443), ("có PostgreSQL", 454), ("giao diện", 460),
+             ("dashboard", 463)]  # fmt: skip
     fig, ax = plt.subplots(figsize=(3.5, 2.4))
     ax.plot(range(len(steps)), [s[1] for s in steps], "o-", color=S1, lw=1.8, ms=5)
     for i, (_, n) in enumerate(steps):

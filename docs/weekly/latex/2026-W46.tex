@@ -21,8 +21,6 @@
 \definecolor{warnC}{HTML}{B7791F}
 \definecolor{warnL}{HTML}{FDF3E1}
 \definecolor{okC}{HTML}{2E8B3E}
-\definecolor{okL}{HTML}{E3F5E6}
-\definecolor{badC}{HTML}{D03B3B}
 \definecolor{ink2}{HTML}{52514E}
 
 \usepackage{graphicx}
@@ -34,6 +32,20 @@
 \usepackage{caption}\captionsetup{font=small,labelfont={bf,color=navy}}
 \usepackage{float}
 \usepackage{fontawesome5}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\definecolor{s1}{HTML}{2A78D6}
+\definecolor{s2}{HTML}{EB6834}
+\definecolor{soft}{HTML}{EEF4FC}
+\definecolor{muted}{HTML}{C3C2B7}
+\tikzset{
+  arr/.style={-{Stealth[length=1.8mm]},line width=0.7pt,color=ink2},
+  stage/.style={rounded corners=2pt,draw=navy,fill=navy,text=white,align=center,
+    font=\scriptsize\bfseries,text width=27.5mm,minimum height=9mm,inner sep=1pt},
+  prod/.style={rounded corners=3pt,draw=muted,fill=white,align=center,font=\scriptsize,
+    text width=27.5mm,minimum height=12mm,inner sep=1pt,text=ink2},
+  pick/.style={prod,draw=s1,fill=soft,text=navy,line width=0.9pt},
+}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xurl}
 
@@ -58,52 +70,86 @@
 
 \begin{document}
 
-% ---------- Tiêu đề ----------
 \begin{tcolorbox}[enhanced,colback=navy,colframe=navy,arc=3pt,left=12pt,right=12pt,top=10pt,bottom=10pt]
   \color{white}
   {\Large\bfseries Báo cáo tuần 2026-W46}\\[2pt]
   {\small 09/11 – 15/11/2026 · viết ngày 12/11/2026}\\[6pt]
   {\small\textbf{Người thực hiện:} Đỗ Trung Tuyến \quad
-   \textbf{Đề tài:} Payment Intelligence Ecosystem \quad
-   \textbf{Giai đoạn:} Stage G (sau lịch 6 tuần)}
+   \textbf{Đề tài:} Payment Intelligence Ecosystem}
 \end{tcolorbox}
+
+\textbf{Bối cảnh.} Đề tài xây một hệ thống dữ liệu thanh toán gồm \textbf{nhiều sản phẩm nhỏ} trên
+\textbf{một nền tảng dùng chung}; mỗi sản phẩm phục vụ một khâu của giao dịch (định tuyến, kiểm tra
+rủi ro, xử lý qua nhà cung cấp, đối soát, tranh chấp). Hai sản phẩm đang làm là
+\textbf{Payment Reliability} (giám sát và phát hiện sự cố nhà cung cấp) và \textbf{Fraud \& Risk}
+(chấm điểm rủi ro gian lận). Tuần này tập trung vào việc dùng điểm rủi ro để ra quyết định và đóng gói
+hệ thống để người khác chạy lại được.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[x=1mm,y=1mm]
+    \foreach \i/\t in {0/1. Định tuyến,1/2. Kiểm tra rủi ro,2/3. Xử lý qua\\nhà cung cấp,3/4. Đối soát\\\& quyết toán,4/5. Tranh chấp\\\& hoàn tiền}
+      \node[stage] (s\i) at (\i*34,26) {\t};
+    \foreach \a/\b in {0/1,1/2,2/3,3/4} \draw[arr,navy] (s\a) -- (s\b);
+    \node[prod] (p0) at (0,6)   {\textbf{Smart Routing}\\chọn nhà cung cấp};
+    \node[pick] (p1) at (34,6)  {\textbf{Fraud \& Risk}\\chấm điểm gian lận};
+    \node[pick] (p2) at (68,6)  {\textbf{Payment Reliability}\\giám sát, phát hiện sự cố};
+    \node[prod] (p3) at (102,6)  {\textbf{Reconciliation}\\khớp giao dịch, tiền về};
+    \node[prod] (p4) at (136,6) {\textbf{Dispute}\\xử lý chargeback};
+    \foreach \i in {0,...,4} \draw[arr] (s\i) -- (p\i);
+    \draw[s2,line width=1.4pt] (34,6) ellipse (17mm and 10.5mm);
+    \draw[s2,line width=1.4pt] (68,6) ellipse (17mm and 10.5mm);
+    \foreach \x in {34,68} \node[font=\scriptsize\bfseries,text=s2] at (\x,-6.5) {đang làm};
+    \foreach \x in {0,102,136} \node[font=\scriptsize,text=ink2] at (\x,-6.5) {chưa làm};
+    \node[rounded corners=3pt,draw=navy,fill=navy!8,align=center,font=\small,
+          minimum width=166mm,minimum height=9mm] (base) at (68,-17)
+      {\textbf{Nền tảng dữ liệu chung}: định dạng sự kiện · quản lý dataset · quy tắc đánh giá · PostgreSQL};
+    \foreach \i in {0,...,4} \draw[muted,line width=0.7pt] (\i*34,-9) -- (\i*34,-12.5);
+  \end{tikzpicture}
+  \caption{Sơ đồ hệ thống theo vòng đời giao dịch}
+\end{figure}
 
 \begin{keypoint}
 \begin{itemize}
-  \item \textbf{Stage G (từ điểm số đến quyết định)} xong G01–G09: hiệu chỉnh xác suất, so sánh chính
-        sách theo chi phí giả định, độ ổn định theo tuần, đóng gói tái lập, bộ chấm điểm theo lô.
-        Mọi kết quả mới là \textbf{thăm dò}, chỉ dùng train + validation; tập test \textbf{không} bị mở lại.
-  \item \textbf{\texttt{make demo}} chạy đầu-cuối cả hai sản phẩm trên máy chủ dự án (Docker Desktop):
-        khớp số đã công bố (D-B 3/4, 0 báo nhầm/ngày; lệch chấm điểm 0).
-  \item \textbf{Giao diện}: terminal demo dùng \texttt{rich} (ADR 0011); dashboard viết lại thành một trang
-        có thanh điều hướng, luồng pipeline, biểu đồ.
-  \item \textbf{Chất lượng}: 381 → \textbf{463 test pass} (1 skip), lint sạch; 23 commit trên 11 nhánh, chờ
-        mở PR và CI.
+  \item Fraud \& Risk: hoàn thành phần “từ điểm số đến quyết định”: hiệu chỉnh xác suất, so sánh chính
+        sách cảnh báo theo chi phí giả định, độ ổn định theo tuần, chấm điểm theo lô. Chỉ dùng dữ liệu
+        huấn luyện và validation; tập test \textbf{không} bị mở lại.
+  \item Một lệnh \texttt{make demo} chạy cả hai sản phẩm trên máy chủ dự án, khớp kết quả đã công bố.
+  \item Giao diện terminal và dashboard được làm lại; có slide trình bày.
+  \item Kiểm thử tự động: 381 → \textbf{463 đạt}; chờ mở pull request để CI chạy.
 \end{itemize}
 \end{keypoint}
+
+\begin{small}
+\textbf{Thuật ngữ.} \textbf{PR-AUC}: khả năng xếp giao dịch gian lận lên đầu danh sách (0 → 1; đoán
+ngẫu nhiên $\approx$ 0,035). \textbf{Tỷ lệ báo nhầm (FPR)}: phần giao dịch hợp lệ bị cảnh báo.
+\textbf{Validation}: dữ liệu để chọn mô hình và ngưỡng; tuần này chia theo thời gian thành ba khối
+\emph{hiệu chỉnh}, \emph{chọn}, \emph{đánh giá}. \textbf{Test}: dữ liệu đánh giá cuối, chỉ mở một lần.
+\textbf{CI}: kiểm thử tự động trên GitHub mỗi khi mở pull request.
+\end{small}
 
 % =====================================================================
 \section{Công việc đã làm}
 
 \begin{small}
 \renewcommand{\arraystretch}{1.25}
-\begin{longtable}{@{}p{0.5cm}p{5.8cm}p{3.1cm}p{5.9cm}@{}}
+\begin{longtable}{@{}p{0.5cm}p{6.6cm}p{1.6cm}p{6.6cm}@{}}
 \toprule
-\textbf{} & \textbf{Việc} & \textbf{Nhánh / commit} & \textbf{Kiểm chứng} \\
+ & \textbf{Việc} & \textbf{Commit} & \textbf{Kiểm chứng} \\
 \midrule
 \endhead
-\ok & G01 đặc tả protocol Stage G, chia validation thành V1 / V2 / V3; ADR 0009 & \run{g01} · \run{e2f962b} & Chủ dự án duyệt D1–D8 \\
-\ok & G02 tách bảng “chất lượng xếp hạng” và “ngưỡng chốt trước” (README, báo cáo, dashboard) & \run{g02} · \run{dba37f6} & Không còn chỗ đọc 0,51 như hiệu quả triển khai \\
-\ok & G03 hiệu chỉnh xác suất & \run{g03} · \run{50d01de} & \run{cal-04b3ad5944ce}; chạy 3 lần trùng từng byte \\
-\ok & G04 so sánh chính sách (27 tổ hợp chi phí giả định) & \run{g04} · \run{fb53035} & \run{pol-af5df43efe54} \\
-\ok & G05 độ ổn định theo tuần và nhóm & \run{g05} · \run{ed54347} & \run{stab-36887d48b356} \\
-\ok & G06 báo cáo Stage G & \run{g06} · \run{82705cb} & Mọi số kèm mã lần chạy \\
-\wait & G07 tách \texttt{experiment\_id} / \texttt{execution\_id} (ADR 0010), CI có PostgreSQL, kiểm sổ test-một-lần, gói \texttt{results/} & \run{g07} · \run{08c569d} & Test pass trên máy; \textbf{chờ CI xanh} \\
-\ok & G08 bộ chấm điểm theo lô (\texttt{make score-model}, \texttt{make score}) & \run{g08} · \run{7ab81f6} & Lệch huấn luyện–chấm điểm 0 trên 2.000 dòng; phá hoại có chủ đích bị 2 test bắt \\
-\ok & \texttt{make demo} cho hai sản phẩm; chạy được từ PowerShell; kiểm tra PostgreSQL trước khi chạy & \run{g08b}, \run{g08c} · \run{f8c1d70} & Chạy thật trên Docker Desktop, 7/7 kiểm tra đạt \\
-\ok & G09 đồng bộ tài liệu; báo cáo thực tập mục 4.6 (PDF 25 trang); ADR 0002 Accepted & \run{g09} · \run{215df5f} & Đã xem từng trang mới \\
-\wait & G10 đặc tả thử nghiệm độ bền (sự cố tăng dần, nạp trùng/muộn, lật nhãn) & \run{g10} · \run{c55b3ba} & \textbf{Chờ duyệt D1–D9}, chưa code \\
-\ok & G11 terminal \texttt{rich} (ADR 0011); dashboard một trang; slide và báo cáo tuần LaTeX & \run{g11} · \run{4a0b68b}+ & Xem ảnh chụp sáng/tối/màn hẹp; 463 pass \\
+\ok & Đặc tả quy trình đánh giá mới: chia validation thành ba khối theo thời gian & \run{e2f962b} & Chủ dự án duyệt \\
+\ok & Tách hai bảng kết quả: chất lượng xếp hạng và hiệu quả của ngưỡng chốt trước & \run{dba37f6} & README, báo cáo, dashboard thống nhất \\
+\ok & Hiệu chỉnh xác suất & \run{50d01de} & Chạy 3 lần, kết quả trùng từng byte \\
+\ok & So sánh chính sách cảnh báo (27 tổ hợp chi phí giả định) & \run{fb53035} & Có khoảng tin cậy theo ngày \\
+\ok & Độ ổn định theo tuần và theo nhóm khách hàng & \run{ed54347} & Cảnh báo nhóm cỡ mẫu nhỏ \\
+\ok & Báo cáo tổng hợp phần ra quyết định & \run{82705cb} & Mọi số kèm mã lần chạy \\
+\wait & Đóng gói: tách mã cấu hình và mã lần chạy, CI có PostgreSQL, kiểm tra sổ ghi lần chạy test & \run{08c569d} & Đạt trên máy; \textbf{chờ CI} \\
+\ok & Chấm điểm theo lô (\texttt{make score-model}, \texttt{make score}) & \run{7ab81f6} & Điểm lô trùng điểm lúc huấn luyện \\
+\ok & \texttt{make demo} cho hai sản phẩm, chạy được từ PowerShell & \run{f8c1d70} & Chạy thật trên Docker, 7/7 kiểm tra đạt \\
+\ok & Đồng bộ tài liệu; báo cáo thực tập thêm phần ra quyết định (25 trang) & \run{215df5f} & Đã xem từng trang \\
+\ok & Giao diện terminal, dashboard một trang, slide và báo cáo tuần LaTeX & \run{103419a}+ & Xem ảnh chụp sáng/tối/màn hẹp \\
+\wait & Đặc tả thử nghiệm độ bền (sự cố tăng dần, dữ liệu trùng/muộn, nhãn sai) & \run{c55b3ba} & \textbf{Chờ duyệt}, chưa code \\
 \bottomrule
 \end{longtable}
 \end{small}
@@ -113,111 +159,106 @@
 
 \begin{small}
 \renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{\textwidth}{@{}p{3.4cm}X p{2.9cm}p{2cm}@{}}
+\begin{tabularx}{\textwidth}{@{}p{3.6cm}X p{2.2cm}@{}}
 \toprule
-\textbf{Câu hỏi} & \textbf{Quan sát} & \textbf{Mã lần chạy} & \textbf{Loại} \\
+\textbf{Câu hỏi} & \textbf{Quan sát} & \textbf{Loại} \\
 \midrule
-Mô hình chính (trích lại) & GBM PR-AUC test 0,408 [0,390; 0,424]; ngưỡng 0,853: precision 0,516, recall 0,371, FPR 1,24\% & \run{run-f8807cb6f780} & Test một lần (Stage E) \\
-Điểm có phải xác suất? & Không: trung bình điểm 26,1\% so với 3,5\% thật ($\approx$7 lần). Platt (fit V1) đưa log loss V3 0,351 → 0,109 & \run{cal-04b3ad5944ce} & Thăm dò \\
-Ngưỡng có “chuyển” được? & Ngưỡng FPR 5\% chọn ở khối trước cho FPR thực tế 3,9–5,6\% ở khối sau & \run{pol-af5df43efe54} & Thăm dò \\
-Chính sách nào rẻ nhất? & Luật chi phí theo số tiền, dùng xác suất đã hiệu chỉnh: 27/27 tổ hợp chi phí \textbf{giả định} & \run{pol-af5df43efe54} & Độ nhạy, không phải ROI \\
-Có ổn định theo thời gian? & PR-AUC tuần validation 0,35–0,56; PSI 4 đầu vào < 0,05 không giải thích được hai tuần cuối & \run{stab-36887d48b356} & Thăm dò \\
-Chấm điểm theo lô đúng? & Điểm lô trùng điểm lúc huấn luyện (chênh 0); từ chối cột nhãn và dòng giai đoạn test & \run{score-19e94be9616d} & Kiểm thử kỹ thuật \\
-Product 01 tái lập? & \texttt{make demo}: D-B 3/4 (0 báo nhầm/ngày), D-A 2/4 (1,0) trên bộ tuning, khớp công bố & \run{det-3ddc26cff253} & Tuning \\
+Mô hình chính tốt đến đâu? & Gradient Boosting: PR-AUC test 0,408 [0,390; 0,424]; với ngưỡng chốt trước: precision 0,516, recall 0,371, báo nhầm 1,24\% & Test một lần (trích lại) \\
+Điểm có phải xác suất? & Không: trung bình điểm 26,1\% so với 3,5\% gian lận thật. Hiệu chỉnh Platt đưa log loss 0,351 → 0,109 & Thăm dò \\
+Ngưỡng có giữ được? & Ngưỡng báo nhầm 5\% chọn ở giai đoạn trước cho 3,9–5,6\% ở giai đoạn sau & Thăm dò \\
+Chính sách nào rẻ nhất? & Luật chi phí theo số tiền, dùng xác suất đã hiệu chỉnh: 27/27 tổ hợp chi phí \textbf{giả định} & Độ nhạy, không phải ROI \\
+Có ổn định theo thời gian? & PR-AUC theo tuần validation 0,35–0,56; phân phối đầu vào gần như không đổi nên chưa giải thích được hai tuần cuối & Thăm dò \\
+Chấm điểm theo lô đúng? & Trùng điểm lúc huấn luyện (chênh 0); từ chối file có cột nhãn hoặc dòng thuộc giai đoạn test & Kiểm thử kỹ thuật \\
+Payment Reliability tái lập? & Detector nhị thức bắt 3/4 sự cố, 0 báo nhầm/ngày; detector z-score 2/4, 1,0 & Bộ chỉnh ngưỡng \\
 \bottomrule
 \end{tabularx}
 \end{small}
 
+{\footnotesize\color{ink2} “Thăm dò”: chỉ dùng train và validation; validation đã được dùng nhiều lần nên
+số có thể lạc quan. Mã lần chạy của từng số nằm trong \texttt{docs/architecture/stage-g-report.md}.}
+
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.92\linewidth]{\fig/p02_calibration.pdf}
-  \caption{Hiệu chỉnh trên khối V3: điểm gốc thổi lên khoảng 7 lần; Platt và dịch tiên nghiệm đưa xác
-  suất trung bình về gần tỷ lệ gian lận thật. PR-AUC không đổi (hiệu chỉnh đơn điệu).}
+  \includegraphics[width=0.88\linewidth]{\fig/p02_calibration.pdf}
+  \caption{Hiệu chỉnh xác suất}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   \begin{minipage}[t]{0.55\linewidth}\centering
     \includegraphics[width=\linewidth]{\fig/p02_policy.pdf}
-    \caption{Tổng chi phí giả định trên V3 (mất $0{,}75\times$ số tiền, duyệt 5, nhầm 1).}
+    \caption{Tổng chi phí giả định theo chính sách}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.42\linewidth}\centering
     \includegraphics[width=\linewidth]{\fig/p02_stability.pdf}
-    \caption{PR-AUC và tỷ lệ gian lận theo tuần (T: train, trong mẫu; V: validation).}
+    \caption{PR-AUC và tỷ lệ gian lận theo tuần}
   \end{minipage}
 \end{figure}
 
 % =====================================================================
 \section{Demo và giao diện}
 
-\texttt{make up} rồi \texttt{make demo} chạy Product 01 (sinh dữ liệu → PostgreSQL → KPI → detector →
-dashboard) và Product 02 (huấn luyện bộ chấm điểm → chấm 2.000 giao dịch). Terminal hiện sản phẩm đang
-chạy, phần trăm tiến độ, bảng kết quả và danh sách kiểm tra. Stage G chạy lại bằng
-\texttt{make calibration policy stability} (cần dataset); hình trong báo cáo này: \texttt{make slides-figures}.
-Dashboard (\texttt{artifacts/dashboard/index.html}) là một trang HTML tĩnh mở offline:
+\texttt{make up} rồi \texttt{make demo} chạy Payment Reliability (sinh dữ liệu → PostgreSQL → chỉ số 15
+phút → detector → dashboard) và Fraud \& Risk (huấn luyện bộ chấm điểm → chấm 2.000 giao dịch). Terminal
+hiện sản phẩm đang chạy, phần trăm tiến độ, bảng kết quả và danh sách kiểm tra. Dashboard là một trang
+HTML tĩnh, mở được không cần mạng.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.95\linewidth]{\fig/dashboard_top.png}
-  \caption{Dashboard sau \texttt{make demo}: số liệu chính và luồng pipeline của hai sản phẩm (\faCheck\ đã chạy,
-  \faLock\ tập test chỉ đánh giá một lần). Phía dưới có biểu đồ theo giờ, bảng sự cố, kết quả Stage G.}
+  \caption{Dashboard sau khi chạy demo}
 \end{figure}
 
 % =====================================================================
-\section{Chất lượng và tự kiểm tra}
+\section{Chất lượng}
 
 \begin{minipage}[c]{0.46\linewidth}
+  \centering
   \includegraphics[width=\linewidth]{\fig/tests_progress.pdf}
+  \captionof{figure}{Số kiểm thử đạt trong tuần}
 \end{minipage}\hfill
 \begin{minipage}[c]{0.5\linewidth}\small
 \begin{itemize}
-  \item Số test pass tăng 381 → 463 (1 skip là hook git); 7 test database chạy thật với PostgreSQL.
-  \item Mỗi lệnh Stage G chạy ít nhất 2–3 lần, \texttt{results.json} trùng từng byte.
-  \item Tự kiểm tra: đảo nhãn, nhìn tương lai, tính lại độc lập, phá hoại có chủ đích (ví dụ lệch
-        \texttt{hour\_of\_day} 7 giờ khi chấm điểm bị 2 test bắt).
-  \item Kiểm tra trên Python 3.11 bằng ruff (máy chỉ có 3.12); CI chạy 3.11 và 3.13.
+  \item 463 kiểm thử đạt, 1 bỏ qua; 7 kiểm thử cơ sở dữ liệu chạy với PostgreSQL thật.
+  \item Mỗi thí nghiệm chạy ít nhất hai lần, kết quả trùng từng byte.
+  \item Tự kiểm tra: đảo nhãn, đổi dữ liệu tương lai, tính lại bằng cách khác, cố tình gây lỗi để xem
+        kiểm thử có bắt được không.
 \end{itemize}
 \end{minipage}
 
-\begin{warnbox}{Vi phạm quy tắc đã phát hiện và sửa trong tuần}
-\small Dashboard cũ đọc \texttt{artifacts/runs/run-f8807cb6f780/test/metrics.json} để hiện số test, và
-từ khi có \texttt{make demo}, mỗi lần chạy demo trên máy chủ dự án đều đọc file này. File chỉ chứa số
-đã công bố (không có đánh giá lại trên tập test), nhưng việc đọc vi phạm quy tắc “không đọc thư mục
-test”. \textbf{Khắc phục}: số test và số bộ report nay chỉ trích từ \texttt{results/published.json} (trong
-git); thêm test cài giá trị mồi vào \texttt{runs/*/test/} để chặn tái diễn.
+\begin{warnbox}{Vi phạm quy tắc đã phát hiện và sửa}
+\small Dashboard cũ đọc file kết quả trong thư mục test để hiện số test; mỗi lần chạy demo đều đọc
+file này. File chỉ chứa số đã công bố (không có đánh giá lại), nhưng vẫn vi phạm quy tắc “không đọc thư
+mục test”. \textbf{Khắc phục}: số test nay chỉ trích từ \texttt{results/published.json} trong git; có kiểm
+thử chặn tái diễn.
 \end{warnbox}
 
 % =====================================================================
-\section{Hạn chế (kết quả tuần này không chứng minh)}
+\section{Hạn chế}
 
 \begin{itemize}
-  \item Không chứng minh hiệu quả khi vận hành và không phải ROI: chi phí trong G04 là giả định.
+  \item Không chứng minh hiệu quả khi vận hành, không phải ROI: chi phí là giả định.
   \item “27/27” có phần đúng theo cách xây dựng: luật chi phí được chấm bằng chính hàm chi phí nó tối ưu.
-  \item Validation đã bị dùng nhiều lần (lưới GBM, rò rỉ, đặc trưng lịch sử), nên số Stage G có thể lạc quan.
-  \item Config Stage G được commit cùng code sau lần chạy đầu, dù viết trước và chạy lại trùng từng byte.
-  \item Product 01 chỉ có 4 sự cố mỗi bộ, dữ liệu giả lập; hai sản phẩm vẫn không chung dữ liệu.
-  \item CI (test database thật, job \texttt{demo}, job kiểm sổ) chưa được xác nhận xanh vì chưa mở PR.
+  \item Validation đã dùng nhiều lần nên các số thăm dò có thể lạc quan.
+  \item Payment Reliability dùng dữ liệu giả lập, mỗi bộ chỉ 4 sự cố; hai sản phẩm chưa chung dữ liệu.
+  \item CI chưa chạy vì chưa mở pull request.
 \end{itemize}
 
 % =====================================================================
 \section{Kế hoạch tuần sau}
 
 \begin{enumerate}
-  \item Mở chuỗi PR xếp chồng (g01 → \texttt{main}, g02 → g01, …, g11 → g08c), xác nhận CI xanh, merge từ dưới lên.
-  \item G10 thử nghiệm độ bền, nếu chủ dự án duyệt D1–D9.
-  \item Tập trình bày bằng slide (\texttt{docs/slides/slides.pdf}) và demo 5 phút.
-  \item Cập nhật hình dashboard trong báo cáo thực tập (hiện còn bản Stage F).
+  \item Mở chuỗi pull request, xác nhận CI xanh, merge vào \texttt{main}.
+  \item Thử nghiệm độ bền nếu được duyệt.
+  \item Tập trình bày bằng slide và demo 5 phút.
 \end{enumerate}
 
-% =====================================================================
 \section{Cần mentor / chủ dự án quyết định}
 
 \begin{itemize}
-  \item Duyệt đặc tả G10 (\texttt{docs/architecture/stage-g10-spec.md}), đặc biệt D1 (không tăng
-        \texttt{GENERATOR\_VERSION}) và D2 (nơi chạy phần cần PostgreSQL).
-  \item Có cần nối hai sản phẩm thành một pipeline không? Đề xuất: không, vì không có dataset công khai
-        chung khoá giao dịch; trình bày là một nền tảng, hai pipeline.
+  \item Duyệt đặc tả thử nghiệm độ bền (\texttt{docs/architecture/stage-g10-spec.md}).
+  \item Có cần nối hai sản phẩm thành một pipeline không? Đề xuất: chưa, vì không có dataset công khai
+        chung mã giao dịch; giữ một nền tảng, nhiều sản phẩm.
 \end{itemize}
-
 
 \end{document}
