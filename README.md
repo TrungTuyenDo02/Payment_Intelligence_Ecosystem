@@ -19,7 +19,7 @@ Không dùng dữ liệu thật của công ty. Toàn bộ chạy trên máy cá
 | Dữ liệu | Product 01 là dữ liệu **giả lập** (4 sự cố mỗi bộ); Product 02 là dataset công khai IEEE-CIS, ý nghĩa nhiều cột đã bị ẩn danh, `C1–C14` mang gần hết tín hiệu nhưng chưa xác minh nghĩa |
 | Con số đánh giá | Đo trên dữ liệu lịch sử, một lần cắt theo thời gian. Không phải cam kết hiệu quả khi vận hành; chưa có thử nghiệm A/B hay dữ liệu chi phí thật |
 | Điểm vận hành | Recall tại FPR 5% chọn ngưỡng bằng nhãn của chính tập đánh giá, nên chỉ đo chất lượng xếp hạng. Hiệu quả của một ngưỡng đã chốt trước xem ở bảng riêng (mục Stage E) |
-| Chấm điểm | Không có API chấm điểm, không theo dõi mô hình, không huấn luyện lại định kỳ, không xác thực người dùng |
+| Chấm điểm | Chỉ có bộ chấm điểm **theo lô** trên file CSV (`make score`, chỉ dữ liệu phát triển). Không có API, không theo dõi mô hình, không huấn luyện lại định kỳ, không xác thực người dùng |
 | Nhãn | Giả định nhãn gian lận có ngay; thực tế chargeback đến muộn nhiều tuần ([ADR 0003](docs/decisions/0003-label-delay-and-entity-overlap.md)) |
 
 ## Hệ thống
@@ -137,6 +137,8 @@ make lint test
 | `make leakage` | Thí nghiệm rò rỉ dữ liệu (chỉ trên validation) |
 | `make dashboard` | Dashboard HTML cho cả hai sản phẩm, ghi vào `artifacts/dashboard/index.html` |
 | `make gbm` / `make gbm-final` | Gradient Boosting trên validation / đánh giá test một lần với config đã `frozen` (chỉ chủ dự án chạy) |
+| `make calibration` / `make policy` / `make stability` | Stage G (thăm dò, chỉ train + validation): hiệu chỉnh xác suất, so sánh chính sách, độ ổn định ([báo cáo Stage G](docs/architecture/stage-g-report.md)) |
+| `make score-model` / `make score` | Bộ chấm điểm theo lô: huấn luyện và lưu vào `artifacts/models/` / chấm một CSV giao dịch không nhãn (`INPUT=...`; mặc định là mẫu 2.000 dòng validation). Từ chối dòng thuộc giai đoạn test |
 
 **Dữ liệu IEEE-CIS:** tải [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection) từ Kaggle (cần đăng nhập và chấp nhận điều khoản cuộc thi), đặt `train_transaction.csv` và `train_identity.csv` vào `datasets/raw/ieee-cis/` (không commit). Tạo manifest checksum:
 

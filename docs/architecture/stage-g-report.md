@@ -12,6 +12,7 @@
 | G03 | Điểm có đọc như xác suất được không? | Không: trung bình điểm GBM gấp khoảng 7 lần tỷ lệ gian lận thật. Dịch tiên nghiệm và Platt đều sửa được phần lớn (log loss V3 0,35 → 0,11); hai cách gần như ngang nhau; cả hai đi trễ so với trôi theo tuần | `cal-04b3ad5944ce` | `50d01de` |
 | G04 | Dùng điểm ra quyết định thế nào? | Luật chi phí theo số tiền, dùng xác suất đã hiệu chỉnh, có chi phí thấp nhất ở 27/27 tổ hợp chi phí giả định và 4/4 cửa sổ cuốn chiếu; dùng điểm gốc thì luật này cảnh báo quá nhiều. Ngưỡng FPR 5% chọn trước cho FPR thực tế 3,9%–5,6% | `pol-af5df43efe54` | `fb53035` |
 | G05 | Mô hình ổn định đến đâu? | PR-AUC theo tuần validation 0,35–0,56, thấp nhất ở hai tuần cuối; PSI của 4 đầu vào đều dưới 0,05 nên không giải thích được sự sụt giảm. `ProductCD = W` (79% giao dịch) có recall @ FPR 5% thấp nhất (0,39) | `stab-36887d48b356` | `ed54347` |
+| G08 | Điểm được tạo ra theo lô thế nào? | `make score-model` rồi `make score` chấm một file CSV giao dịch (không có nhãn). Trên 2.000 dòng V3, điểm chấm theo lô trùng **đúng từng bit** với điểm lúc huấn luyện; tham số Platt trùng G03 | `score-19e94be9616d` | xem `HANDOFF.md` |
 
 Kết quả nằm trong `artifacts/experiments/<mã>/` (`results.json`, `summary.md`, hình, `config.yaml`, `environment.txt`, `git_sha.txt`). Thư mục `artifacts/` không nằm trong git; chạy lại bằng `make calibration`, `make policy`, `make stability` (cần dataset IEEE-CIS, khoảng 30–50 giây mỗi lệnh). Mỗi lệnh đã chạy ba lần (hai lần trước commit, một lần sau commit) và cho `results.json` trùng từng byte.
 
@@ -21,7 +22,7 @@ Từ G07 (ADR 0010), bản chép các file tóm tắt nằm trong git ở [`resu
 
 1. **Không chứng minh hiệu quả khi vận hành.** Mọi số liệu ở trên là dữ liệu lịch sử của validation, không phải số đo trên hệ thống thật hay trên dữ liệu mới.
 2. **Không phải ước lượng không thiên lệch.** Validation đã được dùng để chọn cấu hình GBM và cho nhiều thí nghiệm trước; V3 là một phần của validation đó. Tập test không được dùng lại (ADR 0009), nên Stage G không có con số "chưa thấy" nào.
-3. **Không phải ROI.** Chi phí là giả định; kết luận G04 chỉ đúng trong vùng giả định đã quét (`loss_rate` 0,5–1; `c_review` 1–25; `c_friction` 0–10) và với giả định mất mát tỷ lệ với số tiền.
+3. **Không phải ROI.** Chi phí là giả định; kết luận G04 chỉ đúng trong vùng giả định đã quét (`loss_rate` 0,5–1; `c_review` 1–25; `c_friction` 0–10) và với giả định mất mát tỷ lệ với số tiền. Riêng "27/27" có phần **đúng theo cách xây dựng**: luật chi phí là quy tắc tối thiểu chi phí kỳ vọng, và được chấm bằng đúng hàm chi phí giả định đó, nên nếu xác suất được hiệu chỉnh tốt thì về lý thuyết nó phải thắng. Điều kết quả thực sự cho thấy hẹp hơn: hiệu chỉnh fit trên V1 vẫn đủ tốt trên V3, và xét số tiền từng giao dịch có lợi hơn một ngưỡng điểm chung, **dưới hàm chi phí giả định**. Nó không cho biết luật này có tốt hơn khi mất mát thật khác giả định hay không.
 4. **Không chứng minh nguyên nhân** của trôi theo tuần (G05) hay của việc PR-AUC khác nhau giữa các khối.
 5. Giả định nhãn đến ngay (D3) làm mọi kết quả cần nhãn mới (hiệu chỉnh, chọn ngưỡng) lạc quan hơn thực tế.
 
@@ -228,3 +229,42 @@ Tỷ lệ thiếu: chỉ `card4` và `card6` có giá trị thiếu trong dữ l
 - Tuần có 400–1.050 gian lận nên PR-AUC từng tuần có sai số đáng kể; chưa có khoảng tin cậy theo tuần (không nằm trong danh sách đăng ký trước).
 - Tuần train là trong mẫu, nên không so trực tiếp với tuần validation được.
 - Nhóm chỉ xét theo hai cột; các nhóm giao nhau (ví dụ W × debit) chưa xét.
+
+## G08 — Bộ chấm điểm theo lô (`score-19e94be9616d`)
+
+Mục tiêu: biến Product 02 từ "bảng số đánh giá" thành thứ chạy được, nhận một bảng giao dịch và trả điểm, mà **không** mở tập test và không làm API (ngoài phạm vi).
+
+```bash
+make score-model                      # fit GBM trên train, Platt trên V1, lưu artifacts/models/score-<mã>/
+make score                            # chấm mẫu 2.000 dòng V3 không nhãn (sample_v3.csv)
+make score INPUT=<file.csv>           # chấm file khác cùng định dạng train_transaction.csv, không có cột isFraud
+```
+
+Đầu ra `artifacts/scores/<execution_id>.csv`: `TransactionID`, `score` (điểm gốc của GBM), `score_calibrated` (Platt fit trên V1), `model_version` (`score-<mã>`, cùng cách tính hash như các experiment Stage G, nên không đổi khi nâng thư viện), `feature_version` (`feat-v<FEATURES_VERSION>-<hash danh sách đặc trưng>`), `execution_id` (mỗi lần chấm một mã, ADR 0010). File `.json` cùng tên ghi SHA-256 của đầu vào, commit, và kết quả kiểm tra lệch huấn luyện–chấm điểm.
+
+**Thiết kế và lý do**
+
+- **Cùng một đường code.** Mô hình là đúng đối tượng `GbmModel` mà `prepare()` của Stage G đã fit và đã kiểm tra tái tạo PR-AUC validation 0,497. Đầu vào được đọc bằng cùng hàm đọc CSV và cùng kiểu dữ liệu như lúc huấn luyện (`read_transactions`), và đặc trưng được tạo bằng cùng `build_features`. Không có bản sao thứ hai của logic đặc trưng nên không có chỗ để lệch.
+- **Chỉ đặc trưng theo dòng.** Cấu hình `gbm.yaml` chỉ dùng cột của chính dòng đó (`log_amount`, `hour_of_day`, `C1–C14`, …). Đặc trưng lịch sử thực thể (ADR 0008) cần các giao dịch trước đó của cùng thẻ, mà một lô không mang theo, nên bộ chấm điểm **từ chối** config có đặc trưng lịch sử thay vì chấm sai một cách im lặng.
+- **Bộ chặn:** đầu vào có cột `isFraud` thì báo lỗi; có dòng sau `TransactionDT` 12.192.842 (thuộc giai đoạn test) thì báo lỗi; `TransactionID` trùng hoặc thiếu thì báo lỗi; Platt có hệ số dốc ≤ 0 thì báo lỗi.
+- **Hiệu chỉnh cố định từ G03** (`platt`, được chọn trên V2 trong `cal-04b3ad5944ce`), fit lại trên V1 qua `fit_calibrator`, hàm này từ chối mọi khối không có vai trò `calibrate`.
+
+**Kết quả trên dữ liệu thật** (thăm dò, chỉ dữ liệu phát triển)
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Lệch huấn luyện–chấm điểm | 2.000 dòng V3 đọc lại từ CSV: chênh tuyệt đối lớn nhất giữa điểm theo lô và điểm lúc huấn luyện là **0** |
+| Tham số Platt | slope 1,0971, intercept −3,0314: trùng từng chữ số với `cal-04b3ad5944ce` |
+| Tính độc lập | Tính lại `score_calibrated` bằng công thức Platt viết tay trên 1.000 dòng: chênh 0 |
+| Tái lập | `make score-model` hai lần: cùng `score-19e94be9616d`; `dev_scores.csv`, `sample_v3.csv`, `model_card.json` trùng từng byte; hai bản ghi `executions/exec-….json` |
+| Trung bình điểm trên mẫu | gốc 0,273; đã hiệu chỉnh 0,037 (cùng hướng với G03: điểm gốc bị thổi lên do `class_weight="balanced"`) |
+
+**Test tự động** (`tests/test_stage_g_scoring.py`, dữ liệu tổng hợp): điểm theo lô bằng điểm huấn luyện trên cùng dòng; đổi thứ tự hoặc cỡ lô không đổi điểm; đổi các dòng sau thời điểm t không đổi điểm các dòng trước t; có nhãn, có dòng giai đoạn test, ID trùng, đặc trưng lịch sử đều bị từ chối; đảo nhãn V2/V3 không đổi bộ hiệu chỉnh, còn đảo nhãn V1 (phá hoại) làm hệ số dốc âm và bị từ chối. **Phá hoại có chủ đích:** tạm dịch `hour_of_day` thêm 7 giờ ở bước chấm điểm, như một lỗi lệch múi giờ, thì cả test so khớp lẫn bước kiểm tra lệch của CLI đều thất bại; đã khôi phục.
+
+**Hạn chế (kết quả này không chứng minh):**
+
+- Không phải hệ thống chấm điểm vận hành: không có API, không xử lý dòng đến theo thời gian thực, không giám sát.
+- Kiểm tra lệch chỉ so được trên dòng đã có điểm lúc huấn luyện (validation). Với dữ liệu thật mới, nó chỉ bảo đảm **cùng code** cho ra cùng kết quả, không bảo đảm phân phối đầu vào giống lúc huấn luyện (xem G05).
+- `feature_version` dựa trên hằng số `FEATURES_VERSION` do người sửa code tự tăng; quên tăng thì hai phiên bản code đặc trưng có thể mang cùng mã.
+- `scorer.pkl` là pickle: chỉ nạp file do chính lệnh `score-model` tạo trong `artifacts/models/`; không nạp file từ nguồn khác.
+- `score_calibrated` kế thừa mọi hạn chế của G03: hiệu chỉnh đi trễ so với trôi tỷ lệ gian lận theo tuần.

@@ -102,6 +102,12 @@ def _read_csv(path: Path, known_dtypes: dict[str, str]) -> tuple[pd.DataFrame, l
     return frame, unexpected
 
 
+def read_transactions(path: Path | str) -> pd.DataFrame:
+    """One transaction CSV read with the same dtypes as `load_ieee_cis` (G08 batch scoring)."""
+    frame, _ = _read_csv(Path(path), TRANSACTION_DTYPES)
+    return frame
+
+
 def load_ieee_cis(
     data_dir: Path | str | None = None,
     *,

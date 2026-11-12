@@ -7,6 +7,12 @@ import numpy as np
 import pandas as pd
 
 LABEL = "isFraud"
+# Bump when the code of any feature changes its output for the same input (G08: the batch scorer
+# records it as part of `feature_version`, so scores made with different feature code differ).
+FEATURES_VERSION = 1
+# Derived features that read only the row itself. History features read earlier rows of the same
+# entity, so a batch scorer would need that history too (not supported by G08).
+ROW_LOCAL_DERIVED = frozenset({"log_amount", "hour_of_day"})
 # Never usable as model inputs: the label, a row ID, and the raw time/order key.
 FORBIDDEN_FEATURES = frozenset({LABEL, "TransactionID", "TransactionDT"})
 

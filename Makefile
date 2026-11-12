@@ -22,10 +22,10 @@ endif
 export PYTHONPATH := shared/dataset-management$(SEP)shared/synthetic-generator$(SEP)shared/dashboard$(SEP)projects/fraud-risk$(SEP)projects/payment-reliability
 
 
-.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability bundle verify-demo
+.PHONY: help setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score bundle verify-demo
 
 help:
-	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability bundle verify-demo"
+	@echo "Targets: setup hooks lint test up down eda baseline baseline-final report leakage gbm gbm-final simulate db-init ingest kpi detect tune detect-plot detect-report dashboard calibration policy stability score-model score bundle verify-demo"
 
 setup:
 ifeq ($(UV),)
@@ -90,6 +90,14 @@ policy:
 
 stability:
 	$(RUN) python -m fraud_risk.experiments.stability
+
+# G08 batch scorer (development data only). score-model: fit on train, calibrate on V1, save to
+# artifacts/models/. score: INPUT=<csv> (default: the label-free V3 sample) MODEL=<model folder>.
+score-model:
+	$(RUN) python -m fraud_risk.scoring.batch train
+
+score:
+	$(RUN) python -m fraud_risk.scoring.batch score $(if $(MODEL),--model-dir $(MODEL),) $(if $(INPUT),--input $(INPUT),)
 
 # Synthetic payment events (Stage C). CONFIG defaults to the demo scenario.
 SIM_CONFIG := $(if $(filter command line,$(origin CONFIG)),$(CONFIG),shared/synthetic-generator/configs/demo.yaml)
