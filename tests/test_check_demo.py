@@ -70,13 +70,15 @@ def fake_products(monkeypatch: pytest.MonkeyPatch, *, db: str | None, data: bool
     monkeypatch.setattr(demo, "database_problem", lambda: db)
     monkeypatch.setattr(demo, "DATASET", ROOT / ("pyproject.toml" if data else "missing.csv"))
 
-    def run_product(name: str, steps: list, bar: object) -> dict:
-        ran.append(name[:10])
+    def run_product(console: object, product: tuple, steps: list, *rest: object) -> dict:
+        ran.append(product[0])
         return {}
 
     monkeypatch.setattr(demo, "run_product", run_product)
-    monkeypatch.setattr(demo, "report_01", lambda out: [(True, "p01 ok")])
-    monkeypatch.setattr(demo, "report_02", lambda out: [(True, "p02 ok")])
+    monkeypatch.setattr(demo, "results_01", lambda out: demo.Result(checks=[(True, "p01 ok")]))
+    monkeypatch.setattr(demo, "results_02", lambda out: demo.Result(checks=[(True, "p02 ok")]))
+    monkeypatch.setattr(demo, "render_01", lambda console, res: None)
+    monkeypatch.setattr(demo, "render_02", lambda console, res: None)
     return ran
 
 
@@ -87,7 +89,7 @@ def test_demo_runs_both_products_and_prints_the_checklist(
     assert demo.main([]) == 0
     out = capsys.readouterr().out
     assert ran == ["Product 01", "Product 02"]
-    assert "✓ p01 ok" in out and "✓ p02 ok" in out and "2/2 kiểm tra đạt" in out
+    assert "p01 ok" in out and "p02 ok" in out and "2/2 kiểm tra đạt" in out
 
 
 def test_demo_without_postgres_skips_product_01_with_a_how_to(
@@ -95,8 +97,8 @@ def test_demo_without_postgres_skips_product_01_with_a_how_to(
 ) -> None:
     ran = fake_products(monkeypatch, db="no db: make up", data=True)
     assert demo.main([]) == 2  # a requested product could not run
-    captured = capsys.readouterr()
-    assert ran == ["Product 02"] and "make up" in captured.err and "Bỏ qua" in captured.out
+    out = capsys.readouterr().out
+    assert ran == ["Product 02"] and "make up" in out and "Bỏ qua" in out
 
 
 def test_demo_without_dataset_runs_product_01_only(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -108,7 +110,7 @@ def test_demo_without_dataset_runs_product_01_only(monkeypatch: pytest.MonkeyPat
 
 def test_demo_fails_when_a_check_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_products(monkeypatch, db=None, data=False)
-    monkeypatch.setattr(demo, "report_01", lambda out: [(False, "mismatch")])
+    monkeypatch.setattr(demo, "results_01", lambda out: demo.Result(checks=[(False, "x")]))
     assert demo.main(["--product", "01"]) == 1
 
 
@@ -116,9 +118,12 @@ def test_demo_step_failure_is_reported(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(demo, "run_step", lambda args: (False, "boom", 1.0))
-    assert demo.run_product("Product 01 — x", demo.STEPS_01, demo.Progress(6)) is None
-    err = capsys.readouterr().err
-    assert "THẤT BẠI" in err and "boom" in err
+    console = demo.Console(width=120)
+    progress = demo.Progress(console=console)
+    overall = progress.add_task("t", total=6)
+    assert demo.run_product(console, demo.P01, demo.STEPS_01, progress, overall) is None
+    out = capsys.readouterr().out
+    assert "THẤT BẠI" in out and "boom" in out
 
 
 def test_product_01_report_reads_the_detection_run(
@@ -138,9 +143,11 @@ def test_product_01_report_reads_the_detection_run(
     ev_path.write_text(json.dumps(ev), encoding="utf-8")
     monkeypatch.setattr(demo, "ARTIFACTS", artifacts)
     load = '{"rows_read": 9, "rows_accepted": 9, "rows_duplicate": 0, "rows_rejected": 0}'
-    checks = demo.report_01({"3": load})
-    assert [ok for ok, _ in checks] == [True, True, True, False]  # no dashboard in tmp
-    assert "x1,5 (prov_001)" in capsys.readouterr().out
+    res = demo.results_01({"3": load})
+    assert [ok for ok, _ in res.checks] == [True, True, True, False]  # no dashboard in tmp
+    assert res.rows[0][2] == "x1,5" and res.rows[0][4] == (True, 15.0)
+    demo.render_01(demo.Console(width=120), res)
+    assert "x1,5" in capsys.readouterr().out
 
 
 def test_demo_script_never_touches_the_report_simulation() -> None:

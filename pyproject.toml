@@ -21,6 +21,7 @@ dev = [
     "pytest-cov",
     "ruff",
     "matplotlib",  # EDA figures only (AGENTS.md D2)
+    "rich>=15.0.0",  # make demo terminal UI only (ADR 0011)
 ]
 
 [tool.uv]
