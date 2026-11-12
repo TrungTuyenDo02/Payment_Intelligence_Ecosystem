@@ -18,7 +18,7 @@ Việc tiếp theo:
 1. Push ba nhánh mới, mở PR xếp chồng: G08 → G07, `g08b-demo` → G08, G09 → `g08b-demo`. Xác nhận CI xanh: `lint and test` (PostgreSQL, `REQUIRE_DB=1`), `registries`, `demo`.
 2. ADR 0002 đã Accepted (chủ dự án chấp nhận trong chat 2026-11-12).
 3. Dashboard trên máy mới thiếu số test của Product 02: chép `artifacts/runs/run-f8807cb6f780/test/` từ máy chủ dự án, hoặc chủ dự án chạy `make bundle RUN_DIR=artifacts/runs/run-f8807cb6f780 OWNER_TEST=1` rồi commit. Agent không đọc thư mục test.
-4. G10 ⏸ (thử nghiệm độ bền) chỉ làm khi chủ dự án đồng ý.
+4. G10 ⏸: chủ dự án đồng ý lên kế hoạch (2026-11-12). Đặc tả nháp [`stage-g10-spec.md`](docs/architecture/stage-g10-spec.md) trên nhánh `stage-g/g10-spec`, **chờ duyệt D1–D9** trước khi viết code (đặc biệt D1: không tăng `GENERATOR_VERSION`, và D2: nơi chạy phần cần PostgreSQL).
 
 ## 00. Cập nhật 2026-11-11: Stage G
 
