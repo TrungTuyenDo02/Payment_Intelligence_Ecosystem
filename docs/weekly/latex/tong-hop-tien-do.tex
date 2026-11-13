@@ -1,0 +1,235 @@
+% =====================================================================
+%  BÁO CÁO TUẦN 2026-W46 — Payment Intelligence Ecosystem
+%  Biên dịch: make weekly   (hoặc: xelatex 2026-W46.tex, chạy 2 lần)
+%  Hình: ../../slides/figures/ (make slides-figures). Số test chỉ TRÍCH LẠI.
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Heros}
+\setmonofont{DejaVu Sans Mono}[Scale=0.85]
+\usepackage[vietnamese]{babel}
+\usepackage[a4paper,margin=2.1cm,headheight=14pt]{geometry}
+\usepackage{setspace}\setstretch{1.12}
+\setlength{\parskip}{0.45em}\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+
+\usepackage[table]{xcolor}
+\definecolor{navy}{HTML}{1B2A4A}
+\definecolor{accent}{HTML}{2A78D6}
+\definecolor{accentL}{HTML}{EEF4FC}
+\definecolor{warnC}{HTML}{B7791F}
+\definecolor{warnL}{HTML}{FDF3E1}
+\definecolor{okC}{HTML}{2E8B3E}
+\definecolor{ink2}{HTML}{52514E}
+
+\usepackage{graphicx}
+\usepackage[most]{tcolorbox}
+\usepackage{booktabs,tabularx,array,longtable}
+\usepackage{enumitem}\setlist{nosep,leftmargin=1.4em,topsep=0.3em}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{caption}\captionsetup{font=small,labelfont={bf,color=navy}}
+\usepackage{float}
+\usepackage{fontawesome5}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\definecolor{s1}{HTML}{2A78D6}
+\definecolor{s2}{HTML}{EB6834}
+\definecolor{soft}{HTML}{EEF4FC}
+\definecolor{muted}{HTML}{C3C2B7}
+\tikzset{
+  arr/.style={-{Stealth[length=1.8mm]},line width=0.7pt,color=ink2},
+  stage/.style={rounded corners=2pt,draw=navy,fill=navy,text=white,align=center,
+    font=\scriptsize\bfseries,text width=27.5mm,minimum height=9mm,inner sep=1pt},
+  prod/.style={rounded corners=3pt,draw=muted,fill=white,align=center,font=\scriptsize,
+    text width=27.5mm,minimum height=12mm,inner sep=1pt,text=ink2},
+  pick/.style={prod,draw=s1,fill=soft,text=navy,line width=0.9pt},
+}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
+
+\titleformat{\section}{\large\bfseries\color{navy}}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.1em}{0.4em}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\color{ink2}Payment Intelligence Ecosystem}
+\fancyhead[R]{\small\color{ink2}Báo cáo tuần 2026-W46}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\newtcolorbox{keypoint}[1][Tóm tắt]{enhanced,colback=accentL,colframe=accent,boxrule=0.5pt,arc=2pt,
+  left=8pt,right=8pt,top=5pt,bottom=5pt,title={\textbf{#1}},coltitle=white,colbacktitle=accent,
+  fonttitle=\small}
+\newtcolorbox{warnbox}[1]{enhanced,colback=warnL,colframe=warnC,boxrule=0.5pt,arc=2pt,
+  left=8pt,right=8pt,top=5pt,bottom=5pt,title={\textbf{#1}},coltitle=white,colbacktitle=warnC,
+  fonttitle=\small}
+\newcommand{\run}[1]{\texttt{\small #1}}
+\newcommand{\ok}{\textcolor{okC}{\faCheck}}
+\newcommand{\wait}{\textcolor{warnC}{\faHourglassHalf}}
+\newcommand{\fig}{../../slides/figures}
+
+\begin{document}
+
+\begin{tcolorbox}[enhanced,colback=navy,colframe=navy,arc=3pt,left=12pt,right=12pt,top=10pt,bottom=10pt]
+  \color{white}
+  {\Large\bfseries Báo cáo tuần: đề tài, dữ liệu và tiến độ}\\[2pt]
+  {\small Tuần 2026-W46 (09/11 – 15/11/2026)}\\[6pt]
+  {\small\textbf{Người thực hiện:} Đỗ Trung Tuyến \quad
+   \textbf{Đề tài:} Payment Intelligence Ecosystem}
+\end{tcolorbox}
+
+\section{Đề tài}
+
+Một hệ thống thanh toán cần trả lời hai câu hỏi khác nhau: \emph{hệ thống có đang chạy ổn không}, và
+\emph{giao dịch này có rủi ro gian lận không}. Đề tài xây một \textbf{nền tảng dữ liệu dùng chung}
+(định dạng sự kiện, quản lý dataset, quy tắc đánh giá, PostgreSQL) và hai sản phẩm trên nền tảng đó:
+
+\begin{itemize}
+  \item \textbf{Product 01 – Payment Reliability}: tính chỉ số độ tin cậy mỗi 15 phút (tỷ lệ thành công,
+        độ trễ, lỗi theo nhà cung cấp) và phát hiện bất thường.
+  \item \textbf{Product 02 – Fraud \& Risk}: chấm điểm rủi ro gian lận cho từng giao dịch.
+\end{itemize}
+
+Hai sản phẩm \textbf{chung nền tảng, không chung dữ liệu}, vì không có dataset công khai nào chứa đồng
+thời dữ liệu vận hành (độ trễ, mã lỗi, nhà cung cấp) và nhãn gian lận trên cùng mã giao dịch. Tiêu chí
+thành công là \textbf{đánh giá trung thực, tái lập được, giải thích được từng bước}; điểm số mô hình là
+ưu tiên thứ yếu.
+
+\section{Bộ dữ liệu}
+
+\begin{small}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}p{2.6cm}X X@{}}
+\toprule
+ & \textbf{Product 01 (giả lập)} & \textbf{Product 02 (IEEE-CIS)} \\
+\midrule
+Nguồn & Bộ sinh dữ liệu tự viết theo luật, tái lập bằng mã mô phỏng & Dataset công khai Kaggle IEEE-CIS Fraud Detection \\
+Quy mô & Bộ chỉnh ngưỡng: 25.573 giao dịch, 30.050 sự kiện; bộ báo cáo cùng cỡ & 590.540 giao dịch, gian lận 3,5\% \\
+Nhãn & Sự cố do chính dự án chèn vào: \textbf{4 sự cố mỗi bộ} & Nhãn gian lận có sẵn \\
+Chia dữ liệu & Hai bộ riêng: một để chỉnh, một để báo cáo & Theo thời gian 60/20/20 (train/validation/test), không chia ngẫu nhiên \\
+Kiểm soát & Cấu hình đã chốt, bộ báo cáo chạy một lần & Tập test chỉ mở một lần cho mỗi cấu hình đã chốt \\
+\bottomrule
+\end{tabularx}
+\end{small}
+
+\section{Công việc đã làm theo từng tuần}
+
+\begin{small}
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{@{}p{2.3cm}p{2.3cm}p{11.3cm}@{}}
+\toprule
+\textbf{Tuần} & \textbf{Phần} & \textbf{Nội dung} \\
+\midrule
+\endhead
+\textbf{W45} 02/11 – 08/11 & Nền tảng & Dựng khung dự án, PostgreSQL 16, định dạng sự kiện thanh toán (JSON Schema, đã duyệt), công cụ quản lý dataset có checksum, quy tắc đánh giá (chia theo thời gian, test chỉ mở một lần, nhật ký lần chạy). \\
+ & Product 02 & Tìm hiểu quy trình học máy cho bài toán mất cân bằng; nạp IEEE-CIS; phân tích khám phá dữ liệu (EDA) 6 bước, 9 quyết định tiền xử lý đã duyệt. Chạy \textbf{baseline luật} và \textbf{hồi quy Logistic} (PR-AUC test 0,078 và 0,165). Lấy \textbf{Gradient Boosting} (HistGradientBoosting của scikit-learn) chạy thử: PR-AUC test 0,408. Thí nghiệm rò rỉ dữ liệu trên validation. \\
+ & Product 01 & Bộ sinh dữ liệu giả lập và nạp vào PostgreSQL; chỉ số 15 phút bằng SQL; hai bộ phát hiện bất thường (z-score bền vững và nhị thức gộp cửa sổ), chạy \textbf{baseline}: bộ nhị thức bắt 3/4 sự cố ở bộ chỉnh và 2/4 ở bộ báo cáo, không báo nhầm. \\
+ & Báo cáo & Dashboard, báo cáo thực tập và bản thảo bài báo. \\
+\addlinespace
+\textbf{W46} 09/11 – 15/11 & Product 02 & Phần “từ điểm số đến quyết định”: hiệu chỉnh xác suất, so sánh chính sách cảnh báo theo chi phí giả định, độ ổn định theo tuần, chấm điểm theo lô. Chỉ dùng train và validation. \\
+ & Nền tảng & Tách mã cấu hình và mã lần chạy; \texttt{make demo} chạy cả hai sản phẩm; giao diện terminal, dashboard một trang, slide; 463 kiểm thử đạt. \\
+\bottomrule
+\end{longtable}
+\end{small}
+
+\section{Kết quả hiện có}
+
+\begin{small}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}p{4.6cm}X@{}}
+\toprule
+\textbf{Mục} & \textbf{Quan sát} \\
+\midrule
+Baseline luật (test) & PR-AUC 0,078 \\
+Hồi quy Logistic (test) & PR-AUC 0,165; recall tại FPR 5\% là 0,28 \\
+Gradient Boosting (test) & PR-AUC 0,408 [0,390; 0,424]; recall tại FPR 5\% là 0,51 (ngưỡng chọn bằng nhãn của chính tập đó) \\
+Rò rỉ dữ liệu (validation, thăm dò) & Mã hoá \texttt{card1} theo nhãn làm PR-AUC cao giả +0,063; chia ngẫu nhiên thay vì theo thời gian lệch $-0{,}068$ \\
+Product 01, bộ báo cáo & Bộ nhị thức bắt 2/4 sự cố, 0 báo nhầm/ngày \\
+\bottomrule
+\end{tabularx}
+\end{small}
+
+{\footnotesize\color{ink2} Số test chỉ được trích lại từ lần chạy đã công bố, không chạy lại. PR-AUC đoán ngẫu nhiên
+$\approx$ 0,035 (bằng tỷ lệ gian lận). Recall 0,51 không phải hiệu quả khi triển khai.}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.62\linewidth]{\fig/p02_prauc.pdf}
+  \caption{PR-AUC của các mô hình trên Product 02}
+\end{figure}
+
+\section{Hiện trạng và phần sẽ làm thêm}
+
+\subsection*{Product 01 – Payment Reliability}
+
+\textbf{Hiện trạng.} Mới ở mức \textbf{baseline chưa tối ưu}: hai bộ phát hiện chạy được, nhưng ngưỡng
+chỉnh trên một bộ nhỏ và dữ liệu là giả lập do chính dự án sinh ra.
+
+\textbf{Sẽ làm.}
+\begin{enumerate}
+  \item \textbf{Tìm dataset phù hợp}: khảo sát dữ liệu công khai có chuỗi thời gian vận hành thanh toán
+        hoặc bất thường có nhãn; ghi rõ dataset nào dùng được và vì sao (chưa chọn trước).
+  \item \textbf{Đưa bộ dữ liệu lớn vào}: nạp qua định dạng sự kiện chung, đo thời gian nạp, dung lượng và
+        độ trễ của chỉ số 15 phút; thử dữ liệu trùng, đến muộn, dòng hỏng.
+  \item \textbf{Hoàn tất cách đánh giá}: tách bộ chỉnh và bộ báo cáo, thêm sự cố tăng dần, chấm điểm theo
+        cửa sổ thời gian; viết thành \textbf{một bài báo} nếu kết quả đủ vững.
+  \item Tối ưu bộ phát hiện sau khi có cách đánh giá, không làm ngược lại.
+\end{enumerate}
+
+\subsection*{Product 02 – Fraud \& Risk}
+
+\textbf{Hiện trạng.} Đã đi hết chuỗi: quy trình học máy, EDA, baseline luật, hồi quy Logistic, Gradient
+Boosting. Gradient Boosting mới chỉ thử một lưới nhỏ (8 tổ hợp tham số) trên validation, \textbf{chưa tinh
+chỉnh sâu}.
+
+\textbf{Sẽ làm.} Đánh giá sâu hơn trên dữ liệu phát triển (train và validation): điều chỉnh tham số có
+kiểm soát, giải thích đặc trưng; \textbf{không mở lại tập test}. Ý nghĩa của nhóm đặc trưng \texttt{C1–C14}
+(mang gần toàn bộ tín hiệu) chưa được xác minh.
+
+\section{Hạn chế}
+
+\begin{itemize}
+  \item Product 01 dùng dữ liệu giả lập và mỗi bộ chỉ có 4 sự cố: kết quả là “kiểm chứng trên sự cố đã
+        biết”, không phải hiệu năng thực tế; đánh giá có yếu tố vòng tròn.
+  \item Hai sản phẩm chưa chung dữ liệu, chưa có luồng xuyên suốt.
+  \item Product 02: validation đã dùng nhiều lần nên các số thăm dò có thể lạc quan; \texttt{C1–C14} chưa
+        giải thích được.
+  \item Chi phí trong phần chính sách cảnh báo là giả định; đây là phân tích độ nhạy, không phải ROI.
+\end{itemize}
+
+\section{Hướng đi và nhiệm vụ tuần sau}
+
+\subsection*{Product 01 – Payment Reliability}
+
+\textbf{Hướng:} chuyển từ “chạy được trên dữ liệu tự sinh” sang “đánh giá được trên dữ liệu đủ lớn và
+đủ thật”, rồi mới tối ưu bộ phát hiện.
+\begin{enumerate}
+  \item Liệt kê tiêu chí dataset phù hợp (có thời gian, có bất thường hoặc sự cố được gán nhãn, đủ lớn,
+        được phép dùng) và khảo sát các dataset công khai theo tiêu chí đó.
+  \item Chọn dataset, viết bản chuyển đổi sang định dạng sự kiện chung, nạp thử một phần.
+  \item Viết đặc tả cách đánh giá: tách bộ chỉnh và bộ báo cáo, thước đo theo cửa sổ thời gian, các loại
+        sự cố cần thử (kể cả sự cố tăng dần).
+  \item Phác thảo khung bài báo: câu hỏi nghiên cứu, cách đánh giá, kết quả cần có.
+\end{enumerate}
+
+\subsection*{Product 02 – Fraud \& Risk}
+
+\textbf{Hướng:} từ “có mô hình” sang “hiểu mô hình và dùng điểm số để ra quyết định”, chỉ trên dữ liệu
+phát triển.
+\begin{enumerate}
+  \item Điều chỉnh tham số Gradient Boosting có kiểm soát (lưới rộng hơn, chọn trên validation), ghi rõ
+        là thăm dò.
+  \item Giải thích mô hình: mức quan trọng của đặc trưng, tìm hiểu ý nghĩa nhóm \texttt{C1–C14}.
+  \item So sánh thêm các đặc trưng lịch sử của thẻ và tài khoản (chỉ dùng thông tin quá khứ).
+  \item Tổng hợp kết quả thành bảng và hình cho báo cáo thực tập.
+\end{enumerate}
+
+\section{Cần mentor hỗ trợ}
+
+\begin{itemize}
+  \item Gợi ý dataset công khai phù hợp cho Product 01 và góp ý tiêu chí chọn.
+  \item Góp ý về hướng bài báo: phạm vi, tạp chí hoặc hội nghị phù hợp.
+  \item Góp ý về việc nối hai sản phẩm thành một pipeline.
+\end{itemize}
+
+\end{document}
